@@ -27,21 +27,35 @@ app.post("/api/auth/sync", async (req, res) => {
 
   try {
     const decodedToken = await auth.verifyIdToken(token);
-    const { uid, name, email, picture } = decodedToken;
+    const { uid, email, picture } = decodedToken;
+
+    let displayName = decodedToken.name;
+
+    if (!displayName) {
+      const userRecord = await auth.getUser(uid);
+      displayName = userRecord.displayName || 'Usuario';
+    }
 
     const userRef = db.collection("users").doc(uid);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
-      console.log(`[Firebase] Creando nuevo usuario: ${name} (${uid})`);
+      console.log(`[Firebase] Creando nuevo usuario: ${displayName} (${uid})`);
       await userRef.set({
-        displayName: name,
+        displayName: displayName,
         email: email,
-        photoURL: picture,
+        photoURL: picture || null,
         createdAt: new Date().toISOString(),
       });
     } else {
-      console.log(`[Firebase] Usuario ya existe: ${name} (${uid})`);
+      console.log(`[Firebase] Usuario ya existe: ${displayName} (${uid})`);
+
+      await userRef.update({
+        displayName: displayName,
+        email: email,
+        photoURL: picture || userDoc.data().photoURL || null,
+        updatedAt: new Date().toISOString(),
+      });
     }
 
     res.status(200).json({ status: "success", uid });
