@@ -1,20 +1,30 @@
+const { auth } = require('../config/firebaseAdmin');
+const registerChatHandlers = require('./chatHandler');
+
+const socketAuthMiddleware = async (socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) {
+    return next(new Error('Autenticación fallida: Token no proporcionado.'));
+  }
+  try {
+    const decodedToken = await auth.verifyIdToken(token);
+    socket.user = decodedToken;
+    next();
+  } catch (error) {
+    return next(new Error('Autenticación fallida: Token inválido.'));
+  }
+};
+
 const registerSocketHandlers = (io) => {
+  io.use(socketAuthMiddleware);
+
   io.on("connection", (socket) => {
-    console.log(`[${new Date().toLocaleTimeString()}] Cliente conectado: ${socket.id}`);
+    console.log(`[Socket] Cliente autenticado y conectado: ${socket.id} (Usuario: ${socket.user.uid})`);
 
-    socket.emit("connected", { message: "¡Conectado exitosamente al servidor!", socketId: socket.id });
-
-    socket.on('ping', () => {
-      console.log(`[${new Date().toLocaleTimeString()}] Ping recibido de: ${socket.id}`);
-      socket.emit('pong');
-    });
+    registerChatHandlers(io, socket);
 
     socket.on("disconnect", (reason) => {
-      console.log(`[${new Date().toLocaleTimeString()}] Cliente desconectado: ${socket.id}, Razón: ${reason}`);
-    });
-
-    socket.on("error", (error) => {
-      console.error(`[${new Date().toLocaleTimeString()}] Error en socket ${socket.id}:`, error);
+      console.log(`[Socket] Cliente desconectado: ${socket.id}, Razón: ${reason}`);
     });
   });
 };

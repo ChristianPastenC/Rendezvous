@@ -21,10 +21,7 @@ const MainLayout = () => {
   return (
     <div className="flex h-screen bg-gray-800 text-white">
       <aside className="w-64 bg-gray-900 p-4 flex flex-col justify-between">
-        <div>
-          <h2 className="font-bold text-xl mb-4">connections</h2>
-        </div>
-
+        <div />
         {currentUser && (
           <div className="p-2 bg-gray-800 rounded-lg">
             <p className="text-sm font-semibold truncate" title={currentUser.email}>
