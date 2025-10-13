@@ -10,9 +10,7 @@ const authMiddleware = async (req, res, next) => {
 
   try {
     const decodedToken = await auth.verifyIdToken(idToken);
-
     req.user = decodedToken;
-
     next();
   } catch (error) {
     console.error('Error al verificar el token de Firebase:', error);
