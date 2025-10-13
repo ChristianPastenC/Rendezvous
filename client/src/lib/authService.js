@@ -9,7 +9,7 @@ const API_BASE_URL = 'http://localhost:3000/api/auth';
 * @returns {Promise<void>}
  */
 export const syncUserWithBackend = async (user, forceRefresh = false) => {
-  if (!user) return;
+  if (!user) return false;
 
   try {
     const token = await user.getIdToken(forceRefresh); 
@@ -26,7 +26,8 @@ export const syncUserWithBackend = async (user, forceRefresh = false) => {
 
     const data = await response.json();
     console.log('Usuario sincronizado con el backend:', data);
+    return true;
   } catch (error) {
-    console.error('Error al sincronizar con el backend:', error); 
+    return false; 
   }
 };
