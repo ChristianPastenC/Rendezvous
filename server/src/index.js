@@ -4,7 +4,7 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const { socketConfig } = require("./config/socket.config");
 const { registerSocketHandlers } = require("./sockets/socketHandler");
-
+const { authMiddleware } = require('./middleware/authMiddleware');
 const { auth, db } = require('./config/firebaseAdmin');
 
 const app = express();
@@ -64,6 +64,13 @@ app.post("/api/auth/sync", async (req, res) => {
     console.error("Error al verificar token o sincronizar usuario:", error);
     res.status(401).json({ error: "Token inválido o expirado." });
   }
+});
+
+app.get("/api/me", authMiddleware, (req, res) => {
+  res.json({
+    message: `Hola, ${req.user.name || req.user.email}!`,
+    userData: req.user,
+  });
 });
 
 registerSocketHandlers(io);
