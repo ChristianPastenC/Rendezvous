@@ -22,3 +22,6 @@ Thumbs.db
 
 # Environment-specific files
 *.local
+
+# Firebase Admin keys
+serviceAccountKey.json

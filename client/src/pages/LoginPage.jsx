@@ -4,17 +4,44 @@ import { auth } from '../lib/firebase';
 const LoginPage = () => {
   const provider = new GoogleAuthProvider();
 
+  const syncUserWithBackend = async (user) => {
+    if (!user) return;
+
+    try {
+      const token = await user.getIdToken();
+
+      const response = await fetch('http://localhost:3000/api/auth/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      if (!response.ok) {
+        throw new Error('La sincronización con el backend falló.');
+      }
+
+      const data = await response.json();
+      console.log("Usuario sincronizado con el backend:", data);
+
+    } catch (error) {
+      console.error("Error al sincronizar con el backend:", error);
+    }
+  };
+
+
   const handleGoogleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
-
       const user = result.user;
-      console.log("Usuario autenticado:", user);
+      
+      console.log("Usuario autenticado en Firebase:", user);
+      
+      await syncUserWithBackend(user);
 
     } catch (error) {
       console.error("Error durante el inicio de sesión con Google:", error);
-      const errorCode = error.code;
-      const errorMessage = error.message;
     }
   };
 
