@@ -1,77 +1,76 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../lib/socket';
+import { useAuth } from '../context/AuthContext';
+import MessageInput from '../components/chat/MessageInput'; // Asegúrate de crear este componente
 
 const HomePage = () => {
-  const [apiStatus, setApiStatus] = useState('Cargando estado del servidor...');
-
-  const [isConnected, setIsConnected] = useState(socket.connected);
-  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const { currentUser } = useAuth();
+  const [messages, setMessages] = useState([]);
+  const [channelInfo, setChannelInfo] = useState(null);
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/healthcheck')
-      .then(res => res.json())
-      .then(data => {
-        setApiStatus(`${data.message}`);
-      })
-      .catch(err => {
-        console.error("Error al conectar con la API:", err);
-        setApiStatus("No se pudo conectar con el servidor.");
+    if (!currentUser) return;
+
+    const fetchChannelInfo = async () => {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('http://localhost:3000/api/default-channel', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-  }, []);
+      const data = await response.json();
+      setChannelInfo(data);
 
-  useEffect(() => {
-    const onConnect = () => {
-      setIsConnected(true);
-      console.log('Conectado al servidor de sockets!');
-    }
+      socket.connect();
+      socket.emit('joinDefaultChannel', { channelId: data.channelId });
+    };
 
-    const onDisconnect = () => {
-      setIsConnected(false);
-      console.log('Desconectado del servidor de sockets.');
-    }
+    fetchChannelInfo();
 
-    const onWelcome = (data) => {
-      setWelcomeMessage(data.message);
-    }
-
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('connected', onWelcome);
+    const handleNewMessage = (newMessage) => {
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    };
+    socket.on('newMessage', handleNewMessage);
 
     return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('connected', onWelcome);
+      socket.off('newMessage', handleNewMessage);
+      socket.disconnect();
     };
-  }, []);
+  }, [currentUser]);
 
-  const sendPing = () => {
-    console.log("Enviando ping al servidor...");
-    socket.emit('ping');
-  };
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-gray-800 text-white p-8">
-      <h1 className="text-4xl font-bold mb-8">Rendezvous</h1>
+    <div className="flex flex-col h-full bg-gray-800 text-white">
+      <header className="p-4 bg-gray-700 shadow-md">
+        <h2 className="font-bold"># general (Canal de Ejemplo)</h2>
+      </header>
 
-      <div className="w-full max-w-md p-4 mb-6 bg-gray-700 rounded-lg shadow">
-        <h2 className="text-lg font-semibold border-b border-gray-600 pb-2 mb-2">Estado de la API</h2>
-        <p className="text-gray-300">{apiStatus}</p>
+      <div className="flex-1 p-4 overflow-y-auto space-y-3">
+        {messages.map((msg, index) => (
+          <div key={msg.id || index} className="flex items-start space-x-3">
+            <div>
+              <p className="font-semibold text-white">{msg.authorInfo.displayName}</p>
+              <p className="text-gray-200 mt-1">{msg.content}</p>
+            </div>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
       </div>
 
-      <div className="w-full max-w-md p-4 bg-gray-700 rounded-lg shadow">
-        <h2 className="text-lg font-semibold border-b border-gray-600 pb-2 mb-2">Conexión WebSocket</h2>
-        <p>
-          Estado: {isConnected ? <span className="text-green-400">Conectado</span> : <span className="text-red-400">Desconectado</span>}
-        </p>
-        {welcomeMessage && <p className="text-blue-300 mt-2">Server dice: "{welcomeMessage}"</p>}
-        <button
-          onClick={sendPing}
-          className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-        >
-          Enviar Ping de Prueba
-        </button>
-      </div>
+      {channelInfo && (
+        <MessageInput
+          socket={socket}
+          groupId={channelInfo.groupId}
+          channelId={channelInfo.channelId}
+          authorInfo={{
+            uid: currentUser.uid,
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL,
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -6,6 +6,7 @@ const { socketConfig } = require("./config/socket.config");
 const { registerSocketHandlers } = require("./sockets/socketHandler");
 const { authMiddleware } = require('./middleware/authMiddleware');
 const { auth, db } = require('./config/firebaseAdmin');
+const { FieldValue } = require('firebase-admin/firestore');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,6 +14,30 @@ const io = new Server(server, socketConfig);
 
 app.use(cors());
 app.use(express.json());
+
+const ensureDefaultGroup = async (newUserUid) => {
+  const defaultGroupId = 'general_group';
+  const defaultChannelId = 'general_channel';
+  const groupRef = db.collection('groups').doc(defaultGroupId);
+  const groupDoc = await groupRef.get();
+
+  if (!groupDoc.exists) {
+    await groupRef.set({
+      name: 'General',
+      ownerId: 'system',
+      members: [newUserUid]
+    });
+    await groupRef.collection('channels').doc(defaultChannelId).set({
+      name: 'general',
+      type: 'text'
+    });
+  } else {
+    await groupRef.update({
+      members: FieldValue.arrayUnion(newUserUid)
+    });
+  }
+};
+
 
 app.get("/api/healthcheck", (req, res) => {
   res.json({ status: "ok", message: "Server is healthy and running" });
@@ -47,6 +72,8 @@ app.post("/api/auth/sync", async (req, res) => {
         photoURL: picture || null,
         createdAt: new Date().toISOString(),
       });
+
+      await ensureDefaultGroup(uid);
     } else {
       console.log(`[Firebase] Usuario ya existe: ${displayName} (${uid})`);
 
@@ -70,6 +97,13 @@ app.get("/api/me", authMiddleware, (req, res) => {
   res.json({
     message: `Hola, ${req.user.name || req.user.email}!`,
     userData: req.user,
+  });
+});
+
+app.get("/api/default-channel", authMiddleware, async (req, res) => {
+  res.status(200).json({
+    groupId: 'general_group',
+    channelId: 'general_channel'
   });
 });
 
