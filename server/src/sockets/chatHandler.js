@@ -1,16 +1,13 @@
 const { db } = require('../config/firebaseAdmin');
 const { FieldValue } = require('firebase-admin/firestore');
 
-const registerChatHandlers = (io, socket) => {
+const registerChatHandlers = (io, socket, userSocketMap) => {
   socket.on('joinChannel', async ({ groupId, channelId }) => {
     try {
       const groupRef = db.collection('groups').doc(groupId);
       const groupDoc = await groupRef.get();
       if (groupDoc.exists && groupDoc.data().members.includes(socket.user.uid)) {
         socket.join(channelId);
-        console.log(`[Socket] Usuario ${socket.user.uid} se unió al canal: ${channelId}`);
-      } else {
-        console.warn(`[Seguridad] Intento de acceso denegado al canal ${channelId} por ${socket.user.uid}`);
       }
     } catch (error) {
       console.error("Error al unirse al canal:", error);
@@ -19,14 +16,11 @@ const registerChatHandlers = (io, socket) => {
 
   socket.on('leaveChannel', ({ channelId }) => {
     socket.leave(channelId);
-    console.log(`[Socket] Usuario ${socket.user.uid} salió del canal: ${channelId}`);
   });
 
-  socket.on('sendMessage', async ({ 
-    groupId, channelId, content, fileUrl = null, fileType = null 
-  }) => {
+  socket.on('sendMessage', async ({ groupId, channelId, encryptedPayload }) => {
     try {
-      if (!groupId || !channelId || (!content?.trim() && !fileUrl)) {
+      if (!groupId || !channelId || !encryptedPayload) {
         return socket.emit('messageError', { message: 'Datos del mensaje inválidos.' });
       }
 
@@ -39,9 +33,7 @@ const registerChatHandlers = (io, socket) => {
       }
 
       const messageData = {
-        content: content?.trim() || 'Archivo adjunto',
-        type: fileUrl ? (fileType?.startsWith('image/') ? 'image' : 'file') : 'text',
-        fileUrl: fileUrl,
+        encryptedPayload: encryptedPayload,
         authorId: author.uid,
         authorInfo: {
           displayName: author.name || 'Usuario',
@@ -53,7 +45,7 @@ const registerChatHandlers = (io, socket) => {
       const messageRef = await db.collection('groups').doc(groupId).collection('channels').doc(channelId).collection('messages').add(messageData);
       const savedMessage = { ...messageData, id: messageRef.id, createdAt: new Date().toISOString() };
 
-      io.to(channelId).emit('newMessage', savedMessage);
+      io.to(channelId).emit('encryptedMessage', savedMessage);
     } catch (error) {
       console.error(`[Error] en sendMessage para ${socket.id}:`, error.message);
       socket.emit('messageError', { message: 'No se pudo enviar el mensaje.' });

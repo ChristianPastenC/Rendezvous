@@ -39,7 +39,7 @@ app.post("/api/auth/sync", async (req, res) => {
     const userRef = db.collection("users").doc(uid);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
-      await userRef.set({ displayName: name, email, photoURL: picture || null, createdAt: FieldValue.serverTimestamp() }, { merge: true });
+      await userRef.set({ displayName: name, email, photoURL: picture || null, createdAt: FieldValue.serverTimestamp(), publicKey: null }, { merge: true });
       await ensureDefaultGroup(uid);
     } else {
       await userRef.update({ displayName: name, photoURL: picture || (userDoc.data() && userDoc.data().photoURL) || null });
@@ -47,6 +47,20 @@ app.post("/api/auth/sync", async (req, res) => {
     res.status(200).json({ status: "success", uid });
   } catch (error) {
     res.status(401).json({ error: "Token inválido." });
+  }
+});
+
+app.get("/api/users/:uid/key", authMiddleware, async (req, res) => {
+  const { uid } = req.params;
+  try {
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists || !userDoc.data().publicKey) {
+      return res.status(404).json({ error: "Clave pública no encontrada para este usuario." });
+    }
+    res.status(200).json({ publicKey: userDoc.data().publicKey });
+  } catch (error) {
+    console.error("Error al obtener la clave pública:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
   }
 });
 
@@ -111,17 +125,17 @@ app.post("/api/groups", authMiddleware, async (req, res) => {
 app.get("/api/groups/:groupId/members", authMiddleware, async (req, res) => {
   const { groupId } = req.params;
   const userId = req.user.uid;
-  
+
   try {
     const groupRef = db.collection('groups').doc(groupId);
     const groupDoc = await groupRef.get();
-    
+
     if (!groupDoc.exists || !groupDoc.data().members.includes(userId)) {
       return res.status(403).json({ error: "No tienes permiso para ver estos miembros." });
     }
-    
+
     const memberIds = groupDoc.data().members || [];
-    
+
     const membersPromises = memberIds.map(async (memberId) => {
       const userDoc = await db.collection('users').doc(memberId).get();
       if (userDoc.exists) {
@@ -135,10 +149,10 @@ app.get("/api/groups/:groupId/members", authMiddleware, async (req, res) => {
       }
       return null;
     });
-    
+
     const members = (await Promise.all(membersPromises)).filter(m => m !== null);
     res.status(200).json(members);
-    
+
   } catch (error) {
     console.error("Error al obtener miembros:", error);
     res.status(500).json({ error: "Error al obtener miembros." });
