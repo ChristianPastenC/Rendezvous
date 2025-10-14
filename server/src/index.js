@@ -12,6 +12,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, socketConfig);
 
+const userSocketMap = {};
+
 app.use(cors());
 app.use(express.json());
 
@@ -106,7 +108,45 @@ app.post("/api/groups", authMiddleware, async (req, res) => {
   }
 });
 
-registerSocketHandlers(io);
+app.get("/api/groups/:groupId/members", authMiddleware, async (req, res) => {
+  const { groupId } = req.params;
+  const userId = req.user.uid;
+  
+  try {
+    const groupRef = db.collection('groups').doc(groupId);
+    const groupDoc = await groupRef.get();
+    
+    if (!groupDoc.exists || !groupDoc.data().members.includes(userId)) {
+      return res.status(403).json({ error: "No tienes permiso para ver estos miembros." });
+    }
+    
+    const memberIds = groupDoc.data().members || [];
+    
+    const membersPromises = memberIds.map(async (memberId) => {
+      const userDoc = await db.collection('users').doc(memberId).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        return {
+          uid: memberId,
+          displayName: userData.displayName || 'Usuario',
+          photoURL: userData.photoURL || null,
+          email: userData.email || null
+        };
+      }
+      return null;
+    });
+    
+    const members = (await Promise.all(membersPromises)).filter(m => m !== null);
+    res.status(200).json(members);
+    
+  } catch (error) {
+    console.error("Error al obtener miembros:", error);
+    res.status(500).json({ error: "Error al obtener miembros." });
+  }
+});
+
+
+registerSocketHandlers(io, userSocketMap);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

@@ -22,9 +22,13 @@ const registerChatHandlers = (io, socket) => {
     console.log(`[Socket] Usuario ${socket.user.uid} salió del canal: ${channelId}`);
   });
 
-  socket.on('sendMessage', async ({ groupId, channelId, content }) => {
+  socket.on('sendMessage', async ({ 
+    groupId, channelId, content, fileUrl = null, fileType = null 
+  }) => {
     try {
-      if (!groupId || !channelId || !content.trim()) return;
+      if (!groupId || !channelId || (!content?.trim() && !fileUrl)) {
+        return socket.emit('messageError', { message: 'Datos del mensaje inválidos.' });
+      }
 
       const author = socket.user;
       const groupRef = db.collection('groups').doc(groupId);
@@ -35,8 +39,9 @@ const registerChatHandlers = (io, socket) => {
       }
 
       const messageData = {
-        content: content.trim(),
-        type: 'text',
+        content: content?.trim() || 'Archivo adjunto',
+        type: fileUrl ? (fileType?.startsWith('image/') ? 'image' : 'file') : 'text',
+        fileUrl: fileUrl,
         authorId: author.uid,
         authorInfo: {
           displayName: author.name || 'Usuario',
