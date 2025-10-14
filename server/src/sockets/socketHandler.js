@@ -1,5 +1,6 @@
 const { auth } = require('../config/firebaseAdmin');
 const registerChatHandlers = require('./chatHandler');
+const registerWebRTCHandlers = require('./webrtcHandlers');
 
 const socketAuthMiddleware = async (socket, next) => {
   const token = socket.handshake.auth.token;
@@ -15,18 +16,26 @@ const socketAuthMiddleware = async (socket, next) => {
   }
 };
 
-const registerSocketHandlers = (io) => {
+const registerSocketHandlers = (io, userSocketMap) => {
   io.use(socketAuthMiddleware);
 
   io.on("connection", (socket) => {
-    console.log(`[Socket] Cliente autenticado y conectado: ${socket.id} (Usuario: ${socket.user.uid})`);
+    console.log(`[Socket] Cliente autenticado: ${socket.id} (Usuario: ${socket.user.uid})`);
+
+    userSocketMap[socket.user.uid] = socket.id;
+    console.log('[Mapeo] Usuarios conectados:', userSocketMap);
 
     registerChatHandlers(io, socket);
+    registerWebRTCHandlers(io, socket, userSocketMap);
 
     socket.on("disconnect", (reason) => {
       console.log(`[Socket] Cliente desconectado: ${socket.id}, Razón: ${reason}`);
+      
+      delete userSocketMap[socket.user.uid];
+      console.log('[Mapeo] Usuarios conectados:', userSocketMap);
     });
   });
 };
+
 
 module.exports = { registerSocketHandlers };
