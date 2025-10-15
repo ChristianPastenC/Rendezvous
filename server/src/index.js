@@ -17,19 +17,6 @@ const userSocketMap = {};
 app.use(cors());
 app.use(express.json());
 
-const ensureDefaultGroup = async (newUserUid) => {
-  const defaultGroupId = 'general_group';
-  const groupRef = db.collection('groups').doc(defaultGroupId);
-  const groupDoc = await groupRef.get();
-
-  if (!groupDoc.exists) {
-    await groupRef.set({ name: 'General', ownerId: 'system', members: [newUserUid] });
-    await groupRef.collection('channels').doc('general_channel').set({ name: 'general', type: 'text' });
-  } else {
-    await groupRef.update({ members: FieldValue.arrayUnion(newUserUid) });
-  }
-};
-
 app.post("/api/auth/sync", async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: "Token no proporcionado." });
@@ -40,7 +27,6 @@ app.post("/api/auth/sync", async (req, res) => {
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
       await userRef.set({ displayName: name, email, photoURL: picture || null, createdAt: FieldValue.serverTimestamp(), publicKey: null }, { merge: true });
-      await ensureDefaultGroup(uid);
     } else {
       await userRef.update({ displayName: name, photoURL: picture || (userDoc.data() && userDoc.data().photoURL) || null });
     }
@@ -50,25 +36,21 @@ app.post("/api/auth/sync", async (req, res) => {
   }
 });
 
-// --- RUTA /api/contacts CORREGIDA Y SIMPLIFICADA ---
 app.get("/api/contacts", authMiddleware, async (req, res) => {
   const userId = req.user.uid;
   try {
     const contactsSnapshot = await db.collection('users').doc(userId).collection('contacts').orderBy('lastActivity', 'desc').get();
 
     if (contactsSnapshot.empty) {
-      return res.status(200).json([]); // Devuelve un array vacío si no hay contactos
+      return res.status(200).json([]);
     }
 
-    // Mapear cada ID de contacto a una promesa que obtiene los datos del usuario
     const userPromises = contactsSnapshot.docs.map(doc =>
       db.collection('users').doc(doc.id).get()
     );
 
-    // Esperar a que todas las promesas se resuelvan
     const userDocs = await Promise.all(userPromises);
 
-    // Filtrar los que existen y mapear los datos
     const contactsData = userDocs
       .filter(doc => doc.exists)
       .map(doc => ({
@@ -83,8 +65,6 @@ app.get("/api/contacts", authMiddleware, async (req, res) => {
   }
 });
 
-
-// --- RESTO DE LAS RUTAS (SIN CAMBIOS) ---
 app.get("/api/users/:uid/key", authMiddleware, async (req, res) => {
   const { uid } = req.params;
   try {

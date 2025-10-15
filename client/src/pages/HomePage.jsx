@@ -11,64 +11,111 @@ import CallTypeModal from '../components/chat/CallTypeModal';
 import UserSearch from '../components/dms/UserSearch';
 import AddMemberModal from '../components/groups/AddMemberModal';
 
-const NavigationBar = ({ view, onChangeView }) => (
-  <div className="w-20 bg-gray-900 p-2 flex flex-col items-center space-y-2 flex-shrink-0">
-    <button
-      onClick={() => onChangeView('dms')}
-      className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl transition-all duration-200 ${view === 'dms' ? 'bg-blue-600 rounded-2xl' : 'bg-gray-700 hover:bg-blue-600 hover:rounded-2xl'}`}
-      title="Mensajes Directos"
-    >
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-    </button>
-    <div className="w-full h-px bg-gray-700 my-2"></div>
-    <button
-      onClick={() => onChangeView('groups')}
-      className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl transition-all duration-200 ${view === 'groups' ? 'bg-blue-600 rounded-2xl' : 'bg-gray-700 hover:bg-blue-600 hover:rounded-2xl'}`}
-      title="Ver Grupos"
-    >
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-    </button>
+const Loader = () => (
+  <div className="flex items-center justify-center h-screen bg-gray-900">
+    <div className="text-center">
+      <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+      <p className="text-gray-400 text-lg">Cargando...</p>
+    </div>
   </div>
 );
 
-const GroupList = ({ groups, selectedGroupId, onSelectGroup, onCreateGroup }) => (
-  <aside className="w-64 bg-gray-800 flex flex-col flex-shrink-0">
-    <h2 className="font-bold text-lg text-white p-4 border-b border-gray-900">Grupos</h2>
-    <div className="flex-1 p-2 space-y-1 overflow-y-auto">
-      {groups.map(group => (
-        <button key={group.id} onClick={() => onSelectGroup(group.id)}
-          className={`w-full text-left p-3 rounded-md flex items-center space-x-3 transition-colors ${selectedGroupId === group.id ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}>
-          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">{group.name.charAt(0).toUpperCase()}</div>
-          <span className="truncate">{group.name}</span>
-        </button>
-      ))}
-    </div>
-    <button onClick={onCreateGroup} className="m-2 p-3 rounded-md bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 font-semibold">
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-      <span>Crear Grupo</span>
-    </button>
-  </aside>
-);
+const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCreateGroup, currentUserId, onStartConversation }) => {
+  const [filter, setFilter] = useState('all');
 
-const DirectMessagesList = ({ contacts, onSelectContact, selectedContactId, onStartConversation }) => (
-  <aside className="w-64 bg-gray-800 flex flex-col flex-shrink-0">
-    <UserSearch onSelectUser={onStartConversation} />
-    <div className="flex-1 p-2 space-y-1 overflow-y-auto">
-      <h2 className="font-bold text-xs text-gray-400 uppercase px-2 mb-2">Mensajes Directos</h2>
-      {contacts.length === 0 ? (
-        <p className="text-gray-500 text-sm px-2 py-4">Busca usuarios para iniciar un chat.</p>
-      ) : (
-        contacts.map(contact => (
-          <button key={contact.uid} onClick={() => onSelectContact(contact)}
-            className={`w-full text-left p-3 rounded-md flex items-center space-x-3 transition-colors ${selectedContactId === contact.uid ? 'bg-gray-600' : 'hover:bg-gray-700'}`}>
-            {contact.photoURL ? <img src={contact.photoURL} alt={contact.displayName} className="w-8 h-8 rounded-full flex-shrink-0" /> : <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm flex-shrink-0">{contact.displayName?.charAt(0).toUpperCase() || '?'}</div>}
-            <span className="text-gray-300 truncate">{contact.displayName}</span>
+  const filteredConversations = conversations.filter(conv => {
+    if (filter === 'all') return true;
+    if (filter === 'dms') return conv.type === 'dm';
+    if (filter === 'groups') return conv.type === 'group';
+    return true;
+  });
+
+  return (
+    <aside className="w-72 bg-gray-800 flex flex-col flex-shrink-0">
+      <div className="p-4 border-b border-gray-900">
+        <h2 className="font-bold text-lg text-white mb-3">Conversaciones</h2>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setFilter('all')}
+            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+          >
+            Todos
           </button>
-        ))
-      )}
-    </div>
-  </aside>
-);
+          <button
+            onClick={() => setFilter('dms')}
+            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'dms' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+          >
+            Directos
+          </button>
+          <button
+            onClick={() => setFilter('groups')}
+            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'groups' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+          >
+            Grupos
+          </button>
+        </div>
+        <UserSearch onSelectUser={onStartConversation} />
+      </div>
+
+      <div className="flex-1 p-2 space-y-1 overflow-y-auto">
+        {filteredConversations.length === 0 ? (
+          <p className="text-gray-500 text-sm px-2 py-4 text-center">
+            {filter === 'all' ? 'No hay conversaciones. Busca usuarios o crea un grupo.' :
+              filter === 'dms' ? 'No hay mensajes directos.' :
+                'No hay grupos.'}
+          </p>
+        ) : (
+          filteredConversations.map(conv => (
+            <button
+              key={conv.id}
+              onClick={() => onSelectConversation(conv)}
+              className={`w-full text-left p-3 rounded-md flex items-center space-x-3 transition-colors ${selectedId === conv.id ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-700'
+                }`}
+            >
+              {conv.type === 'group' ? (
+                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                  {conv.name.charAt(0).toUpperCase()}
+                </div>
+              ) : conv.photoURL ? (
+                <img src={conv.photoURL} alt={conv.name} className="w-10 h-10 rounded-full flex-shrink-0" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                  {conv.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium truncate">{conv.name}</span>
+                  {conv.type === 'group' && (
+                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  )}
+                </div>
+                {conv.lastMessage && (
+                  <p className="text-xs text-gray-400 truncate mt-0.5">{conv.lastMessage}</p>
+                )}
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+
+      <button
+        onClick={onCreateGroup}
+        className="m-3 p-3 rounded-md bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 font-semibold"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        <span>Crear Grupo</span>
+      </button>
+    </aside>
+  );
+};
 
 const MessageList = ({ messages }) => {
   const { currentUser } = useAuth();
@@ -113,16 +160,35 @@ const MessageList = ({ messages }) => {
 
 const MembersList = ({ members, onCallMember, currentUserId, onAddMemberClick, isOwner }) => (
   <aside className="w-64 bg-gray-800 p-4 border-l border-gray-900 flex-shrink-0 flex flex-col">
-    <h2 className="font-bold text-lg text-white mb-4">Miembros</h2>
+    <h2 className="font-bold text-lg text-white mb-4">Miembros ({members.length})</h2>
     <div className="space-y-2 flex-1 overflow-y-auto">
       {members.map(member => (
-        <div key={member.uid} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-700">
-          <span className="text-gray-200 text-sm">{member.displayName}</span>
-          {member.uid !== currentUserId && (<button onClick={() => onCallMember(member)} className="p-1" title="Llamar"><svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></button>)}
+        <div key={member.uid} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-700 transition-colors">
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
+            {member.photoURL ? (
+              <img src={member.photoURL} alt={member.displayName} className="w-8 h-8 rounded-full flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                {member.displayName?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
+            <span className="text-gray-200 text-sm truncate">{member.displayName}</span>
+          </div>
+          {member.uid !== currentUserId && (
+            <button onClick={() => onCallMember(member)} className="p-1 hover:bg-gray-600 rounded" title="Llamar">
+              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+            </button>
+          )}
         </div>
       ))}
     </div>
-    {isOwner && (<button onClick={onAddMemberClick} className="mt-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold w-full">Añadir Miembro</button>)}
+    {isOwner && (
+      <button onClick={onAddMemberClick} className="mt-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold w-full transition-colors">
+        Añadir Miembro
+      </button>
+    )}
   </aside>
 );
 
@@ -133,13 +199,18 @@ const HomePage = () => {
   const [groups, setGroups] = useState([]);
   const [members, setMembers] = useState([]);
   const [contacts, setContacts] = useState([]);
-  const [mainView, setMainView] = useState('dms');
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
   const [selectedChannelId, setSelectedChannelId] = useState(null);
-  const [selectedDM, setSelectedDM] = useState(null);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const previousConversationId = useRef(null);
+
+  const messagesCache = useRef({});
+  const membersCache = useRef({});
+  const channelCache = useRef({});
 
   const [webrtc, setWebrtc] = useState(null);
   const [inCall, setInCall] = useState(false);
@@ -152,44 +223,97 @@ const HomePage = () => {
   const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
 
   const fetchGroups = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser) return [];
     const token = await currentUser.getIdToken();
     const response = await fetch('http://localhost:3000/api/groups', { headers: { 'Authorization': `Bearer ${token}` } });
     const data = await response.json();
-    setGroups(data);
+    return data;
   }, [currentUser]);
 
   const fetchContacts = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser) return [];
     const token = await currentUser.getIdToken();
     const response = await fetch('http://localhost:3000/api/contacts', { headers: { 'Authorization': `Bearer ${token}` } });
     const data = await response.json();
-    setContacts(data);
+    return data;
   }, [currentUser]);
 
-  useEffect(() => { fetchGroups(); fetchContacts(); }, [fetchGroups, fetchContacts]);
+  const loadAllData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [groupsData, contactsData] = await Promise.all([fetchGroups(), fetchContacts()]);
+      setGroups(groupsData);
+      setContacts(contactsData);
+
+      const unifiedConversations = [
+        ...contactsData.map(contact => ({
+          id: `dm_${contact.uid}`,
+          type: 'dm',
+          name: contact.displayName,
+          photoURL: contact.photoURL,
+          userData: contact,
+          lastMessage: null
+        })),
+        ...groupsData.map(group => ({
+          id: `group_${group.id}`,
+          type: 'group',
+          name: group.name,
+          groupData: group,
+          lastMessage: null
+        }))
+      ];
+
+      setConversations(unifiedConversations);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchGroups, fetchContacts]);
+
+  useEffect(() => { loadAllData(); }, [loadAllData]);
 
   useEffect(() => {
-    if (!selectedGroup || !currentUser) return;
-    const fetchGroupData = async () => {
-      const token = await currentUser.getIdToken();
-      const [channelsRes, membersRes] = await Promise.all([
-        fetch(`http://localhost:3000/api/groups/${selectedGroup.id}/channels`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`http://localhost:3000/api/groups/${selectedGroup.id}/members`, { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      const channelsData = await channelsRes.json();
-      const membersData = await membersRes.json();
+    if (!selectedConversation || !currentUser) return;
+    const fetchConversationData = async () => {
+      if (selectedConversation.type === 'group') {
+        const groupId = selectedConversation.groupData.id;
 
-      // Como solo hay un canal, lo seleccionamos directamente
-      if (channelsData.length > 0) {
-        setSelectedChannelId(channelsData[0].id);
+        if (channelCache.current[groupId]) {
+          setSelectedChannelId(channelCache.current[groupId]);
+        } else {
+          const token = await currentUser.getIdToken();
+          const channelsRes = await fetch(`http://localhost:3000/api/groups/${groupId}/channels`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const channelsData = await channelsRes.json();
+
+          if (channelsData.length > 0) {
+            channelCache.current[groupId] = channelsData[0].id;
+            setSelectedChannelId(channelsData[0].id);
+          } else {
+            setSelectedChannelId(null);
+          }
+        }
+
+        if (membersCache.current[groupId]) {
+          setMembers(membersCache.current[groupId]);
+        } else {
+          const token = await currentUser.getIdToken();
+          const membersRes = await fetch(`http://localhost:3000/api/groups/${groupId}/members`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const membersData = await membersRes.json();
+          membersCache.current[groupId] = membersData;
+          setMembers(membersData);
+        }
       } else {
+        setMembers([]);
         setSelectedChannelId(null);
       }
-      setMembers(membersData);
     };
-    fetchGroupData();
-  }, [selectedGroup, currentUser]);
+    fetchConversationData();
+  }, [selectedConversation, currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -209,30 +333,56 @@ const HomePage = () => {
 
   useEffect(() => {
     const loadDataAndJoin = async () => {
-      if (!socket || !currentUser || (!selectedChannelId && !selectedDM)) { setMessages([]); return; }
-      if (previousConversationId.current) socket.emit('leaveChannel', { conversationId: previousConversationId.current });
-
-      let conversationId, endpoint, isDirectMessage = !!selectedDM;
-
-      if (selectedDM) {
-        conversationId = [currentUser.uid, selectedDM.uid].sort().join('_');
-        endpoint = `/api/dms/${conversationId}/messages`;
-      } else if (selectedGroup && selectedChannelId) {
-        conversationId = selectedChannelId;
-        endpoint = `/api/groups/${selectedGroup.id}/channels/${selectedChannelId}/messages`;
-      } else {
+      if (!socket || !currentUser || !selectedConversation) {
+        setMessages([]);
+        setIsLoadingMessages(false);
         return;
       }
+
+      if (previousConversationId.current) {
+        socket.emit('leaveChannel', { conversationId: previousConversationId.current });
+      }
+
+      let conversationId, endpoint, isDirectMessage = selectedConversation.type === 'dm';
+
+      if (selectedConversation.type === 'dm') {
+        conversationId = [currentUser.uid, selectedConversation.userData.uid].sort().join('_');
+        endpoint = `/api/dms/${conversationId}/messages`;
+      } else if (selectedConversation.type === 'group' && selectedChannelId) {
+        conversationId = selectedChannelId;
+        endpoint = `/api/groups/${selectedConversation.groupData.id}/channels/${selectedChannelId}/messages`;
+      } else {
+        setMessages([]);
+        return;
+      }
+
+      setMessages([]);
+      setIsLoadingMessages(true);
 
       socket.emit('joinChannel', { conversationId, isDirectMessage });
       previousConversationId.current = conversationId;
 
-      const token = await currentUser.getIdToken();
-      const response = await fetch(`http://localhost:3000${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
-      setMessages(response.ok ? await response.json() : []);
+      if (messagesCache.current[conversationId]) {
+        setMessages(messagesCache.current[conversationId]);
+        setIsLoadingMessages(false);
+      } else {
+        const token = await currentUser.getIdToken();
+        const response = await fetch(`http://localhost:3000${endpoint}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const messagesData = await response.json();
+          messagesCache.current[conversationId] = messagesData;
+          setMessages(messagesData);
+        } else {
+          setMessages([]);
+        }
+        setIsLoadingMessages(false);
+      }
     };
     loadDataAndJoin();
-  }, [selectedDM, selectedChannelId, selectedGroup, socket, currentUser]);
+  }, [selectedConversation, selectedChannelId, socket, currentUser]);
 
   useEffect(() => {
     if (socket && currentUser) {
@@ -245,62 +395,186 @@ const HomePage = () => {
     }
   }, [socket, currentUser]);
 
-  const handleChangeMainView = (view) => { setMainView(view); setSelectedGroup(null); setSelectedChannelId(null); setSelectedDM(null); };
-  const handleSelectGroup = (groupId) => { setSelectedDM(null); setSelectedGroup(groups.find(g => g.id === groupId)); setMainView('groups'); };
-  const handleSelectContact = (user) => { setSelectedGroup(null); setSelectedChannelId(null); setSelectedDM(user); setMainView('dms'); };
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (newMessage) => {
+      const conversationId = previousConversationId.current;
+      if (conversationId) {
+        messagesCache.current[conversationId] = [
+          ...(messagesCache.current[conversationId] || []),
+          newMessage
+        ];
+        setMessages(prev => [...prev, newMessage]);
+      }
+    };
+
+    socket.on('encryptedMessage', handleNewMessage);
+
+    return () => {
+      socket.off('encryptedMessage', handleNewMessage);
+    };
+  }, [socket]);
+
+  const handleSelectConversation = (conv) => {
+    setMessages([]);
+    setIsLoadingMessages(true);
+    setSelectedConversation(conv);
+  };
+  const handleStartConversation = (user) => {
+    const existingConv = conversations.find(c => c.type === 'dm' && c.userData.uid === user.uid);
+    if (existingConv) {
+      setSelectedConversation(existingConv);
+    } else {
+      const newConv = {
+        id: `dm_${user.uid}`,
+        type: 'dm',
+        name: user.displayName,
+        photoURL: user.photoURL,
+        userData: user,
+        lastMessage: null
+      };
+      setConversations(prev => [newConv, ...prev]);
+      setSelectedConversation(newConv);
+    }
+  };
+
   const handleCallMember = (member) => { if (inCall) return; setSelectedMemberToCall(member); setShowCallTypeModal(true); };
   const handleSelectCallType = async (callType) => { setShowCallTypeModal(false); if (!selectedMemberToCall || !webrtc) return; try { setCurrentCallType(callType); const stream = await webrtc.startLocalStream(callType); setLocalStream(stream); await webrtc.createOffer(selectedMemberToCall.uid, callType, currentUser.displayName || 'Usuario'); setInCall(true); } catch (e) { setSelectedMemberToCall(null); } };
   const handleAcceptCall = async () => { if (!incomingCallData || !webrtc) return; try { setCurrentCallType(incomingCallData.callType); const stream = await webrtc.startLocalStream(incomingCallData.callType); setLocalStream(stream); await webrtc.acceptCall(incomingCallData.from, incomingCallData.offer, incomingCallData.callType); setInCall(true); setShowIncomingCallModal(false); setIncomingCallData(null); } catch (e) { handleRejectCall(); } };
   const handleRejectCall = () => { if (incomingCallData && webrtc) webrtc.rejectCall(incomingCallData.from); setShowIncomingCallModal(false); setIncomingCallData(null); };
   const handleHangUp = () => { if (webrtc) { const remoteId = incomingCallData?.from || selectedMemberToCall?.uid; if (remoteId) webrtc.hangUp(remoteId); } setInCall(false); setLocalStream(null); setRemoteStream(null); };
-  const handleCreateGroup = async (name, memberIds) => { const token = await currentUser.getIdToken(); const response = await fetch('http://localhost:3000/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name, memberIds }) }); if (response.ok) { setIsCreateGroupModalOpen(false); await fetchGroups(); } else { alert('Error al crear el grupo.'); } };
-  const handleMemberAdded = () => { fetchMembers(); };
-
-  const getHeaderTitle = () => {
-    if (selectedDM) return selectedDM.displayName;
-    if (selectedGroup) return selectedGroup.name;
-    return 'Selecciona una conversación';
+  const handleCreateGroup = async (name, memberIds) => {
+    const token = await currentUser.getIdToken();
+    const response = await fetch('http://localhost:3000/api/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ name, memberIds })
+    });
+    if (response.ok) {
+      setIsCreateGroupModalOpen(false);
+      messagesCache.current = {};
+      membersCache.current = {};
+      channelCache.current = {};
+      await loadAllData();
+    } else {
+      alert('Error al crear el grupo.');
+    }
   };
 
   const getMembersForMessage = () => {
-    if (selectedDM) return [{ uid: currentUser.uid }, { uid: selectedDM.uid }];
+    if (selectedConversation?.type === 'dm') return [{ uid: currentUser.uid }, { uid: selectedConversation.userData.uid }];
     return members;
   };
 
   const getCurrentConversationId = () => {
-    if (selectedDM) return [currentUser.uid, selectedDM.uid].sort().join('_');
+    if (selectedConversation?.type === 'dm') return [currentUser.uid, selectedConversation.userData.uid].sort().join('_');
     return selectedChannelId;
   };
 
+  const getCallTarget = () => {
+    if (selectedConversation?.type === 'dm') return selectedConversation.userData;
+    if (members.length > 1) return members.find(m => m.uid !== currentUser.uid);
+    return null;
+  };
+
+  if (isLoading) {
+    return <Loader />;
+  }
+
   return (
     <>
-      <div className="flex h-screen bg-gray-700 text-white">
-        <NavigationBar view={mainView} onChangeView={handleChangeMainView} />
-        {mainView === 'dms' ? (
-          <DirectMessagesList contacts={contacts} selectedContactId={selectedDM?.uid} onSelectContact={handleSelectContact} onStartConversation={handleSelectContact} />
-        ) : (
-          <GroupList groups={groups} selectedGroupId={selectedGroup?.id} onSelectGroup={handleSelectGroup} onCreateGroup={() => setIsCreateGroupModalOpen(true)} />
-        )}
+      <div className="flex h-screen bg-gray-900 text-white">
+        <UnifiedSidebar
+          conversations={conversations}
+          selectedId={selectedConversation?.id}
+          onSelectConversation={handleSelectConversation}
+          onCreateGroup={() => setIsCreateGroupModalOpen(true)}
+          currentUserId={currentUser.uid}
+          onStartConversation={handleStartConversation}
+        />
         <main className="flex flex-col flex-1">
-          <header className="p-4 bg-gray-700 shadow-md border-b-2 border-gray-900 flex justify-between items-center">
-            <h2 className="font-bold text-lg">{getHeaderTitle()}</h2>
-            {(selectedDM || (mainView === 'groups' && members.length > 1)) && <button onClick={() => handleCallMember(selectedDM || members.find(m => m.uid !== currentUser.uid))} disabled={inCall} className="px-3 py-1 bg-green-600 rounded">Llamar</button>}
+          <header className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              {selectedConversation ? (
+                <>
+                  {selectedConversation.type === 'group' ? (
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">
+                      {selectedConversation.name.charAt(0).toUpperCase()}
+                    </div>
+                  ) : selectedConversation.photoURL ? (
+                    <img src={selectedConversation.photoURL} alt={selectedConversation.name} className="w-10 h-10 rounded-full" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg">
+                      {selectedConversation.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <h2 className="font-bold text-lg">{selectedConversation.name}</h2>
+                </>
+              ) : (
+                <h2 className="font-bold text-lg text-gray-400">Selecciona una conversación</h2>
+              )}
+            </div>
+            {selectedConversation && getCallTarget() && (
+              <button
+                onClick={() => handleCallMember(getCallTarget())}
+                disabled={inCall}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors flex items-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <span>Llamar</span>
+              </button>
+            )}
           </header>
-          <MessageList messages={messages} />
-          {(selectedChannelId || selectedDM) && socket && (
-            <MessageInput
-              socket={socket}
-              isDirectMessage={!!selectedDM}
-              conversationId={getCurrentConversationId()}
-              groupId={selectedGroup?.id}
-              members={getMembersForMessage()}
-            />
+          {selectedConversation ? (
+            <>
+              {isLoadingMessages ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
+                    <p className="text-gray-400">Cargando mensajes...</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <MessageList messages={messages} />
+                  {socket && (selectedChannelId || selectedConversation.type === 'dm') && (
+                    <MessageInput
+                      socket={socket}
+                      isDirectMessage={selectedConversation.type === 'dm'}
+                      conversationId={getCurrentConversationId()}
+                      groupId={selectedConversation.type === 'group' ? selectedConversation.groupData.id : null}
+                      members={getMembersForMessage()}
+                    />
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <svg className="w-24 h-24 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <p className="text-xl">Selecciona una conversación para empezar</p>
+              </div>
+            </div>
           )}
         </main>
-        {mainView === 'groups' && selectedGroup && <MembersList members={members} onCallMember={handleCallMember} currentUserId={currentUser.uid} isOwner={currentUser.uid === selectedGroup.ownerId} onAddMemberClick={() => setIsAddMemberModalOpen(true)} />}
+        {selectedConversation?.type === 'group' && (
+          <MembersList
+            members={members}
+            onCallMember={handleCallMember}
+            currentUserId={currentUser.uid}
+            isOwner={currentUser.uid === selectedConversation.groupData.ownerId}
+            onAddMemberClick={() => setIsAddMemberModalOpen(true)}
+          />
+        )}
       </div>
       <CreateGroupModal isOpen={isCreateGroupModalOpen} onClose={() => setIsCreateGroupModalOpen(false)} onCreate={handleCreateGroup} />
-      {selectedGroup && <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} onMemberAdded={handleMemberAdded} groupId={selectedGroup.id} />}
+      {selectedConversation?.type === 'group' && <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} onMemberAdded={loadAllData} groupId={selectedConversation.groupData.id} />}
       {showCallTypeModal && <CallTypeModal onSelectType={handleSelectCallType} onCancel={() => { setShowCallTypeModal(false); setSelectedMemberToCall(null); }} />}
       {showIncomingCallModal && incomingCallData && <IncomingCallModal callerName={incomingCallData.callerName} callType={incomingCallData.callType} onAccept={handleAcceptCall} onReject={handleRejectCall} />}
       {inCall && <VideoCallModal localStream={localStream} remoteStream={remoteStream} onHangUp={handleHangUp} callType={currentCallType} />}
