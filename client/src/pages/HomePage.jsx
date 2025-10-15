@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { initSocket } from '../lib/socket';
+import { cryptoService } from '../lib/cryptoService';
 import WebRTCService from '../lib/webrtcService';
 import CreateGroupModal from '../components/groups/CreateGroupModal';
 import MessageInput from '../components/chat/MessageInput';
@@ -36,53 +37,56 @@ const ChannelList = ({ channels, selectedChannelId, onSelectChannel }) => (
 );
 
 const MessageList = ({ messages }) => {
+  const { currentUser } = useAuth();
   const messagesEndRef = useRef(null);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const renderContent = (msg) => {
-    switch (msg.type) {
-      case 'image':
-        return (
-          <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
-            <img src={msg.fileUrl} alt={msg.content} className="mt-2 rounded-lg max-w-xs max-h-64" />
-          </a>
-        );
-      case 'file':
-        return (
-          <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center bg-gray-700 hover:bg-gray-600 p-2 rounded-lg">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            {msg.content}
-          </a>
-        );
-      default:
-        return <p className="text-gray-200 mt-1">{msg.content}</p>;
+    const encryptedDataForUser = msg.encryptedPayload[currentUser.uid];
+    if (!encryptedDataForUser) {
+      return <p className="text-gray-400 italic mt-1">[No tienes permiso para ver este mensaje]</p>;
+    }
+    const decryptedString = cryptoService.decrypt(encryptedDataForUser);
+    if (!decryptedString) {
+      return <p className="text-red-400 italic mt-1">[Error al descifrar el mensaje]</p>;
+    }
+    try {
+      const messageObject = JSON.parse(decryptedString);
+      switch (messageObject.type) {
+        case 'image':
+          return <a href={messageObject.fileUrl} target="_blank" rel="noopener noreferrer"><img src={messageObject.fileUrl} alt={messageObject.content} className="mt-2 rounded-lg max-w-xs max-h-64" /></a>;
+        case 'file':
+          return <a href={messageObject.fileUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center bg-gray-700 hover:bg-gray-600 p-2 rounded-lg"><svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>{messageObject.content}</a>;
+        default:
+          return <p className="text-gray-200 mt-1">{messageObject.content}</p>;
+      }
+    } catch (e) {
+      return <p className="text-red-400 italic mt-1">[Mensaje corrupto]</p>;
     }
   };
 
   return (
     <div className="flex-1 p-4 overflow-y-auto space-y-3">
-      {messages.length === 0 ? (
-        <div className="text-center text-gray-400 mt-8">
-          No hay mensajes aún. ¡Sé el primero en escribir!
-        </div>
-      ) : (
-        messages.map(msg => (
-          <div key={msg.id} className="flex items-start space-x-3">
-            <div className="flex-1">
-              <div className="flex items-baseline space-x-2">
-                <span className="font-semibold text-white">{msg.authorInfo.displayName}</span>
-                <span className="text-xs text-gray-400">
-                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+      {messages.map(msg => (
+        <div key={msg.id} className="flex items-start space-x-3">
+          <div className="flex-shrink-0">
+            {msg.authorInfo?.photoURL ? (
+              <img src={msg.authorInfo.photoURL} alt={msg.authorInfo.displayName} className="w-10 h-10 rounded-full" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold">
+                {msg.authorInfo?.displayName?.charAt(0).toUpperCase() || '?'}
               </div>
-              {renderContent(msg)}
-            </div>
+            )}
           </div>
-        ))
-      )}
+          <div className="flex-1">
+            <div className="flex items-baseline space-x-2">
+              <span className="font-semibold text-white">{msg.authorInfo?.displayName || 'Usuario'}</span>
+              <span className="text-xs text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            {renderContent(msg)}
+          </div>
+        </div>
+      ))}
       <div ref={messagesEndRef} />
     </div>
   );
@@ -133,14 +137,11 @@ const HomePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const previousChannelRef = useRef(null);
 
-  // Estados de WebRTC
   const [webrtc, setWebrtc] = useState(null);
   const [inCall, setInCall] = useState(false);
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [currentCallType, setCurrentCallType] = useState('video');
-
-  // Estados de modales
   const [showCallTypeModal, setShowCallTypeModal] = useState(false);
   const [showIncomingCallModal, setShowIncomingCallModal] = useState(false);
   const [incomingCallData, setIncomingCallData] = useState(null);
@@ -150,9 +151,7 @@ const HomePage = () => {
     if (!currentUser) return;
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch('http://localhost:3000/api/groups', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch('http://localhost:3000/api/groups', { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await response.json();
       setGroups(data);
       if (data.length > 0 && !selectedGroup) {
@@ -165,15 +164,12 @@ const HomePage = () => {
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
-  // Obtener canales
   useEffect(() => {
     const fetchChannels = async () => {
       if (!selectedGroup || !currentUser) return;
       try {
         const token = await currentUser.getIdToken();
-        const response = await fetch(`http://localhost:3000/api/groups/${selectedGroup}/channels`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(`http://localhost:3000/api/groups/${selectedGroup}/channels`, { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await response.json();
         setChannels(data);
         if (data.length > 0) {
@@ -189,15 +185,12 @@ const HomePage = () => {
     fetchChannels();
   }, [selectedGroup, currentUser]);
 
-  // Obtener miembros del grupo
   useEffect(() => {
     const fetchMembers = async () => {
       if (!selectedGroup || !currentUser) return;
       try {
         const token = await currentUser.getIdToken();
-        const response = await fetch(`http://localhost:3000/api/groups/${selectedGroup}/members`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch(`http://localhost:3000/api/groups/${selectedGroup}/members`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (response.ok) {
           const data = await response.json();
           setMembers(data);
@@ -209,7 +202,6 @@ const HomePage = () => {
     fetchMembers();
   }, [selectedGroup, currentUser]);
 
-  // Inicializar socket
   useEffect(() => {
     if (!currentUser) return;
     let socketInstance;
@@ -217,76 +209,67 @@ const HomePage = () => {
       socketInstance = await initSocket();
       if (socketInstance) {
         setSocket(socketInstance);
-        socketInstance.on('newMessage', (newMessage) => setMessages(prev => [...prev, newMessage]));
+        const { publicKey } = await cryptoService.generateAndStoreKeys();
+        socketInstance.emit('security:register-public-key', { publicKey });
+        socketInstance.on('encryptedMessage', (newMessage) => {
+          setMessages(prev => [...prev, newMessage]);
+        });
       }
     };
     connect();
-    return () => { if (socketInstance) socketInstance.disconnect(); };
+    return () => {
+      if (socketInstance) {
+        socketInstance.off('encryptedMessage');
+        socketInstance.disconnect();
+      }
+    };
   }, [currentUser]);
 
-  // Cargar mensajes del canal
   useEffect(() => {
-    const loadAndJoin = async () => {
+    const loadDataAndJoin = async () => {
       if (!selectedChannel || !socket || !currentUser) return;
+
       if (previousChannelRef.current) {
         socket.emit('leaveChannel', { channelId: previousChannelRef.current });
       }
       socket.emit('joinChannel', { groupId: selectedGroup, channelId: selectedChannel });
       previousChannelRef.current = selectedChannel;
+
       try {
         const token = await currentUser.getIdToken();
-        const response = await fetch(
-          `http://localhost:3000/api/groups/${selectedGroup}/channels/${selectedChannel}/messages`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const data = await response.json();
-        setMessages(data);
+        const response = await fetch(`http://localhost:3000/api/groups/${selectedGroup}/channels/${selectedChannel}/messages`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (response.ok) {
+          const historicalMessages = await response.json();
+          setMessages(historicalMessages);
+        } else {
+          setMessages([]);
+        }
       } catch (error) {
         console.error("Error al cargar mensajes:", error);
+        setMessages([]);
       }
     };
-    loadAndJoin();
+    loadDataAndJoin();
   }, [selectedChannel, selectedGroup, socket, currentUser]);
 
-  // Configurar WebRTC
   useEffect(() => {
     if (socket && currentUser) {
       const webrtcService = new WebRTCService(socket);
       setWebrtc(webrtcService);
-
-      // Manejar llamadas entrantes
       webrtcService.onIncomingCall = ({ from, offer, callType, callerName }) => {
         setIncomingCallData({ from, offer, callType, callerName });
         setShowIncomingCallModal(true);
       };
-
-      // Manejar stream remoto
-      webrtcService.onRemoteStream = (stream) => {
-        console.log('[WebRTC] Stream remoto recibido');
-        setRemoteStream(stream);
-      };
-
-      // Manejar fin de llamada
+      webrtcService.onRemoteStream = (stream) => setRemoteStream(stream);
       webrtcService.onCallEnded = () => {
-        console.log('[WebRTC] Llamada finalizada');
-        setInCall(false);
-        setLocalStream(null);
-        setRemoteStream(null);
-        setCurrentCallType('video');
+        setInCall(false); setLocalStream(null); setRemoteStream(null); setCurrentCallType('video');
       };
-
-      return () => {
-        webrtcService.cleanup();
-      };
+      return () => { webrtcService.cleanup(); };
     }
   }, [socket, currentUser]);
 
-  // Iniciar llamada
   const handleCallMember = (member) => {
-    if (inCall) {
-      alert('Ya estás en una llamada');
-      return;
-    }
+    if (inCall) return alert('Ya estás en una llamada');
     setSelectedMemberToCall(member);
     setShowCallTypeModal(true);
   };
@@ -294,49 +277,35 @@ const HomePage = () => {
   const handleSelectCallType = async (callType) => {
     setShowCallTypeModal(false);
     if (!selectedMemberToCall || !webrtc) return;
-
     try {
       setCurrentCallType(callType);
       const stream = await webrtc.startLocalStream(callType);
       setLocalStream(stream);
-
-      await webrtc.createOffer(
-        selectedMemberToCall.uid,
-        callType,
-        currentUser.displayName || 'Usuario'
-      );
-
+      await webrtc.createOffer(selectedMemberToCall.uid, callType, currentUser.displayName || 'Usuario');
       setInCall(true);
       setSelectedMemberToCall(null);
     } catch (error) {
       console.error('Error al iniciar llamada:', error);
-      alert('No se pudo acceder a la cámara/micrófono');
       setSelectedMemberToCall(null);
     }
   };
 
-  // Aceptar llamada entrante
   const handleAcceptCall = async () => {
     if (!incomingCallData || !webrtc) return;
-
     try {
       setCurrentCallType(incomingCallData.callType);
       const stream = await webrtc.startLocalStream(incomingCallData.callType);
       setLocalStream(stream);
-
       await webrtc.acceptCall(incomingCallData.from, incomingCallData.offer, incomingCallData.callType);
-
       setInCall(true);
       setShowIncomingCallModal(false);
       setIncomingCallData(null);
     } catch (error) {
       console.error('Error al aceptar llamada:', error);
-      alert('No se pudo acceder a la cámara/micrófono');
       handleRejectCall();
     }
   };
 
-  // Rechazar llamada entrante
   const handleRejectCall = () => {
     if (incomingCallData && webrtc) {
       webrtc.rejectCall(incomingCallData.from);
@@ -345,15 +314,14 @@ const HomePage = () => {
     setIncomingCallData(null);
   };
 
-  // Colgar llamada
   const handleHangUp = () => {
-    if (webrtc && incomingCallData) {
-      webrtc.hangUp(incomingCallData.from);
+    if (webrtc) {
+      const remoteId = incomingCallData?.from || selectedMemberToCall?.uid;
+      if (remoteId) webrtc.hangUp(remoteId);
     }
     setInCall(false);
     setLocalStream(null);
     setRemoteStream(null);
-    setCurrentCallType('video');
   };
 
   const handleCreateGroup = async (name) => {
@@ -374,85 +342,24 @@ const HomePage = () => {
   return (
     <>
       <div className="flex h-screen bg-gray-700 text-white">
-        <GroupList
-          groups={groups}
-          selectedGroupId={selectedGroup}
-          onSelectGroup={setSelectedGroup}
-          onCreateGroup={() => setIsModalOpen(true)}
-        />
-
-        <ChannelList
-          channels={channels}
-          selectedChannelId={selectedChannel}
-          onSelectChannel={setSelectedChannel}
-        />
-
+        <GroupList groups={groups} selectedGroupId={selectedGroup} onSelectGroup={setSelectedGroup} onCreateGroup={() => setIsModalOpen(true)} />
+        <ChannelList channels={channels} selectedChannelId={selectedChannel} onSelectChannel={setSelectedChannel} />
         <main className="flex flex-col flex-1">
-          <header className="p-4 bg-gray-700 shadow-md flex justify-between items-center border-b-2 border-gray-900">
-            <h2 className="font-bold">
-              {selectedChannel ? `# ${channels.find(c => c.id === selectedChannel)?.name}` : 'Selecciona un canal'}
-            </h2>
+          <header className="p-4 bg-gray-700 shadow-md border-b-2 border-gray-900">
+            <h2 className="font-bold">{selectedChannel ? `# ${channels.find(c => c.id === selectedChannel)?.name}` : 'Selecciona un canal'}</h2>
           </header>
-
           <MessageList messages={messages} />
-
           {selectedGroup && selectedChannel && socket && (
-            <MessageInput
-              socket={socket}
-              groupId={selectedGroup}
-              channelId={selectedChannel}
-              authorInfo={{
-                uid: currentUser.uid,
-                displayName: currentUser.displayName,
-                photoURL: currentUser.photoURL
-              }}
-            />
+            <MessageInput socket={socket} groupId={selectedGroup} channelId={selectedChannel} members={members} />
           )}
         </main>
-
-        {selectedGroup && (
-          <MembersList
-            members={members}
-            onCallMember={handleCallMember}
-            currentUserId={currentUser.uid}
-          />
-        )}
+        {selectedGroup && <MembersList members={members} onCallMember={handleCallMember} currentUserId={currentUser.uid} />}
       </div>
 
-      {/* Modales */}
-      {showCallTypeModal && (
-        <CallTypeModal
-          onSelectType={handleSelectCallType}
-          onCancel={() => {
-            setShowCallTypeModal(false);
-            setSelectedMemberToCall(null);
-          }}
-        />
-      )}
-
-      {showIncomingCallModal && incomingCallData && (
-        <IncomingCallModal
-          callerName={incomingCallData.callerName}
-          callType={incomingCallData.callType}
-          onAccept={handleAcceptCall}
-          onReject={handleRejectCall}
-        />
-      )}
-
-      {inCall && (
-        <VideoCallModal
-          localStream={localStream}
-          remoteStream={remoteStream}
-          onHangUp={handleHangUp}
-          callType={currentCallType}
-        />
-      )}
-
-      <CreateGroupModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreate={handleCreateGroup}
-      />
+      {showCallTypeModal && <CallTypeModal onSelectType={handleSelectCallType} onCancel={() => { setShowCallTypeModal(false); setSelectedMemberToCall(null); }} />}
+      {showIncomingCallModal && incomingCallData && <IncomingCallModal callerName={incomingCallData.callerName} callType={incomingCallData.callType} onAccept={handleAcceptCall} onReject={handleRejectCall} />}
+      {inCall && <VideoCallModal localStream={localStream} remoteStream={remoteStream} onHangUp={handleHangUp} callType={currentCallType} />}
+      <CreateGroupModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreate={handleCreateGroup} />
     </>
   );
 };
