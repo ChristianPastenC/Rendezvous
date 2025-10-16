@@ -10,6 +10,7 @@ import IncomingCallModal from '../components/chat/IncomingCallModal';
 import CallTypeModal from '../components/chat/CallTypeModal';
 import UserSearch from '../components/dms/UserSearch';
 import AddMemberModal from '../components/groups/AddMemberModal';
+import ProfileEditModal from '../components/user/UserPerfilModal';
 
 const Loader = () => (
   <div className="flex items-center justify-center h-screen bg-gray-900">
@@ -20,7 +21,7 @@ const Loader = () => (
   </div>
 );
 
-const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCreateGroup, onStartConversation }) => {
+const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCreateGroup, onStartConversation, onEditProfile }) => {
   const [filter, setFilter] = useState('all');
   const filteredConversations = conversations.filter(conv => {
     if (filter === 'all') return true;
@@ -60,6 +61,13 @@ const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCre
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
         <span>Crear Grupo</span>
       </button>
+      <div className="p-2 border-t border-gray-900 mt-auto">
+        <div className="flex items-center justify-between">
+          <button onClick={onEditProfile} className="p-2 rounded-lg hover:bg-gray-700" title="Editar Perfil">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </button>
+        </div>
+      </div>
     </aside>
   );
 };
@@ -159,6 +167,8 @@ const HomePage = () => {
   const [incomingCallData, setIncomingCallData] = useState(null);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
 
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
   const loadAllData = useCallback(async () => {
     if (!currentUser) return;
     setIsLoading(true);
@@ -206,11 +216,9 @@ const HomePage = () => {
       const conversationId = previousConversationId.current;
       if (!conversationId) return;
 
-      // Actualizar la caché de mensajes
       const updatedCache = [...(messagesCache.current[conversationId] || []), newMessage];
       messagesCache.current[conversationId] = updatedCache;
 
-      // Determinar el ID de la conversación actualmente seleccionada
       let selectedConvId = null;
       if (selectedConversation) {
         if (selectedConversation.type === 'dm') {
@@ -220,7 +228,6 @@ const HomePage = () => {
         }
       }
 
-      // Actualizar el estado de los mensajes solo si estamos viendo la conversación correcta
       if (conversationId === selectedConvId) {
         setMessages(prevMessages => [...prevMessages, newMessage]);
       }
@@ -254,7 +261,7 @@ const HomePage = () => {
           const channelsData = await channelsRes.json();
           if (channelsData.length > 0) {
             channelId = channelsData[0].id;
-            selectedConversation.groupData.channelId = channelId; // Cachear el ID del canal
+            selectedConversation.groupData.channelId = channelId;
           }
         }
         conversationId = channelId;
@@ -348,6 +355,10 @@ const HomePage = () => {
     return null;
   };
 
+  const handleProfileUpdate = () => {
+    loadAllData();
+  };
+
   if (isLoading) return <Loader />;
 
   return (
@@ -359,6 +370,7 @@ const HomePage = () => {
           onSelectConversation={handleSelectConversation}
           onCreateGroup={() => setIsCreateGroupModalOpen(true)}
           onStartConversation={handleStartConversation}
+          onEditProfile={() => setIsProfileModalOpen(true)}
         />
         <main className="flex flex-col flex-1">
           <header className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex justify-between items-center">
@@ -396,6 +408,11 @@ const HomePage = () => {
           />
         )}
       </div>
+      <ProfileEditModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onProfileUpdate={handleProfileUpdate}
+      />
       <CreateGroupModal isOpen={isCreateGroupModalOpen} onClose={() => setIsCreateGroupModalOpen(false)} onCreate={handleCreateGroup} />
       {selectedConversation?.type === 'group' && <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} onMemberAdded={loadAllData} groupId={selectedConversation.groupData.id} />}
       {showCallTypeModal && <CallTypeModal onSelectType={handleSelectCallType} onCancel={() => { setShowCallTypeModal(false); setSelectedMemberToCall(null); }} />}

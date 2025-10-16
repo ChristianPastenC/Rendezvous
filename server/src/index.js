@@ -36,6 +36,34 @@ app.post("/api/auth/sync", async (req, res) => {
   }
 });
 
+app.put("/api/users/profile", authMiddleware, async (req, res) => {
+  const { displayName, photoURL } = req.body;
+  const userId = req.user.uid;
+
+  if (!displayName || !displayName.trim()) {
+    return res.status(400).json({ error: "El nombre de usuario no puede estar vacío." });
+  }
+
+  try {
+    await auth.updateUser(userId, {
+      displayName: displayName.trim(),
+      photoURL: photoURL || null,
+    });
+
+    await db.collection('users').doc(userId).update({
+      displayName: displayName.trim(),
+      photoURL: photoURL || null,
+    });
+
+    console.log(`[Perfil] Usuario ${userId} actualizó su perfil.`);
+    res.status(200).json({ success: true, message: "Perfil actualizado correctamente." });
+
+  } catch (error) {
+    console.error("Error al actualizar perfil:", error);
+    res.status(500).json({ error: "No se pudo actualizar el perfil." });
+  }
+});
+
 app.get("/api/contacts", authMiddleware, async (req, res) => {
   const userId = req.user.uid;
   try {
