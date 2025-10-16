@@ -1,5 +1,6 @@
 import JSEncrypt from 'jsencrypt';
 import CryptoJS from 'crypto-js';
+import { auth } from './firebase'; // Importar auth directamente
 
 const KEY_SIZE = 2048;
 const STORAGE_KEY_PRIVATE = 'crypto_private_key';
@@ -10,6 +11,7 @@ class CryptoService {
     this.jsEncrypt = new JSEncrypt({ default_key_size: KEY_SIZE });
     this.privateKey = localStorage.getItem(STORAGE_KEY_PRIVATE);
     this.publicKey = localStorage.getItem(STORAGE_KEY_PUBLIC);
+    this.publicKeyCache = new Map();
 
     if (this.privateKey) {
       this.jsEncrypt.setPrivateKey(this.privateKey);
@@ -32,24 +34,39 @@ class CryptoService {
     return this.publicKey;
   }
 
+  async fetchPublicKey(userId) {
+    try {
+      if (this.publicKeyCache.has(userId)) {
+        return this.publicKeyCache.get(userId);
+      }
+
+      if (!auth.currentUser) throw new Error('Usuario no autenticado para obtener token.');
+      const token = await auth.currentUser.getIdToken();
+
+      const response = await fetch(`http://localhost:3000/api/users/${userId}/key`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      this.publicKeyCache.set(userId, data.publicKey);
+      return data.publicKey;
+    } catch (error) {
+      console.error(`[Crypto] Error al obtener clave pública de ${userId}:`, error);
+      return null;
+    }
+  }
+
   encrypt(text, recipientPublicKey) {
     try {
       const aesKey = CryptoJS.lib.WordArray.random(32).toString(CryptoJS.enc.Hex);
-
       const encryptedData = CryptoJS.AES.encrypt(text, aesKey).toString();
-
       const rsaEncryptor = new JSEncrypt();
       rsaEncryptor.setPublicKey(recipientPublicKey);
       const encryptedAesKey = rsaEncryptor.encrypt(aesKey);
-
-      if (!encryptedAesKey) {
-        throw new Error("RSA encryption of AES key failed.");
-      }
-
-      return JSON.stringify({
-        key: encryptedAesKey,
-        data: encryptedData,
-      });
+      if (!encryptedAesKey) throw new Error("RSA encryption of AES key failed.");
+      return JSON.stringify({ key: encryptedAesKey, data: encryptedData });
     } catch (error) {
       console.error("[Crypto] Hybrid encryption failed:", error);
       return null;
@@ -59,19 +76,11 @@ class CryptoService {
   decrypt(encryptedPayload) {
     try {
       const { key: encryptedAesKey, data: encryptedData } = JSON.parse(encryptedPayload);
-
       const aesKey = this.jsEncrypt.decrypt(encryptedAesKey);
-
-      if (!aesKey) {
-        return '[Error: No se pudo descifrar la clave del mensaje]';
-      }
-
+      if (!aesKey) return '[Error: No se pudo descifrar la clave del mensaje]';
       const bytes = CryptoJS.AES.decrypt(encryptedData, aesKey);
-      const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
-
-      return decryptedData;
+      return bytes.toString(CryptoJS.enc.Utf8);
     } catch (error) {
-      console.error("[Crypto] Hybrid decryption failed:", error);
       return '[Mensaje no se pudo descifrar]';
     }
   }
