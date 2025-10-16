@@ -20,9 +20,8 @@ const Loader = () => (
   </div>
 );
 
-const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCreateGroup, currentUserId, onStartConversation }) => {
+const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCreateGroup, onStartConversation }) => {
   const [filter, setFilter] = useState('all');
-
   const filteredConversations = conversations.filter(conv => {
     if (filter === 'all') return true;
     if (filter === 'dms') return conv.type === 'dm';
@@ -35,82 +34,30 @@ const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCre
       <div className="p-4 border-b border-gray-900">
         <h2 className="font-bold text-lg text-white mb-3">Conversaciones</h2>
         <div className="flex gap-2 mb-3">
-          <button
-            onClick={() => setFilter('all')}
-            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-          >
-            Todos
-          </button>
-          <button
-            onClick={() => setFilter('dms')}
-            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'dms' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-          >
-            Directos
-          </button>
-          <button
-            onClick={() => setFilter('groups')}
-            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'groups' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-          >
-            Grupos
-          </button>
+          <button onClick={() => setFilter('all')} className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>Todos</button>
+          <button onClick={() => setFilter('dms')} className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'dms' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>Directos</button>
+          <button onClick={() => setFilter('groups')} className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'groups' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>Grupos</button>
         </div>
         <UserSearch onSelectUser={onStartConversation} />
       </div>
-
       <div className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {filteredConversations.length === 0 ? (
-          <p className="text-gray-500 text-sm px-2 py-4 text-center">
-            {filter === 'all' ? 'No hay conversaciones. Busca usuarios o crea un grupo.' :
-              filter === 'dms' ? 'No hay mensajes directos.' :
-                'No hay grupos.'}
-          </p>
-        ) : (
-          filteredConversations.map(conv => (
-            <button
-              key={conv.id}
-              onClick={() => onSelectConversation(conv)}
-              className={`w-full text-left p-3 rounded-md flex items-center space-x-3 transition-colors ${selectedId === conv.id ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-700'
-                }`}
-            >
-              {conv.type === 'group' ? (
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
-                  {conv.name.charAt(0).toUpperCase()}
-                </div>
-              ) : conv.photoURL ? (
-                <img src={conv.photoURL} alt={conv.name} className="w-10 h-10 rounded-full flex-shrink-0" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
-                  {conv.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium truncate">{conv.name}</span>
-                  {conv.type === 'group' && (
-                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  )}
-                </div>
-                {conv.lastMessage && (
-                  <p className="text-xs text-gray-400 truncate mt-0.5">{conv.lastMessage}</p>
-                )}
-              </div>
-            </button>
-          ))
-        )}
+        {filteredConversations.map(conv => (
+          <button key={conv.id} onClick={() => onSelectConversation(conv)} className={`w-full text-left p-3 rounded-md flex items-center space-x-3 transition-colors ${selectedId === conv.id ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}>
+            {conv.type === 'group' ? (
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">{conv.name.charAt(0).toUpperCase()}</div>
+            ) : conv.photoURL ? (
+              <img src={conv.photoURL} alt={conv.name} className="w-10 h-10 rounded-full flex-shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg flex-shrink-0">{conv.name.charAt(0).toUpperCase()}</div>
+            )}
+            <div className="flex-1 min-w-0">
+              <span className="font-medium truncate">{conv.name}</span>
+            </div>
+          </button>
+        ))}
       </div>
-
-      <button
-        onClick={onCreateGroup}
-        className="m-3 p-3 rounded-md bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 font-semibold"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
+      <button onClick={onCreateGroup} className="m-3 p-3 rounded-md bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 font-semibold">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
         <span>Crear Grupo</span>
       </button>
     </aside>
@@ -123,7 +70,7 @@ const MessageList = ({ messages }) => {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const renderContent = (msg) => {
-    const encryptedDataForUser = msg.encryptedPayload[currentUser.uid];
+    const encryptedDataForUser = msg.encryptedPayload?.[currentUser.uid];
     if (!encryptedDataForUser) return <p className="text-gray-400 italic mt-1">[No tienes permiso para ver este mensaje]</p>;
     const decryptedString = cryptoService.decrypt(encryptedDataForUser);
     if (!decryptedString) return <p className="text-red-400 italic mt-1">[Error al descifrar]</p>;
@@ -146,9 +93,20 @@ const MessageList = ({ messages }) => {
     <div className="flex-1 p-4 overflow-y-auto space-y-3">
       {messages.map(msg => (
         <div key={msg.id} className="flex items-start space-x-3">
-          <div className="flex-shrink-0">{msg.authorInfo?.photoURL ? <img src={msg.authorInfo.photoURL} alt={msg.authorInfo.displayName} className="w-10 h-10 rounded-full" /> : <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold">{msg.authorInfo?.displayName?.charAt(0).toUpperCase() || '?'}</div>}</div>
+          <div className="flex-shrink-0">
+            {msg.authorInfo?.photoURL ? (
+              <img src={msg.authorInfo.photoURL} alt={msg.authorInfo.displayName} className="w-10 h-10 rounded-full" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold">
+                {msg.authorInfo?.displayName?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
+          </div>
           <div className="flex-1">
-            <div className="flex items-baseline space-x-2"><span className="font-semibold text-white">{msg.authorInfo?.displayName || 'Usuario'}</span><span className="text-xs text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+            <div className="flex items-baseline space-x-2">
+              <span className="font-semibold text-white">{msg.authorInfo?.displayName || 'Usuario'}</span>
+              <span className="text-xs text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
             {renderContent(msg)}
           </div>
         </div>
@@ -165,30 +123,14 @@ const MembersList = ({ members, onCallMember, currentUserId, onAddMemberClick, i
       {members.map(member => (
         <div key={member.uid} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-700 transition-colors">
           <div className="flex items-center space-x-2 flex-1 min-w-0">
-            {member.photoURL ? (
-              <img src={member.photoURL} alt={member.displayName} className="w-8 h-8 rounded-full flex-shrink-0" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm flex-shrink-0">
-                {member.displayName?.charAt(0).toUpperCase() || '?'}
-              </div>
-            )}
+            {member.photoURL ? (<img src={member.photoURL} alt={member.displayName} className="w-8 h-8 rounded-full flex-shrink-0" />) : (<div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm flex-shrink-0">{member.displayName?.charAt(0).toUpperCase() || '?'}</div>)}
             <span className="text-gray-200 text-sm truncate">{member.displayName}</span>
           </div>
-          {member.uid !== currentUserId && (
-            <button onClick={() => onCallMember(member)} className="p-1 hover:bg-gray-600 rounded" title="Llamar">
-              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-            </button>
-          )}
+          {member.uid !== currentUserId && (<button onClick={() => onCallMember(member)} className="p-1 hover:bg-gray-600 rounded" title="Llamar"><svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></button>)}
         </div>
       ))}
     </div>
-    {isOwner && (
-      <button onClick={onAddMemberClick} className="mt-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold w-full transition-colors">
-        Añadir Miembro
-      </button>
-    )}
+    {isOwner && (<button onClick={onAddMemberClick} className="mt-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold w-full transition-colors">Añadir Miembro</button>)}
   </aside>
 );
 
@@ -196,21 +138,16 @@ const HomePage = () => {
   const { currentUser } = useAuth();
   const [socket, setSocket] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [members, setMembers] = useState([]);
-  const [contacts, setContacts] = useState([]);
   const [conversations, setConversations] = useState([]);
+  const [members, setMembers] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
-  const [selectedChannelId, setSelectedChannelId] = useState(null);
-  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
-  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const previousConversationId = useRef(null);
-
   const messagesCache = useRef({});
   const membersCache = useRef({});
-  const channelCache = useRef({});
 
   const [webrtc, setWebrtc] = useState(null);
   const [inCall, setInCall] = useState(false);
@@ -222,98 +159,30 @@ const HomePage = () => {
   const [incomingCallData, setIncomingCallData] = useState(null);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
 
-  const fetchGroups = useCallback(async () => {
-    if (!currentUser) return [];
-    const token = await currentUser.getIdToken();
-    const response = await fetch('http://localhost:3000/api/groups', { headers: { 'Authorization': `Bearer ${token}` } });
-    const data = await response.json();
-    return data;
-  }, [currentUser]);
-
-  const fetchContacts = useCallback(async () => {
-    if (!currentUser) return [];
-    const token = await currentUser.getIdToken();
-    const response = await fetch('http://localhost:3000/api/contacts', { headers: { 'Authorization': `Bearer ${token}` } });
-    const data = await response.json();
-    return data;
-  }, [currentUser]);
-
   const loadAllData = useCallback(async () => {
+    if (!currentUser) return;
     setIsLoading(true);
     try {
-      const [groupsData, contactsData] = await Promise.all([fetchGroups(), fetchContacts()]);
-      setGroups(groupsData);
-      setContacts(contactsData);
-
+      const token = await currentUser.getIdToken();
+      const [groupsRes, contactsRes] = await Promise.all([
+        fetch('http://localhost:3000/api/groups', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('http://localhost:3000/api/contacts', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      const groupsData = await groupsRes.json();
+      const contactsData = await contactsRes.json();
       const unifiedConversations = [
-        ...contactsData.map(contact => ({
-          id: `dm_${contact.uid}`,
-          type: 'dm',
-          name: contact.displayName,
-          photoURL: contact.photoURL,
-          userData: contact,
-          lastMessage: null
-        })),
-        ...groupsData.map(group => ({
-          id: `group_${group.id}`,
-          type: 'group',
-          name: group.name,
-          groupData: group,
-          lastMessage: null
-        }))
+        ...contactsData.map(contact => ({ id: `dm_${contact.uid}`, type: 'dm', name: contact.displayName, photoURL: contact.photoURL, userData: contact })),
+        ...groupsData.map(group => ({ id: `group_${group.id}`, type: 'group', name: group.name, groupData: group }))
       ];
-
       setConversations(unifiedConversations);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchGroups, fetchContacts]);
+  }, [currentUser]);
 
   useEffect(() => { loadAllData(); }, [loadAllData]);
-
-  useEffect(() => {
-    if (!selectedConversation || !currentUser) return;
-    const fetchConversationData = async () => {
-      if (selectedConversation.type === 'group') {
-        const groupId = selectedConversation.groupData.id;
-
-        if (channelCache.current[groupId]) {
-          setSelectedChannelId(channelCache.current[groupId]);
-        } else {
-          const token = await currentUser.getIdToken();
-          const channelsRes = await fetch(`http://localhost:3000/api/groups/${groupId}/channels`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const channelsData = await channelsRes.json();
-
-          if (channelsData.length > 0) {
-            channelCache.current[groupId] = channelsData[0].id;
-            setSelectedChannelId(channelsData[0].id);
-          } else {
-            setSelectedChannelId(null);
-          }
-        }
-
-        if (membersCache.current[groupId]) {
-          setMembers(membersCache.current[groupId]);
-        } else {
-          const token = await currentUser.getIdToken();
-          const membersRes = await fetch(`http://localhost:3000/api/groups/${groupId}/members`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const membersData = await membersRes.json();
-          membersCache.current[groupId] = membersData;
-          setMembers(membersData);
-        }
-      } else {
-        setMembers([]);
-        setSelectedChannelId(null);
-      }
-    };
-    fetchConversationData();
-  }, [selectedConversation, currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -324,88 +193,36 @@ const HomePage = () => {
         setSocket(socketInstance);
         const { publicKey } = await cryptoService.generateAndStoreKeys();
         socketInstance.emit('security:register-public-key', { publicKey });
-        socketInstance.on('encryptedMessage', (newMessage) => setMessages(prev => [...prev, newMessage]));
       }
     };
     connect();
-    return () => { if (socketInstance) { socketInstance.off('encryptedMessage'); socketInstance.disconnect(); } };
+    return () => { if (socketInstance) socketInstance.disconnect(); };
   }, [currentUser]);
-
-  useEffect(() => {
-    const loadDataAndJoin = async () => {
-      if (!socket || !currentUser || !selectedConversation) {
-        setMessages([]);
-        setIsLoadingMessages(false);
-        return;
-      }
-
-      if (previousConversationId.current) {
-        socket.emit('leaveChannel', { conversationId: previousConversationId.current });
-      }
-
-      let conversationId, endpoint, isDirectMessage = selectedConversation.type === 'dm';
-
-      if (selectedConversation.type === 'dm') {
-        conversationId = [currentUser.uid, selectedConversation.userData.uid].sort().join('_');
-        endpoint = `/api/dms/${conversationId}/messages`;
-      } else if (selectedConversation.type === 'group' && selectedChannelId) {
-        conversationId = selectedChannelId;
-        endpoint = `/api/groups/${selectedConversation.groupData.id}/channels/${selectedChannelId}/messages`;
-      } else {
-        setMessages([]);
-        return;
-      }
-
-      setMessages([]);
-      setIsLoadingMessages(true);
-
-      socket.emit('joinChannel', { conversationId, isDirectMessage });
-      previousConversationId.current = conversationId;
-
-      if (messagesCache.current[conversationId]) {
-        setMessages(messagesCache.current[conversationId]);
-        setIsLoadingMessages(false);
-      } else {
-        const token = await currentUser.getIdToken();
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-          const messagesData = await response.json();
-          messagesCache.current[conversationId] = messagesData;
-          setMessages(messagesData);
-        } else {
-          setMessages([]);
-        }
-        setIsLoadingMessages(false);
-      }
-    };
-    loadDataAndJoin();
-  }, [selectedConversation, selectedChannelId, socket, currentUser]);
-
-  useEffect(() => {
-    if (socket && currentUser) {
-      const webrtcService = new WebRTCService(socket);
-      setWebrtc(webrtcService);
-      webrtcService.onIncomingCall = ({ from, offer, callType, callerName }) => { setIncomingCallData({ from, offer, callType, callerName }); setShowIncomingCallModal(true); };
-      webrtcService.onRemoteStream = (stream) => setRemoteStream(stream);
-      webrtcService.onCallEnded = () => { setInCall(false); setLocalStream(null); setRemoteStream(null); setCurrentCallType('video'); };
-      return () => { webrtcService.cleanup(); };
-    }
-  }, [socket, currentUser]);
 
   useEffect(() => {
     if (!socket) return;
 
     const handleNewMessage = (newMessage) => {
       const conversationId = previousConversationId.current;
-      if (conversationId) {
-        messagesCache.current[conversationId] = [
-          ...(messagesCache.current[conversationId] || []),
-          newMessage
-        ];
-        setMessages(prev => [...prev, newMessage]);
+      if (!conversationId) return;
+
+      // Actualizar la caché de mensajes
+      const updatedCache = [...(messagesCache.current[conversationId] || []), newMessage];
+      messagesCache.current[conversationId] = updatedCache;
+
+      // Determinar el ID de la conversación actualmente seleccionada
+      let selectedConvId = null;
+      if (selectedConversation) {
+        if (selectedConversation.type === 'dm') {
+          selectedConvId = [currentUser.uid, selectedConversation.userData.uid].sort().join('_');
+        } else if (selectedConversation.type === 'group') {
+          selectedConvId = selectedConversation.groupData.channelId;
+        }
+      }
+
+      // Actualizar el estado de los mensajes solo si estamos viendo la conversación correcta
+      if (conversationId === selectedConvId) {
+        setMessages(prevMessages => [...prevMessages, newMessage]);
       }
     };
 
@@ -414,26 +231,85 @@ const HomePage = () => {
     return () => {
       socket.off('encryptedMessage', handleNewMessage);
     };
-  }, [socket]);
+  }, [socket, currentUser, selectedConversation]);
 
-  const handleSelectConversation = (conv) => {
-    setMessages([]);
-    setIsLoadingMessages(true);
-    setSelectedConversation(conv);
-  };
+  useEffect(() => {
+    const loadConversation = async () => {
+      if (!selectedConversation || !currentUser) { setMessages([]); setMembers([]); return; }
+      setIsLoadingMessages(true);
+
+      let conversationId, membersToSet = [];
+      let isDirectMessage = selectedConversation.type === 'dm';
+
+      if (isDirectMessage) {
+        conversationId = [currentUser.uid, selectedConversation.userData.uid].sort().join('_');
+        membersToSet = [currentUser, selectedConversation.userData];
+      } else {
+        const groupId = selectedConversation.groupData.id;
+        let channelId = selectedConversation.groupData.channelId;
+
+        if (!channelId) {
+          const token = await currentUser.getIdToken();
+          const channelsRes = await fetch(`http://localhost:3000/api/groups/${groupId}/channels`, { headers: { 'Authorization': `Bearer ${token}` } });
+          const channelsData = await channelsRes.json();
+          if (channelsData.length > 0) {
+            channelId = channelsData[0].id;
+            selectedConversation.groupData.channelId = channelId; // Cachear el ID del canal
+          }
+        }
+        conversationId = channelId;
+
+        if (membersCache.current[groupId]) {
+          membersToSet = membersCache.current[groupId];
+        } else {
+          const token = await currentUser.getIdToken();
+          const membersRes = await fetch(`http://localhost:3000/api/groups/${groupId}/members`, { headers: { 'Authorization': `Bearer ${token}` } });
+          membersToSet = await membersRes.json();
+          membersCache.current[groupId] = membersToSet;
+        }
+      }
+
+      setMembers(membersToSet);
+
+      if (previousConversationId.current) socket?.emit('leaveChannel', { conversationId: previousConversationId.current });
+      if (conversationId) {
+        socket?.emit('joinChannel', { conversationId });
+        previousConversationId.current = conversationId;
+
+        if (messagesCache.current[conversationId]) {
+          setMessages(messagesCache.current[conversationId]);
+        } else {
+          const token = await currentUser.getIdToken();
+          const endpoint = isDirectMessage ? `/api/dms/${conversationId}/messages` : `/api/groups/${selectedConversation.groupData.id}/channels/${conversationId}/messages`;
+          const response = await fetch(`http://localhost:3000${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
+          const messagesData = response.ok ? await response.json() : [];
+          messagesCache.current[conversationId] = messagesData;
+          setMessages(messagesData);
+        }
+      }
+      setIsLoadingMessages(false);
+    };
+    loadConversation();
+  }, [selectedConversation, currentUser, socket]);
+
+  useEffect(() => {
+    if (socket && currentUser) {
+      const webrtcService = new WebRTCService(socket);
+      setWebrtc(webrtcService);
+      webrtcService.onIncomingCall = ({ from, offer, callType, callerName }) => { setIncomingCallData({ from, offer, callType, callerName }); setShowIncomingCallModal(true); };
+      webrtcService.onRemoteStream = (stream) => setRemoteStream(stream);
+      webrtcService.onCallEnded = () => { setInCall(false); setLocalStream(null); setRemoteStream(null); };
+      return () => { webrtcService.cleanup(); };
+    }
+  }, [socket, currentUser]);
+
+  const handleSelectConversation = (conv) => { setSelectedConversation(conv); };
   const handleStartConversation = (user) => {
     const existingConv = conversations.find(c => c.type === 'dm' && c.userData.uid === user.uid);
     if (existingConv) {
       setSelectedConversation(existingConv);
     } else {
-      const newConv = {
-        id: `dm_${user.uid}`,
-        type: 'dm',
-        name: user.displayName,
-        photoURL: user.photoURL,
-        userData: user,
-        lastMessage: null
-      };
+      const newConv = { id: `dm_${user.uid}`, type: 'dm', name: user.displayName, photoURL: user.photoURL, userData: user };
       setConversations(prev => [newConv, ...prev]);
       setSelectedConversation(newConv);
     }
@@ -443,19 +319,13 @@ const HomePage = () => {
   const handleSelectCallType = async (callType) => { setShowCallTypeModal(false); if (!selectedMemberToCall || !webrtc) return; try { setCurrentCallType(callType); const stream = await webrtc.startLocalStream(callType); setLocalStream(stream); await webrtc.createOffer(selectedMemberToCall.uid, callType, currentUser.displayName || 'Usuario'); setInCall(true); } catch (e) { setSelectedMemberToCall(null); } };
   const handleAcceptCall = async () => { if (!incomingCallData || !webrtc) return; try { setCurrentCallType(incomingCallData.callType); const stream = await webrtc.startLocalStream(incomingCallData.callType); setLocalStream(stream); await webrtc.acceptCall(incomingCallData.from, incomingCallData.offer, incomingCallData.callType); setInCall(true); setShowIncomingCallModal(false); setIncomingCallData(null); } catch (e) { handleRejectCall(); } };
   const handleRejectCall = () => { if (incomingCallData && webrtc) webrtc.rejectCall(incomingCallData.from); setShowIncomingCallModal(false); setIncomingCallData(null); };
-  const handleHangUp = () => { if (webrtc) { const remoteId = incomingCallData?.from || selectedMemberToCall?.uid; if (remoteId) webrtc.hangUp(remoteId); } setInCall(false); setLocalStream(null); setRemoteStream(null); };
+  const handleHangUp = () => { if (webrtc) { const remoteId = incomingCallData?.from || selectedMemberToCall?.uid; if (remoteId) webrtc.hangUp(remoteId); } };
   const handleCreateGroup = async (name, memberIds) => {
     const token = await currentUser.getIdToken();
-    const response = await fetch('http://localhost:3000/api/groups', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ name, memberIds })
-    });
+    const response = await fetch('http://localhost:3000/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name, memberIds }) });
     if (response.ok) {
       setIsCreateGroupModalOpen(false);
-      messagesCache.current = {};
-      membersCache.current = {};
-      channelCache.current = {};
+      messagesCache.current = {}; membersCache.current = {};
       await loadAllData();
     } else {
       alert('Error al crear el grupo.');
@@ -469,7 +339,7 @@ const HomePage = () => {
 
   const getCurrentConversationId = () => {
     if (selectedConversation?.type === 'dm') return [currentUser.uid, selectedConversation.userData.uid].sort().join('_');
-    return selectedChannelId;
+    return selectedConversation?.groupData?.channelId;
   };
 
   const getCallTarget = () => {
@@ -478,9 +348,7 @@ const HomePage = () => {
     return null;
   };
 
-  if (isLoading) {
-    return <Loader />;
-  }
+  if (isLoading) return <Loader />;
 
   return (
     <>
@@ -490,57 +358,19 @@ const HomePage = () => {
           selectedId={selectedConversation?.id}
           onSelectConversation={handleSelectConversation}
           onCreateGroup={() => setIsCreateGroupModalOpen(true)}
-          currentUserId={currentUser.uid}
           onStartConversation={handleStartConversation}
         />
         <main className="flex flex-col flex-1">
           <header className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              {selectedConversation ? (
-                <>
-                  {selectedConversation.type === 'group' ? (
-                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">
-                      {selectedConversation.name.charAt(0).toUpperCase()}
-                    </div>
-                  ) : selectedConversation.photoURL ? (
-                    <img src={selectedConversation.photoURL} alt={selectedConversation.name} className="w-10 h-10 rounded-full" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg">
-                      {selectedConversation.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <h2 className="font-bold text-lg">{selectedConversation.name}</h2>
-                </>
-              ) : (
-                <h2 className="font-bold text-lg text-gray-400">Selecciona una conversación</h2>
-              )}
-            </div>
-            {selectedConversation && getCallTarget() && (
-              <button
-                onClick={() => handleCallMember(getCallTarget())}
-                disabled={inCall}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                <span>Llamar</span>
-              </button>
-            )}
+            <div className="flex items-center space-x-3">{selectedConversation ? (<>{selectedConversation.type === 'group' ? (<div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">{selectedConversation.name.charAt(0).toUpperCase()}</div>) : selectedConversation.photoURL ? (<img src={selectedConversation.photoURL} alt={selectedConversation.name} className="w-10 h-10 rounded-full" />) : (<div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg">{selectedConversation.name.charAt(0).toUpperCase()}</div>)}<h2 className="font-bold text-lg">{selectedConversation.name}</h2></>) : (<h2 className="font-bold text-lg text-gray-400">Selecciona una conversación</h2>)}</div>
+            {selectedConversation && getCallTarget() && (<button onClick={() => handleCallMember(getCallTarget())} disabled={inCall} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg font-semibold"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></button>)}
           </header>
           {selectedConversation ? (
             <>
-              {isLoadingMessages ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
-                    <p className="text-gray-400">Cargando mensajes...</p>
-                  </div>
-                </div>
-              ) : (
+              {isLoadingMessages ? (<div className="flex-1 flex items-center justify-center"><div className="text-center"><div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div><p className="text-gray-400">Cargando mensajes...</p></div></div>) : (
                 <>
                   <MessageList messages={messages} />
-                  {socket && (selectedChannelId || selectedConversation.type === 'dm') && (
+                  {socket && (
                     <MessageInput
                       socket={socket}
                       isDirectMessage={selectedConversation.type === 'dm'}
@@ -553,14 +383,7 @@ const HomePage = () => {
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <svg className="w-24 h-24 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                <p className="text-xl">Selecciona una conversación para empezar</p>
-              </div>
-            </div>
+            <div className="flex-1 flex items-center justify-center"><div className="text-center text-gray-500"><svg className="w-24 h-24 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg><p className="text-xl">Selecciona una conversación para empezar</p></div></div>
           )}
         </main>
         {selectedConversation?.type === 'group' && (

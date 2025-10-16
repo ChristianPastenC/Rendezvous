@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { cryptoService } from '../../lib/cryptoService';
 import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import ImagePreviewModal from './ImagePreviewModal';
-import EmojiPicker from 'emoji-picker-react'; // Importar la librería
+import EmojiPicker from 'emoji-picker-react';
 
 const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, members }) => {
   const { currentUser } = useAuth();
@@ -12,8 +12,25 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
   const [sending, setSending] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewData, setPreviewData] = useState(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false); // Estado para el picker
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   const encryptAndSendMessage = async (messageObject) => {
     setSending(true);
@@ -91,7 +108,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     <>
       <div className="relative p-4 bg-gray-800 border-t border-gray-900">
         {showEmojiPicker && (
-          <div className="absolute bottom-full mb-2">
+          <div ref={emojiPickerRef} className="absolute bottom-full mb-2">
             <EmojiPicker
               onEmojiClick={onEmojiClick}
               theme="dark"
