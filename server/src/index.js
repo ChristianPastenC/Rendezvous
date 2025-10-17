@@ -17,6 +17,21 @@ const userSocketMap = {};
 app.use(cors());
 app.use(express.json());
 
+const processUserDoc = (doc) => {
+  if (!doc.exists) return null;
+  const data = doc.data();
+  const lastSeenTimestamp = data.lastSeen;
+  return {
+    uid: doc.id,
+    displayName: data.displayName || 'Usuario',
+    email: data.email,
+    photoURL: data.photoURL || null,
+    publicKey: data.publicKey || null,
+    status: data.status || 'offline',
+    lastSeen: lastSeenTimestamp ? lastSeenTimestamp.toDate().toISOString() : null,
+  };
+};
+
 app.post("/api/auth/sync", async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: "Token no proporcionado." });
@@ -26,7 +41,15 @@ app.post("/api/auth/sync", async (req, res) => {
     const userRef = db.collection("users").doc(uid);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
-      await userRef.set({ displayName: name, email, photoURL: picture || null, createdAt: FieldValue.serverTimestamp(), publicKey: null }, { merge: true });
+      await userRef.set({
+        displayName: name,
+        email,
+        photoURL: picture || null,
+        createdAt: FieldValue.serverTimestamp(),
+        publicKey: null,
+        status: 'offline',
+        lastSeen: null
+      }, { merge: true });
     } else {
       await userRef.update({ displayName: name, photoURL: picture || (userDoc.data() && userDoc.data().photoURL) || null });
     }
@@ -68,23 +91,14 @@ app.get("/api/contacts", authMiddleware, async (req, res) => {
   const userId = req.user.uid;
   try {
     const contactsSnapshot = await db.collection('users').doc(userId).collection('contacts').orderBy('lastActivity', 'desc').get();
+    if (contactsSnapshot.empty) return res.status(200).json([]);
 
-    if (contactsSnapshot.empty) {
-      return res.status(200).json([]);
-    }
-
-    const userPromises = contactsSnapshot.docs.map(doc =>
-      db.collection('users').doc(doc.id).get()
-    );
-
+    const userPromises = contactsSnapshot.docs.map(doc => db.collection('users').doc(doc.id).get());
     const userDocs = await Promise.all(userPromises);
 
     const contactsData = userDocs
-      .filter(doc => doc.exists)
-      .map(doc => ({
-        uid: doc.id,
-        ...doc.data()
-      }));
+      .map(processUserDoc)
+      .filter(u => u !== null);
 
     res.status(200).json(contactsData);
   } catch (error) {
@@ -195,15 +209,10 @@ app.get("/api/groups/:groupId/members", authMiddleware, async (req, res) => {
       return res.status(403).json({ error: "No tienes permiso para ver estos miembros." });
     }
     const memberIds = groupDoc.data().members || [];
-    const membersPromises = memberIds.map(async (memberId) => {
-      const userDoc = await db.collection('users').doc(memberId).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        return { uid: memberId, displayName: userData.displayName || 'Usuario', photoURL: userData.photoURL || null, email: userData.email || null };
-      }
-      return null;
-    });
-    const members = (await Promise.all(membersPromises)).filter(m => m !== null);
+    const membersPromises = memberIds.map(id => db.collection('users').doc(id).get());
+    const memberDocs = await Promise.all(membersPromises);
+    const members = memberDocs.map(processUserDoc).filter(m => m !== null);
+
     res.status(200).json(members);
   } catch (error) {
     res.status(500).json({ error: "Error al obtener miembros." });
@@ -222,13 +231,22 @@ app.get("/api/users/search", authMiddleware, async (req, res) => {
     const nameQuery = db.collection('users').where('displayName', '>=', query).where('displayName', '<=', query + '\uf8ff');
     const [emailSnapshot, nameSnapshot] = await Promise.all([emailQuery.get(), nameQuery.get()]);
     const usersMap = new Map();
-    emailSnapshot.docs.forEach(doc => { if (doc.id !== currentUserUid) { usersMap.set(doc.id, { uid: doc.id, ...doc.data() }); } });
-    nameSnapshot.docs.forEach(doc => { if (doc.id !== currentUserUid) { usersMap.set(doc.id, { uid: doc.id, ...doc.data() }); } });
+    const processSnapshot = (snapshot) => {
+      snapshot.docs.forEach(doc => {
+        if (doc.id !== currentUserUid) {
+          const userData = processUserDoc(doc);
+          if (userData) usersMap.set(doc.id, userData);
+        }
+      });
+    };
+    processSnapshot(emailSnapshot);
+    processSnapshot(nameSnapshot);
     res.status(200).json(Array.from(usersMap.values()));
   } catch (error) {
     res.status(500).json({ error: "Error interno del servidor." });
   }
 });
+
 
 app.post("/api/groups/:groupId/members", authMiddleware, async (req, res) => {
   const { groupId } = req.params;
