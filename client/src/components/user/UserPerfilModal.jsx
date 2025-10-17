@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
-const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate }) => {
+const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate, onAccountDelete }) => {
   const { currentUser } = useAuth();
   const [displayName, setDisplayName] = useState(currentUser.displayName || '');
   const [photoFile, setPhotoFile] = useState(null);
@@ -119,6 +119,18 @@ const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate }) => {
           <button onClick={onClose} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500">Cancelar</button>
           <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
             {isUploading ? 'Subiendo...' : (isSaving ? 'Guardando...' : 'Guardar Cambios')}
+          </button>
+        </div>
+        <div className="border-t border-red-500/30 mt-6 pt-4">
+          <h3 className="font-bold text-lg text-red-400">Zona de Peligro</h3>
+          <p className="text-sm text-gray-400 mt-1">
+            La eliminación de tu cuenta es una acción permanente y no se puede deshacer.
+          </p>
+          <button
+            onClick={onAccountDelete}
+            className="w-full mt-3 px-4 py-2 rounded bg-red-600 hover:bg-red-500 font-semibold transition-colors"
+          >
+            Eliminar mi cuenta
           </button>
         </div>
       </div>

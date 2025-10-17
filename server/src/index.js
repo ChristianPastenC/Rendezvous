@@ -87,6 +87,41 @@ app.put("/api/users/profile", authMiddleware, async (req, res) => {
   }
 });
 
+app.delete("/api/users/me", authMiddleware, async (req, res) => {
+  const userId = req.user.uid;
+  console.log(`[Eliminación] Solicitud para eliminar usuario ${userId}`);
+
+  try {
+    const batch = db.batch();
+
+    const groupsSnapshot = await db.collection('groups').where('members', 'array-contains', userId).get();
+    if (!groupsSnapshot.empty) {
+      groupsSnapshot.forEach(doc => {
+        console.log(`[Eliminación] Quitando a ${userId} del grupo ${doc.id}`);
+        const groupRef = db.collection('groups').doc(doc.id);
+        batch.update(groupRef, { members: FieldValue.arrayRemove(userId) });
+      });
+    }
+
+    const userDocRef = db.collection('users').doc(userId);
+    batch.delete(userDocRef);
+    console.log(`[Eliminación] Documento de Firestore para ${userId} marcado para borrado.`);
+
+    await batch.commit();
+    console.log(`[Eliminación] Limpieza de Firestore completada para ${userId}.`);
+
+    await auth.deleteUser(userId);
+    console.log(`[Eliminación] Usuario ${userId} eliminado de Firebase Auth exitosamente.`);
+
+    res.status(200).json({ success: true, message: "Cuenta eliminada correctamente." });
+
+  } catch (error) {
+    console.error(`Error al eliminar la cuenta de ${userId}:`, error);
+    res.status(500).json({ error: "No se pudo eliminar la cuenta. Por favor, inténtalo de nuevo." });
+  }
+});
+
+
 app.get("/api/contacts", authMiddleware, async (req, res) => {
   const userId = req.user.uid;
   try {

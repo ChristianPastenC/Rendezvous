@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
 import { initSocket } from '../lib/socket';
 import { cryptoService } from '../lib/cryptoService';
 import WebRTCService from '../lib/webrtcService';
@@ -179,7 +181,8 @@ const MembersList = ({ members, onCallMember, currentUserId, onAddMemberClick, i
 );
 
 const HomePage = () => {
-  const { currentUser } = useAuth();
+  // --- MODIFICADO: Obtener 'logout' del contexto de autenticación ---
+  const { currentUser, logout } = useAuth();
   const [socket, setSocket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [conversations, setConversations] = useState([]);
@@ -441,6 +444,35 @@ const HomePage = () => {
     loadAllData();
   };
 
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar tu cuenta permanentemente? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('http://localhost:3000/api/users/me', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('Tu cuenta ha sido eliminada exitosamente.');
+        await signOut(auth);
+        navigate("/auth");
+        window.location.reload();
+      } else {
+        const { error } = await response.json();
+        alert(`Error al eliminar la cuenta: ${error}`);
+      }
+    } catch (error) {
+      console.error('Error en el proceso de eliminación:', error);
+      alert('Ocurrió un error de red. Inténtalo de nuevo.');
+    }
+  };
+
+
   if (isLoading) return <Loader />;
 
   return (
@@ -457,37 +489,34 @@ const HomePage = () => {
         <main className="flex flex-col flex-1">
           <header className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              {selectedConversation
-                ? (
-                  <>
-                    {selectedConversation.type === 'group' ?
-                      (<div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">
-                        {selectedConversation.name.charAt(0).toUpperCase()}</div>) : selectedConversation.photoURL ?
-                        (<img
-                          src={selectedConversation.photoURL}
-                          alt={selectedConversation.name}
-                          className="w-10 h-10 rounded-full"
-                        />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg">
-                            {selectedConversation.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                    <h2 className="font-bold text-lg">
-                      {selectedConversation.name}
-                    </h2>
-                    <p>
-                      {selectedConversation.userData.status === 'online'
-                        ? <span className="text-green-400">Conectado</span>
-                        : `Últ. vez ${formatLastSeen(selectedConversation.userData.lastSeen)}`
-                      }
-                    </p>
-                  </>
-                ) :
-                (<h2 className="font-bold text-lg text-gray-400">
-                  Selecciona una conversación
-                </h2>
-                )}
+              {selectedConversation ? (
+                <>
+                  {selectedConversation.type === 'group' ? (
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      {selectedConversation.name.charAt(0).toUpperCase()}
+                    </div>
+                  ) : selectedConversation.photoURL ? (
+                    <img src={selectedConversation.photoURL} alt={selectedConversation.name} className="w-10 h-10 rounded-full flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      {selectedConversation.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="font-bold text-lg leading-tight">{selectedConversation.name}</h2>
+                    {selectedConversation.type === 'dm' && selectedConversation.userData && (
+                      <p className="text-xs text-gray-400">
+                        {selectedConversation.userData.status === 'online' ?
+                          <span className="text-green-400">Conectado</span> :
+                          `Últ. vez ${formatLastSeen(selectedConversation.userData.lastSeen)}`
+                        }
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <h2 className="font-bold text-lg text-gray-400">Selecciona una conversación</h2>
+              )}
             </div>
             {selectedConversation && getCallTarget() && (<button onClick={() => handleCallMember(getCallTarget())} disabled={inCall} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg font-semibold"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></button>)}
           </header>
@@ -526,6 +555,7 @@ const HomePage = () => {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         onProfileUpdate={handleProfileUpdate}
+        onAccountDelete={handleDeleteAccount}
       />
       <CreateGroupModal isOpen={isCreateGroupModalOpen} onClose={() => setIsCreateGroupModalOpen(false)} onCreate={handleCreateGroup} />
       {selectedConversation?.type === 'group' && <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} onMemberAdded={loadAllData} groupId={selectedConversation.groupData.id} />}
