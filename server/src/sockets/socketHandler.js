@@ -1,3 +1,4 @@
+// sockets/socketHandler.js
 const { auth, db } = require('../config/firebaseAdmin');
 const { FieldValue } = require('firebase-admin/firestore');
 const registerChatHandlers = require('./chatHandler');
