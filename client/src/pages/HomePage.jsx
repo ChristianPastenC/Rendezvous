@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
 import { initSocket } from '../lib/socket';
 import { cryptoService } from '../lib/cryptoService';
 import WebRTCService from '../lib/webrtcService';
@@ -10,6 +12,27 @@ import IncomingCallModal from '../components/chat/IncomingCallModal';
 import CallTypeModal from '../components/chat/CallTypeModal';
 import UserSearch from '../components/dms/UserSearch';
 import AddMemberModal from '../components/groups/AddMemberModal';
+import ProfileEditModal from '../components/user/UserPerfilModal';
+
+const formatLastSeen = (isoString) => {
+  if (!isoString) return 'hace mucho tiempo';
+  const now = new Date();
+  const lastSeenDate = new Date(isoString);
+  const diffSeconds = Math.round((now - lastSeenDate) / 1000);
+  const diffMinutes = Math.round(diffSeconds / 60);
+  const diffHours = Math.round(diffMinutes / 60);
+  const diffDays = Math.round(diffHours / 24);
+
+  if (diffSeconds < 60) return 'hace unos segundos';
+  if (diffMinutes === 1) return `hace 1 minuto`;
+  if (diffMinutes < 60) return `hace ${diffMinutes} minutos`;
+  if (diffHours === 1) return `hace 1 hora`;
+  if (diffHours < 24) return `hace ${diffHours} horas`;
+  if (diffDays === 1) return 'ayer';
+  if (diffDays < 7) return `hace ${diffDays} días`;
+
+  return lastSeenDate.toLocaleDateString();
+};
 
 const Loader = () => (
   <div className="flex items-center justify-center h-screen bg-gray-900">
@@ -20,7 +43,7 @@ const Loader = () => (
   </div>
 );
 
-const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCreateGroup, onStartConversation }) => {
+const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCreateGroup, onStartConversation, onEditProfile }) => {
   const [filter, setFilter] = useState('all');
   const filteredConversations = conversations.filter(conv => {
     if (filter === 'all') return true;
@@ -43,13 +66,22 @@ const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCre
       <div className="flex-1 p-2 space-y-1 overflow-y-auto">
         {filteredConversations.map(conv => (
           <button key={conv.id} onClick={() => onSelectConversation(conv)} className={`w-full text-left p-3 rounded-md flex items-center space-x-3 transition-colors ${selectedId === conv.id ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}>
-            {conv.type === 'group' ? (
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">{conv.name.charAt(0).toUpperCase()}</div>
-            ) : conv.photoURL ? (
-              <img src={conv.photoURL} alt={conv.name} className="w-10 h-10 rounded-full flex-shrink-0" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg flex-shrink-0">{conv.name.charAt(0).toUpperCase()}</div>
-            )}
+            <div className="relative flex-shrink-0">
+              {conv.type === 'group' ? (
+                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">{conv.name.charAt(0).toUpperCase()}</div>
+              ) : conv.photoURL ? (
+                <img src={conv.photoURL} alt={conv.name} className="w-10 h-10 rounded-full" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg">{conv.name.charAt(0).toUpperCase()}</div>
+              )}
+              {conv.type === 'dm' && conv.userData && (
+                <span
+                  className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-gray-800 ${conv.userData.status === 'online' ? 'bg-green-500' : 'bg-gray-500'
+                    }`}
+                  title={conv.userData.status === 'online' ? 'Conectado' : `Últ. vez: ${formatLastSeen(conv.userData.lastSeen)}`}
+                />
+              )}
+            </div>
             <div className="flex-1 min-w-0">
               <span className="font-medium truncate">{conv.name}</span>
             </div>
@@ -60,6 +92,13 @@ const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCre
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
         <span>Crear Grupo</span>
       </button>
+      <div className="p-2 border-t border-gray-900 mt-auto">
+        <div className="flex items-center justify-between">
+          <button onClick={onEditProfile} className="p-2 rounded-lg hover:bg-gray-700" title="Editar Perfil">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </button>
+        </div>
+      </div>
     </aside>
   );
 };
@@ -123,7 +162,14 @@ const MembersList = ({ members, onCallMember, currentUserId, onAddMemberClick, i
       {members.map(member => (
         <div key={member.uid} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-700 transition-colors">
           <div className="flex items-center space-x-2 flex-1 min-w-0">
-            {member.photoURL ? (<img src={member.photoURL} alt={member.displayName} className="w-8 h-8 rounded-full flex-shrink-0" />) : (<div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm flex-shrink-0">{member.displayName?.charAt(0).toUpperCase() || '?'}</div>)}
+            <div className="relative flex-shrink-0">
+              {member.photoURL ? (<img src={member.photoURL} alt={member.displayName} className="w-8 h-8 rounded-full" />) : (<div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">{member.displayName?.charAt(0).toUpperCase() || '?'}</div>)}
+              <span
+                className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-gray-800 ${member.status === 'online' ? 'bg-green-500' : 'bg-gray-500'
+                  }`}
+                title={member.status === 'online' ? 'Conectado' : `Últ. vez: ${formatLastSeen(member.lastSeen)}`}
+              />
+            </div>
             <span className="text-gray-200 text-sm truncate">{member.displayName}</span>
           </div>
           {member.uid !== currentUserId && (<button onClick={() => onCallMember(member)} className="p-1 hover:bg-gray-600 rounded" title="Llamar"><svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></button>)}
@@ -135,7 +181,8 @@ const MembersList = ({ members, onCallMember, currentUserId, onAddMemberClick, i
 );
 
 const HomePage = () => {
-  const { currentUser } = useAuth();
+  // --- MODIFICADO: Obtener 'logout' del contexto de autenticación ---
+  const { currentUser, logout } = useAuth();
   const [socket, setSocket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [conversations, setConversations] = useState([]);
@@ -158,6 +205,8 @@ const HomePage = () => {
   const [showIncomingCallModal, setShowIncomingCallModal] = useState(false);
   const [incomingCallData, setIncomingCallData] = useState(null);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
+
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const loadAllData = useCallback(async () => {
     if (!currentUser) return;
@@ -202,15 +251,54 @@ const HomePage = () => {
   useEffect(() => {
     if (!socket) return;
 
+    const handleStatusUpdate = ({ uid, status, lastSeen }) => {
+      setConversations(prevConvs =>
+        prevConvs.map(conv => {
+          if (conv.type === 'dm' && conv.userData.uid === uid) {
+            return {
+              ...conv,
+              userData: { ...conv.userData, status, lastSeen },
+            };
+          }
+          return conv;
+        })
+      );
+
+      setMembers(prevMembers =>
+        prevMembers.map(member => {
+          if (member.uid === uid) {
+            return { ...member, status, lastSeen };
+          }
+          return member;
+        })
+      );
+    };
+
+    socket.on('statusUpdate', handleStatusUpdate);
+
+    if (conversations.length > 0) {
+      const userIdsToWatch = conversations
+        .filter(c => c.type === 'dm')
+        .map(c => c.userData.uid);
+      socket.emit('subscribeToStatus', userIdsToWatch);
+    }
+
+    return () => {
+      socket.off('statusUpdate', handleStatusUpdate);
+    };
+  }, [socket, conversations]);
+
+
+  useEffect(() => {
+    if (!socket) return;
+
     const handleNewMessage = (newMessage) => {
       const conversationId = previousConversationId.current;
       if (!conversationId) return;
 
-      // Actualizar la caché de mensajes
       const updatedCache = [...(messagesCache.current[conversationId] || []), newMessage];
       messagesCache.current[conversationId] = updatedCache;
 
-      // Determinar el ID de la conversación actualmente seleccionada
       let selectedConvId = null;
       if (selectedConversation) {
         if (selectedConversation.type === 'dm') {
@@ -220,7 +308,6 @@ const HomePage = () => {
         }
       }
 
-      // Actualizar el estado de los mensajes solo si estamos viendo la conversación correcta
       if (conversationId === selectedConvId) {
         setMessages(prevMessages => [...prevMessages, newMessage]);
       }
@@ -254,7 +341,7 @@ const HomePage = () => {
           const channelsData = await channelsRes.json();
           if (channelsData.length > 0) {
             channelId = channelsData[0].id;
-            selectedConversation.groupData.channelId = channelId; // Cachear el ID del canal
+            selectedConversation.groupData.channelId = channelId;
           }
         }
         conversationId = channelId;
@@ -266,6 +353,11 @@ const HomePage = () => {
           const membersRes = await fetch(`http://localhost:3000/api/groups/${groupId}/members`, { headers: { 'Authorization': `Bearer ${token}` } });
           membersToSet = await membersRes.json();
           membersCache.current[groupId] = membersToSet;
+        }
+
+        if (socket && membersToSet.length > 0) {
+          const memberIds = membersToSet.map(m => m.uid);
+          socket.emit('subscribeToStatus', memberIds);
         }
       }
 
@@ -348,6 +440,39 @@ const HomePage = () => {
     return null;
   };
 
+  const handleProfileUpdate = () => {
+    loadAllData();
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar tu cuenta permanentemente? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('http://localhost:3000/api/users/me', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('Tu cuenta ha sido eliminada exitosamente.');
+        await signOut(auth);
+        navigate("/auth");
+        window.location.reload();
+      } else {
+        const { error } = await response.json();
+        alert(`Error al eliminar la cuenta: ${error}`);
+      }
+    } catch (error) {
+      console.error('Error en el proceso de eliminación:', error);
+      alert('Ocurrió un error de red. Inténtalo de nuevo.');
+    }
+  };
+
+
   if (isLoading) return <Loader />;
 
   return (
@@ -359,10 +484,40 @@ const HomePage = () => {
           onSelectConversation={handleSelectConversation}
           onCreateGroup={() => setIsCreateGroupModalOpen(true)}
           onStartConversation={handleStartConversation}
+          onEditProfile={() => setIsProfileModalOpen(true)}
         />
         <main className="flex flex-col flex-1">
           <header className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex justify-between items-center">
-            <div className="flex items-center space-x-3">{selectedConversation ? (<>{selectedConversation.type === 'group' ? (<div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">{selectedConversation.name.charAt(0).toUpperCase()}</div>) : selectedConversation.photoURL ? (<img src={selectedConversation.photoURL} alt={selectedConversation.name} className="w-10 h-10 rounded-full" />) : (<div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg">{selectedConversation.name.charAt(0).toUpperCase()}</div>)}<h2 className="font-bold text-lg">{selectedConversation.name}</h2></>) : (<h2 className="font-bold text-lg text-gray-400">Selecciona una conversación</h2>)}</div>
+            <div className="flex items-center space-x-3">
+              {selectedConversation ? (
+                <>
+                  {selectedConversation.type === 'group' ? (
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      {selectedConversation.name.charAt(0).toUpperCase()}
+                    </div>
+                  ) : selectedConversation.photoURL ? (
+                    <img src={selectedConversation.photoURL} alt={selectedConversation.name} className="w-10 h-10 rounded-full flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      {selectedConversation.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="font-bold text-lg leading-tight">{selectedConversation.name}</h2>
+                    {selectedConversation.type === 'dm' && selectedConversation.userData && (
+                      <p className="text-xs text-gray-400">
+                        {selectedConversation.userData.status === 'online' ?
+                          <span className="text-green-400">Conectado</span> :
+                          `Últ. vez ${formatLastSeen(selectedConversation.userData.lastSeen)}`
+                        }
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <h2 className="font-bold text-lg text-gray-400">Selecciona una conversación</h2>
+              )}
+            </div>
             {selectedConversation && getCallTarget() && (<button onClick={() => handleCallMember(getCallTarget())} disabled={inCall} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg font-semibold"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></button>)}
           </header>
           {selectedConversation ? (
@@ -396,6 +551,12 @@ const HomePage = () => {
           />
         )}
       </div>
+      <ProfileEditModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onProfileUpdate={handleProfileUpdate}
+        onAccountDelete={handleDeleteAccount}
+      />
       <CreateGroupModal isOpen={isCreateGroupModalOpen} onClose={() => setIsCreateGroupModalOpen(false)} onCreate={handleCreateGroup} />
       {selectedConversation?.type === 'group' && <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} onMemberAdded={loadAllData} groupId={selectedConversation.groupData.id} />}
       {showCallTypeModal && <CallTypeModal onSelectType={handleSelectCallType} onCancel={() => { setShowCallTypeModal(false); setSelectedMemberToCall(null); }} />}
