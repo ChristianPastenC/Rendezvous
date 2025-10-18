@@ -147,7 +147,7 @@ const ConversationsSidebar = ({
       </button>
 
       <div className="p-3 border-t border-gray-900 mt-auto">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 mb-2">
           <button
             onClick={onEditProfile}
             className="flex-1 p-2 rounded-lg hover:bg-gray-700 flex items-center justify-center"
@@ -173,18 +173,28 @@ const ConversationsSidebar = ({
               />
             </svg>
           </button>
-        </div>
-        <div className="p-2 bg-gray-800 rounded-lg">
           <button
             onClick={onSignOut}
-            className="w-full mt-2 text-left text-sm text-red-400 hover:bg-red-500 hover:text-white rounded p-1 transition-colors font-semibold"
+            className="flex-1 p-2 rounded-lg hover:bg-red-700 bg-red-600 flex items-center justify-center"
+            title="Cerrar Sesión"
           >
-            Cerrar Sesión
+            <svg
+              className="w-5 h-5 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
           </button>
         </div>
       </div>
     </aside>
   );
 };
-
 export default ConversationsSidebar;
