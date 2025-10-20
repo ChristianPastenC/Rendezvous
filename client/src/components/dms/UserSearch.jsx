@@ -45,27 +45,27 @@ const UserSearch = ({ onSelectUser }) => {
   };
 
   return (
-    <div className="p-2 border-b border-gray-900">
+    <div className="p-2 border-b border-gray-200">
       <form onSubmit={handleSearch}>
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar usuarios por email..."
-          className="w-full bg-gray-900 text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="w-full bg-gray-50 text-gray-800 p-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </form>
-      {loading && <p className="text-sm text-gray-400 p-2">Buscando...</p>}
-      {error && <p className="text-sm text-red-400 p-2">{error}</p>}
+      {loading && <p className="text-sm text-gray-500 p-2">Buscando...</p>}
+      {error && <p className="text-sm text-red-500 p-2">{error}</p>}
       <div className="mt-2 max-h-48 overflow-y-auto">
         {results.map(user => (
           <button
             key={user.uid}
             onClick={() => handleSelect(user)}
-            className="w-full text-left p-2 rounded-md hover:bg-gray-700 flex items-center space-x-2"
+            className="w-full text-left p-2 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
           >
-            <span className="text-gray-200">{user.displayName}</span>
-            <span className="text-gray-400 text-xs">({user.email})</span>
+            <span className="text-gray-700">{user.displayName}</span>
+            <span className="text-gray-500 text-xs">({user.email})</span>
           </button>
         ))}
       </div>

@@ -17,10 +17,10 @@ import CallTypeModal from '../components/chat/CallTypeModal';
 import WebRTCService from '../lib/webrtcService';
 
 const Loader = () => (
-  <div className="flex items-center justify-center h-full">
+  <div className="flex items-center justify-center h-full bg-gray-50">
     <div className="text-center">
       <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
-      <p className="text-gray-400">Cargando...</p>
+      <p className="text-gray-600">Cargando mensajes...</p>
     </div>
   </div>
 );
@@ -40,7 +40,6 @@ const GroupView = () => {
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
-  // WebRTC state
   const [webrtc, setWebrtc] = useState(null);
   const [inCall, setInCall] = useState(false);
   const [localStream, setLocalStream] = useState(null);
@@ -51,21 +50,21 @@ const GroupView = () => {
   const [incomingCallData, setIncomingCallData] = useState(null);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMembersOpen, setIsMembersOpen] = useState(false);
+
   const previousChannelId = useRef(null);
 
-  // Cargar datos del grupo
   useEffect(() => {
     const loadGroupData = async () => {
       try {
         const token = await currentUser.getIdToken();
 
-        // Cargar datos básicos del grupo
         const conv = conversations.find(c => c.type === 'group' && c.groupData.id === groupId);
         if (conv) {
           setGroupData(conv.groupData);
         }
 
-        // Cargar canales
         const channelsRes = await fetch(
           `http://localhost:3000/api/groups/${groupId}/channels`,
           { headers: { 'Authorization': `Bearer ${token}` } }
@@ -76,7 +75,6 @@ const GroupView = () => {
           setChannelId(channelsData[0].id);
         }
 
-        // Cargar miembros
         const membersRes = await fetch(
           `http://localhost:3000/api/groups/${groupId}/members`,
           { headers: { 'Authorization': `Bearer ${token}` } }
@@ -84,7 +82,6 @@ const GroupView = () => {
         const membersData = await membersRes.json();
         setMembers(membersData);
 
-        // Suscribirse a estados de miembros
         if (socket && membersData.length > 0) {
           const memberIds = membersData.map(m => m.uid);
           socket.emit('subscribeToStatus', memberIds);
@@ -97,7 +94,6 @@ const GroupView = () => {
     loadGroupData();
   }, [groupId, conversations, currentUser, socket]);
 
-  // Cargar mensajes cuando tengamos el channelId
   useEffect(() => {
     if (!channelId) return;
 
@@ -121,7 +117,6 @@ const GroupView = () => {
     loadMessages();
   }, [channelId, groupId, currentUser]);
 
-  // Unirse/Salir del canal
   useEffect(() => {
     if (!socket || !channelId) return;
 
@@ -139,7 +134,6 @@ const GroupView = () => {
     };
   }, [socket, channelId]);
 
-  // Escuchar nuevos mensajes
   useEffect(() => {
     if (!socket) return;
 
@@ -154,7 +148,6 @@ const GroupView = () => {
     };
   }, [socket]);
 
-  // Escuchar actualizaciones de estado de miembros
   useEffect(() => {
     if (!socket) return;
 
@@ -173,7 +166,6 @@ const GroupView = () => {
     };
   }, [socket]);
 
-  // WebRTC setup
   useEffect(() => {
     if (!socket || !currentUser) return;
 
@@ -321,7 +313,7 @@ const GroupView = () => {
 
   return (
     <>
-      <div className="flex h-screen bg-gray-900 text-white">
+      <div className="flex h-screen bg-gray-50 text-gray-800 overflow-hidden">
         <ConversationsSidebar
           conversations={conversations}
           selectedId={`group_${groupId}`}
@@ -329,16 +321,50 @@ const GroupView = () => {
           onCreateGroup={() => setIsCreateGroupModalOpen(true)}
           onStartConversation={(user) => navigate(`/chat/${user.uid}`)}
           onEditProfile={() => navigate('/profile')}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
         />
 
-        <main className="flex flex-col flex-1">
-          <ChatHeader
-            name={groupData.name}
-            isGroup={true}
-          />
+        <main className="flex flex-col flex-1 min-w-0">
+          <div className="flex items-center justify-between p-3 sm:p-4 bg-white shadow-sm border-b border-gray-200">
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
+              >
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500 flex items-center justify-center font-bold text-base sm:text-lg flex-shrink-0 text-white">
+                {groupData?.name?.charAt(0).toUpperCase()}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold text-base sm:text-lg leading-tight text-gray-800 truncate">
+                  {groupData?.name}
+                </h2>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsMembersOpen(true)}
+              className="xl:hidden p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
+            >
+              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </button>
+          </div>
 
           {isLoadingMessages ? (
-            <Loader />
+            <div className="flex items-center justify-center h-full bg-gray-50">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
+                <p className="text-gray-600">Cargando...</p>
+              </div>
+            </div>
           ) : (
             <>
               <MessageList messages={messages} />
@@ -361,6 +387,8 @@ const GroupView = () => {
           currentUserId={currentUser.uid}
           isOwner={isOwner}
           onAddMemberClick={() => setIsAddMemberModalOpen(true)}
+          isOpen={isMembersOpen}
+          onClose={() => setIsMembersOpen(false)}
         />
       </div>
 

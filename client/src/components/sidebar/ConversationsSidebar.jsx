@@ -30,7 +30,9 @@ const ConversationsSidebar = ({
   onCreateGroup,
   onStartConversation,
   onEditProfile,
-  onSignOut
+  onSignOut,
+  isOpen,
+  onClose
 }) => {
   const [filter, setFilter] = useState('all');
 
@@ -42,159 +44,155 @@ const ConversationsSidebar = ({
   });
 
   return (
-    <aside className="w-72 bg-gray-800 flex flex-col flex-shrink-0">
-      <div className="p-4 border-b border-gray-900">
-        <h2 className="font-bold text-lg text-white mb-3">Conversaciones</h2>
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
-        <div className="flex gap-2 mb-3">
-          <button
-            onClick={() => setFilter('all')}
-            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-          >
-            Todos
-          </button>
-          <button
-            onClick={() => setFilter('dms')}
-            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'dms'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-          >
-            Directos
-          </button>
-          <button
-            onClick={() => setFilter('groups')}
-            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'groups'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-          >
-            Grupos
-          </button>
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-72 sm:w-80 bg-white flex flex-col flex-shrink-0 border-r border-gray-200
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-lg text-gray-800">Conversaciones</h2>
+            <button
+              onClick={onClose}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+            >
+              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setFilter('all')}
+              className={`flex-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${filter === 'all'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => setFilter('dms')}
+              className={`flex-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${filter === 'dms'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+            >
+              Directos
+            </button>
+            <button
+              onClick={() => setFilter('groups')}
+              className={`flex-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${filter === 'groups'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+            >
+              Grupos
+            </button>
+          </div>
+
+          <UserSearch onSelectUser={onStartConversation} />
         </div>
 
-        <UserSearch onSelectUser={onStartConversation} />
-      </div>
+        <div className="flex-1 p-2 space-y-1 overflow-y-auto">
+          {filteredConversations.map(conv => (
+            <button
+              key={conv.id}
+              onClick={() => {
+                onSelectConversation(conv);
+                onClose();
+              }}
+              className={`w-full text-left p-3 rounded-lg flex items-center space-x-3 transition-colors ${selectedId === conv.id
+                  ? 'bg-blue-50 text-gray-800'
+                  : 'text-gray-700 hover:bg-gray-50'
+                }`}
+            >
+              <div className="relative flex-shrink-0">
+                {conv.type === 'group' ? (
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500 flex items-center justify-center font-bold text-lg text-white">
+                    {conv.name.charAt(0).toUpperCase()}
+                  </div>
+                ) : conv.photoURL ? (
+                  <img
+                    src={conv.photoURL}
+                    alt={conv.name}
+                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500 flex items-center justify-center font-bold text-lg text-white">
+                    {conv.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
 
-      <div className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {filteredConversations.map(conv => (
-          <button
-            key={conv.id}
-            onClick={() => onSelectConversation(conv)}
-            className={`w-full text-left p-3 rounded-md flex items-center space-x-3 transition-colors ${selectedId === conv.id
-                ? 'bg-gray-600 text-white'
-                : 'text-gray-300 hover:bg-gray-700'
-              }`}
-          >
-            <div className="relative flex-shrink-0">
-              {conv.type === 'group' ? (
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">
-                  {conv.name.charAt(0).toUpperCase()}
-                </div>
-              ) : conv.photoURL ? (
-                <img
-                  src={conv.photoURL}
-                  alt={conv.name}
-                  className="w-10 h-10 rounded-full"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg">
-                  {conv.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+                {conv.type === 'dm' && conv.userData && (
+                  <span
+                    className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white ${conv.userData.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                      }`}
+                    title={
+                      conv.userData.status === 'online'
+                        ? 'Conectado'
+                        : `Últ. vez: ${formatLastSeen(conv.userData.lastSeen)}`
+                    }
+                  />
+                )}
+              </div>
 
-              {conv.type === 'dm' && conv.userData && (
-                <span
-                  className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-gray-800 ${conv.userData.status === 'online' ? 'bg-green-500' : 'bg-gray-500'
-                    }`}
-                  title={
-                    conv.userData.status === 'online'
-                      ? 'Conectado'
-                      : `Últ. vez: ${formatLastSeen(conv.userData.lastSeen)}`
-                  }
-                />
-              )}
-            </div>
+              <div className="flex-1 min-w-0">
+                <span className="font-medium truncate block text-sm sm:text-base">{conv.name}</span>
+              </div>
+            </button>
+          ))}
+        </div>
 
-            <div className="flex-1 min-w-0">
-              <span className="font-medium truncate">{conv.name}</span>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <button
-        onClick={onCreateGroup}
-        className="m-3 p-3 rounded-md bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 font-semibold"
-      >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+        <button
+          onClick={() => {
+            onCreateGroup();
+            onClose();
+          }}
+          className="m-3 p-3 rounded-lg bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2 font-semibold text-white text-sm sm:text-base"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
-        <span>Crear Grupo</span>
-      </button>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Crear Grupo</span>
+        </button>
 
-      <div className="p-3 border-t border-gray-900 mt-auto">
-        <div className="flex items-center gap-2 mb-2">
-          <button
-            onClick={onEditProfile}
-            className="flex-1 p-2 rounded-lg hover:bg-gray-700 flex items-center justify-center"
-            title="Editar Perfil"
-          >
-            <svg
-              className="w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <div className="p-3 border-t border-gray-200 mt-auto">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onEditProfile}
+              className="flex-1 p-2 rounded-lg hover:bg-gray-100 flex items-center justify-center"
+              title="Editar Perfil"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          </button>
-          <button
-            onClick={onSignOut}
-            className="flex-1 p-2 rounded-lg hover:bg-red-700 bg-red-600 flex items-center justify-center"
-            title="Cerrar Sesión"
-          >
-            <svg
-              className="w-5 h-5 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={onSignOut}
+              className="flex-1 p-2 rounded-lg hover:bg-red-50 bg-red-500 flex items-center justify-center"
+              title="Cerrar Sesión"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </button>
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };
+
 export default ConversationsSidebar;

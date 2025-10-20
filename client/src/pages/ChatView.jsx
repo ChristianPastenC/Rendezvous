@@ -15,10 +15,10 @@ import CallTypeModal from '../components/chat/CallTypeModal';
 import WebRTCService from '../lib/webrtcService';
 
 const Loader = () => (
-  <div className="flex items-center justify-center h-full">
+  <div className="flex items-center justify-center h-full bg-gray-50">
     <div className="text-center">
       <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
-      <p className="text-gray-400">Cargando mensajes...</p>
+      <p className="text-gray-600">Cargando mensajes...</p>
     </div>
   </div>
 );
@@ -43,6 +43,7 @@ const ChatView = () => {
   const [showCallTypeModal, setShowCallTypeModal] = useState(false);
   const [showIncomingCallModal, setShowIncomingCallModal] = useState(false);
   const [incomingCallData, setIncomingCallData] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const conversationId = [currentUser.uid, userId].sort().join('_');
   const previousConversationId = useRef(null);
@@ -236,7 +237,7 @@ const ChatView = () => {
 
   return (
     <>
-      <div className="flex h-screen bg-gray-900 text-white">
+      <div className="flex h-screen bg-gray-50 text-gray-800 overflow-hidden">
         <ConversationsSidebar
           conversations={conversations}
           selectedId={`dm_${userId}`}
@@ -244,20 +245,28 @@ const ChatView = () => {
           onCreateGroup={() => setIsCreateGroupModalOpen(true)}
           onStartConversation={(user) => navigate(`/chat/${user.uid}`)}
           onEditProfile={() => navigate('/profile')}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
         />
 
-        <main className="flex flex-col flex-1">
+        <main className="flex flex-col flex-1 min-w-0">
           <ChatHeader
-            name={otherUser.displayName}
-            photoURL={otherUser.photoURL}
-            status={otherUser.status}
-            lastSeen={otherUser.lastSeen}
+            name={otherUser?.displayName}
+            photoURL={otherUser?.photoURL}
+            status={otherUser?.status}
+            lastSeen={otherUser?.lastSeen}
             onCall={handleCall}
             inCall={inCall}
+            onMenuClick={() => setIsSidebarOpen(true)}
           />
 
           {isLoadingMessages ? (
-            <Loader />
+            <div className="flex items-center justify-center h-full bg-gray-50">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
+                <p className="text-gray-600">Cargando mensajes...</p>
+              </div>
+            </div>
           ) : (
             <>
               <MessageList messages={messages} />

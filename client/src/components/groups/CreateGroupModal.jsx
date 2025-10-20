@@ -1,3 +1,5 @@
+// src/components/groups/CreateGroupModal.jsx
+
 import React, { useState } from 'react';
 
 const CreateGroupModal = ({ isOpen, onClose, onCreate }) => {
@@ -10,18 +12,33 @@ const CreateGroupModal = ({ isOpen, onClose, onCreate }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-2xl font-bold text-white mb-4">Crear un Nuevo Grupo</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-2xl w-full max-w-md">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Crear un Nuevo Grupo</h2>
         <form onSubmit={handleSubmit}>
           <input
-            type="text" value={groupName} onChange={(e) => setGroupName(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
-            placeholder="Nombre del Grupo" autoFocus
+            type="text"
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            className="w-full px-4 py-3 bg-gray-50 rounded-lg text-gray-800 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            placeholder="Nombre del Grupo"
+            autoFocus
           />
           <div className="mt-6 flex justify-end space-x-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg">Cancelar</button>
-            <button type="submit" disabled={!groupName.trim()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50">Crear Grupo</button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 sm:px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium text-sm sm:text-base"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={!groupName.trim()}
+              className="px-3 sm:px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg disabled:opacity-50 text-white font-medium text-sm sm:text-base"
+            >
+              Crear Grupo
+            </button>
           </div>
         </form>
       </div>

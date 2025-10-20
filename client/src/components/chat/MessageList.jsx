@@ -16,7 +16,7 @@ const MessageList = ({ messages }) => {
 
     if (!encryptedDataForUser) {
       return (
-        <p className="text-gray-400 italic mt-1">
+        <p className="text-gray-500 italic mt-1">
           [No tienes permiso para ver este mensaje]
         </p>
       );
@@ -26,7 +26,7 @@ const MessageList = ({ messages }) => {
 
     if (!decryptedString) {
       return (
-        <p className="text-red-400 italic mt-1">
+        <p className="text-red-500 italic mt-1">
           [Error al descifrar]
         </p>
       );
@@ -46,7 +46,7 @@ const MessageList = ({ messages }) => {
               <img
                 src={messageObject.fileUrl}
                 alt={messageObject.content}
-                className="mt-2 rounded-lg max-w-xs max-h-64"
+                className="mt-2 rounded-lg max-w-xs max-h-64 border border-gray-200"
               />
             </a>
           );
@@ -57,7 +57,7 @@ const MessageList = ({ messages }) => {
               href={messageObject.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center bg-gray-700 hover:bg-gray-600 p-2 rounded-lg"
+              className="mt-2 inline-flex items-center bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-gray-700"
             >
               <svg
                 className="w-5 h-5 mr-2"
@@ -78,14 +78,14 @@ const MessageList = ({ messages }) => {
 
         default:
           return (
-            <p className="text-gray-200 mt-1">
+            <p className="text-gray-700 mt-1">
               {messageObject.content}
             </p>
           );
       }
     } catch (e) {
       return (
-        <p className="text-red-400 italic mt-1">
+        <p className="text-red-500 italic mt-1">
           [Mensaje corrupto]
         </p>
       );
@@ -93,7 +93,7 @@ const MessageList = ({ messages }) => {
   };
 
   return (
-    <div className="flex-1 p-4 overflow-y-auto space-y-3">
+    <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
       {messages.map(msg => (
         <div key={msg.id} className="flex items-start space-x-3">
           <div className="flex-shrink-0">
@@ -104,7 +104,7 @@ const MessageList = ({ messages }) => {
                 className="w-10 h-10 rounded-full"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white">
                 {msg.authorInfo?.displayName?.charAt(0).toUpperCase() || '?'}
               </div>
             )}
@@ -112,10 +112,10 @@ const MessageList = ({ messages }) => {
 
           <div className="flex-1">
             <div className="flex items-baseline space-x-2">
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-gray-800">
                 {msg.authorInfo?.displayName || 'Usuario'}
               </span>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-500">
                 {new Date(msg.createdAt).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit'
