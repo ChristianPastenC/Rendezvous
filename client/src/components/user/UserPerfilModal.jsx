@@ -3,7 +3,13 @@ import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
-const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate, onAccountDelete }) => {
+const ProfileEditModal = ({ 
+  isOpen, 
+  onClose, 
+  onProfileUpdate, 
+  onAccountDelete,
+  onSignOut
+}) => {
   const { currentUser } = useAuth();
   const [displayName, setDisplayName] = useState(currentUser.displayName || '');
   const [photoFile, setPhotoFile] = useState(null);
@@ -121,6 +127,13 @@ const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate, onAccountDelete })
             {isUploading ? 'Subiendo...' : (isSaving ? 'Guardando...' : 'Guardar Cambios')}
           </button>
         </div>
+        <button
+          onClick={onSignOut}
+          className="w-full mt-3 px-4 py-2 rounded bg-red-600 hover:bg-red-500 font-semibold transition-colors"
+          title="Cerrar Sesión"
+        >
+          Cerrar Sesión
+        </button>
         <div className="border-t border-red-500/30 mt-6 pt-4">
           <h3 className="font-bold text-lg text-red-400">Zona de Peligro</h3>
           <p className="text-sm text-gray-400 mt-1">

@@ -1,18 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { auth } from '../lib/firebase';
-import { signOut } from 'firebase/auth';
-import { initSocket } from '../lib/socket';
+import { useOutletContext } from 'react-router';
 import { cryptoService } from '../lib/cryptoService';
 import WebRTCService from '../lib/webrtcService';
-import CreateGroupModal from '../components/groups/CreateGroupModal';
 import MessageInput from '../components/chat/MessageInput';
 import VideoCallModal from '../components/chat/VideoCallModal';
 import IncomingCallModal from '../components/chat/IncomingCallModal';
 import CallTypeModal from '../components/chat/CallTypeModal';
-import UserSearch from '../components/dms/UserSearch';
 import AddMemberModal from '../components/groups/AddMemberModal';
-import ProfileEditModal from '../components/user/UserPerfilModal';
 
 const formatLastSeen = (isoString) => {
   if (!isoString) return 'hace mucho tiempo';
@@ -34,82 +28,12 @@ const formatLastSeen = (isoString) => {
   return lastSeenDate.toLocaleDateString();
 };
 
-const Loader = () => (
-  <div className="flex items-center justify-center h-screen bg-gray-900">
-    <div className="text-center">
-      <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
-      <p className="text-gray-400 text-lg">Cargando...</p>
-    </div>
-  </div>
-);
-
-const UnifiedSidebar = ({ conversations, selectedId, onSelectConversation, onCreateGroup, onStartConversation, onEditProfile }) => {
-  const [filter, setFilter] = useState('all');
-  const filteredConversations = conversations.filter(conv => {
-    if (filter === 'all') return true;
-    if (filter === 'dms') return conv.type === 'dm';
-    if (filter === 'groups') return conv.type === 'group';
-    return true;
-  });
-
-  return (
-    <aside className="w-72 bg-gray-800 flex flex-col flex-shrink-0">
-      <div className="p-4 border-b border-gray-900">
-        <h2 className="font-bold text-lg text-white mb-3">Conversaciones</h2>
-        <div className="flex gap-2 mb-3">
-          <button onClick={() => setFilter('all')} className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>Todos</button>
-          <button onClick={() => setFilter('dms')} className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'dms' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>Directos</button>
-          <button onClick={() => setFilter('groups')} className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filter === 'groups' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>Grupos</button>
-        </div>
-        <UserSearch onSelectUser={onStartConversation} />
-      </div>
-      <div className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {filteredConversations.map(conv => (
-          <button key={conv.id} onClick={() => onSelectConversation(conv)} className={`w-full text-left p-3 rounded-md flex items-center space-x-3 transition-colors ${selectedId === conv.id ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}>
-            <div className="relative flex-shrink-0">
-              {conv.type === 'group' ? (
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg">{conv.name.charAt(0).toUpperCase()}</div>
-              ) : conv.photoURL ? (
-                <img src={conv.photoURL} alt={conv.name} className="w-10 h-10 rounded-full" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-lg">{conv.name.charAt(0).toUpperCase()}</div>
-              )}
-              {conv.type === 'dm' && conv.userData && (
-                <span
-                  className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-gray-800 ${conv.userData.status === 'online' ? 'bg-green-500' : 'bg-gray-500'
-                    }`}
-                  title={conv.userData.status === 'online' ? 'Conectado' : `Últ. vez: ${formatLastSeen(conv.userData.lastSeen)}`}
-                />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="font-medium truncate">{conv.name}</span>
-            </div>
-          </button>
-        ))}
-      </div>
-      <button onClick={onCreateGroup} className="m-3 p-3 rounded-md bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 font-semibold">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-        <span>Crear Grupo</span>
-      </button>
-      <div className="p-2 border-t border-gray-900 mt-auto">
-        <div className="flex items-center justify-between">
-          <button onClick={onEditProfile} className="p-2 rounded-lg hover:bg-gray-700" title="Editar Perfil">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-          </button>
-        </div>
-      </div>
-    </aside>
-  );
-};
-
-const MessageList = ({ messages }) => {
-  const { currentUser } = useAuth();
+const MessageList = ({ messages, currentUserUid }) => {
   const messagesEndRef = useRef(null);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const renderContent = (msg) => {
-    const encryptedDataForUser = msg.encryptedPayload?.[currentUser.uid];
+    const encryptedDataForUser = msg.encryptedPayload?.[currentUserUid];
     if (!encryptedDataForUser) return <p className="text-gray-400 italic mt-1">[No tienes permiso para ver este mensaje]</p>;
     const decryptedString = cryptoService.decrypt(encryptedDataForUser);
     if (!decryptedString) return <p className="text-red-400 italic mt-1">[Error al descifrar]</p>;
@@ -181,20 +105,12 @@ const MembersList = ({ members, onCallMember, currentUserId, onAddMemberClick, i
 );
 
 const HomePage = () => {
-  // --- MODIFICADO: Obtener 'logout' del contexto de autenticación ---
-  const { currentUser, logout } = useAuth();
-  const [socket, setSocket] = useState(null);
+  const { socket, currentUser, selectedConversation, loadAllData } = useOutletContext();
+
   const [messages, setMessages] = useState([]);
-  const [conversations, setConversations] = useState([]);
   const [members, setMembers] = useState([]);
-  const [selectedConversation, setSelectedConversation] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  const previousConversationId = useRef(null);
-  const messagesCache = useRef({});
-  const membersCache = useRef({});
 
   const [webrtc, setWebrtc] = useState(null);
   const [inCall, setInCall] = useState(false);
@@ -206,88 +122,9 @@ const HomePage = () => {
   const [incomingCallData, setIncomingCallData] = useState(null);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
 
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
-  const loadAllData = useCallback(async () => {
-    if (!currentUser) return;
-    setIsLoading(true);
-    try {
-      const token = await currentUser.getIdToken();
-      const [groupsRes, contactsRes] = await Promise.all([
-        fetch('http://localhost:3000/api/groups', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('http://localhost:3000/api/contacts', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      const groupsData = await groupsRes.json();
-      const contactsData = await contactsRes.json();
-      const unifiedConversations = [
-        ...contactsData.map(contact => ({ id: `dm_${contact.uid}`, type: 'dm', name: contact.displayName, photoURL: contact.photoURL, userData: contact })),
-        ...groupsData.map(group => ({ id: `group_${group.id}`, type: 'group', name: group.name, groupData: group }))
-      ];
-      setConversations(unifiedConversations);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser]);
-
-  useEffect(() => { loadAllData(); }, [loadAllData]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    let socketInstance;
-    const connect = async () => {
-      socketInstance = await initSocket();
-      if (socketInstance) {
-        setSocket(socketInstance);
-        const { publicKey } = await cryptoService.generateAndStoreKeys();
-        socketInstance.emit('security:register-public-key', { publicKey });
-      }
-    };
-    connect();
-    return () => { if (socketInstance) socketInstance.disconnect(); };
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleStatusUpdate = ({ uid, status, lastSeen }) => {
-      setConversations(prevConvs =>
-        prevConvs.map(conv => {
-          if (conv.type === 'dm' && conv.userData.uid === uid) {
-            return {
-              ...conv,
-              userData: { ...conv.userData, status, lastSeen },
-            };
-          }
-          return conv;
-        })
-      );
-
-      setMembers(prevMembers =>
-        prevMembers.map(member => {
-          if (member.uid === uid) {
-            return { ...member, status, lastSeen };
-          }
-          return member;
-        })
-      );
-    };
-
-    socket.on('statusUpdate', handleStatusUpdate);
-
-    if (conversations.length > 0) {
-      const userIdsToWatch = conversations
-        .filter(c => c.type === 'dm')
-        .map(c => c.userData.uid);
-      socket.emit('subscribeToStatus', userIdsToWatch);
-    }
-
-    return () => {
-      socket.off('statusUpdate', handleStatusUpdate);
-    };
-  }, [socket, conversations]);
-
+  const previousConversationId = useRef(null);
+  const messagesCache = useRef({});
+  const membersCache = useRef({});
 
   useEffect(() => {
     if (!socket) return;
@@ -395,34 +232,11 @@ const HomePage = () => {
     }
   }, [socket, currentUser]);
 
-  const handleSelectConversation = (conv) => { setSelectedConversation(conv); };
-  const handleStartConversation = (user) => {
-    const existingConv = conversations.find(c => c.type === 'dm' && c.userData.uid === user.uid);
-    if (existingConv) {
-      setSelectedConversation(existingConv);
-    } else {
-      const newConv = { id: `dm_${user.uid}`, type: 'dm', name: user.displayName, photoURL: user.photoURL, userData: user };
-      setConversations(prev => [newConv, ...prev]);
-      setSelectedConversation(newConv);
-    }
-  };
-
   const handleCallMember = (member) => { if (inCall) return; setSelectedMemberToCall(member); setShowCallTypeModal(true); };
   const handleSelectCallType = async (callType) => { setShowCallTypeModal(false); if (!selectedMemberToCall || !webrtc) return; try { setCurrentCallType(callType); const stream = await webrtc.startLocalStream(callType); setLocalStream(stream); await webrtc.createOffer(selectedMemberToCall.uid, callType, currentUser.displayName || 'Usuario'); setInCall(true); } catch (e) { setSelectedMemberToCall(null); } };
   const handleAcceptCall = async () => { if (!incomingCallData || !webrtc) return; try { setCurrentCallType(incomingCallData.callType); const stream = await webrtc.startLocalStream(incomingCallData.callType); setLocalStream(stream); await webrtc.acceptCall(incomingCallData.from, incomingCallData.offer, incomingCallData.callType); setInCall(true); setShowIncomingCallModal(false); setIncomingCallData(null); } catch (e) { handleRejectCall(); } };
   const handleRejectCall = () => { if (incomingCallData && webrtc) webrtc.rejectCall(incomingCallData.from); setShowIncomingCallModal(false); setIncomingCallData(null); };
   const handleHangUp = () => { if (webrtc) { const remoteId = incomingCallData?.from || selectedMemberToCall?.uid; if (remoteId) webrtc.hangUp(remoteId); } };
-  const handleCreateGroup = async (name, memberIds) => {
-    const token = await currentUser.getIdToken();
-    const response = await fetch('http://localhost:3000/api/groups', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name, memberIds }) });
-    if (response.ok) {
-      setIsCreateGroupModalOpen(false);
-      messagesCache.current = {}; membersCache.current = {};
-      await loadAllData();
-    } else {
-      alert('Error al crear el grupo.');
-    }
-  };
 
   const getMembersForMessage = () => {
     if (selectedConversation?.type === 'dm') return [{ uid: currentUser.uid }, { uid: selectedConversation.userData.uid }];
@@ -440,52 +254,9 @@ const HomePage = () => {
     return null;
   };
 
-  const handleProfileUpdate = () => {
-    loadAllData();
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!window.confirm('¿Estás seguro de que quieres eliminar tu cuenta permanentemente? Esta acción no se puede deshacer.')) {
-      return;
-    }
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch('http://localhost:3000/api/users/me', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        alert('Tu cuenta ha sido eliminada exitosamente.');
-        await signOut(auth);
-        navigate("/auth");
-        window.location.reload();
-      } else {
-        const { error } = await response.json();
-        alert(`Error al eliminar la cuenta: ${error}`);
-      }
-    } catch (error) {
-      console.error('Error en el proceso de eliminación:', error);
-      alert('Ocurrió un error de red. Inténtalo de nuevo.');
-    }
-  };
-
-
-  if (isLoading) return <Loader />;
-
   return (
     <>
-      <div className="flex h-screen bg-gray-900 text-white">
-        <UnifiedSidebar
-          conversations={conversations}
-          selectedId={selectedConversation?.id}
-          onSelectConversation={handleSelectConversation}
-          onCreateGroup={() => setIsCreateGroupModalOpen(true)}
-          onStartConversation={handleStartConversation}
-          onEditProfile={() => setIsProfileModalOpen(true)}
-        />
+      <div className="flex h-full bg-gray-900 text-white">
         <main className="flex flex-col flex-1">
           <header className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex justify-between items-center">
             <div className="flex items-center space-x-3">
@@ -524,7 +295,7 @@ const HomePage = () => {
             <>
               {isLoadingMessages ? (<div className="flex-1 flex items-center justify-center"><div className="text-center"><div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div><p className="text-gray-400">Cargando mensajes...</p></div></div>) : (
                 <>
-                  <MessageList messages={messages} />
+                  <MessageList messages={messages} currentUserUid={currentUser?.uid} />
                   {socket && (
                     <MessageInput
                       socket={socket}
@@ -551,14 +322,14 @@ const HomePage = () => {
           />
         )}
       </div>
-      <ProfileEditModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        onProfileUpdate={handleProfileUpdate}
-        onAccountDelete={handleDeleteAccount}
-      />
-      <CreateGroupModal isOpen={isCreateGroupModalOpen} onClose={() => setIsCreateGroupModalOpen(false)} onCreate={handleCreateGroup} />
-      {selectedConversation?.type === 'group' && <AddMemberModal isOpen={isAddMemberModalOpen} onClose={() => setIsAddMemberModalOpen(false)} onMemberAdded={loadAllData} groupId={selectedConversation.groupData.id} />}
+      {selectedConversation?.type === 'group' && (
+        <AddMemberModal
+          isOpen={isAddMemberModalOpen}
+          onClose={() => setIsAddMemberModalOpen(false)}
+          onMemberAdded={loadAllData}
+          groupId={selectedConversation.groupData.id}
+        />
+      )}
       {showCallTypeModal && <CallTypeModal onSelectType={handleSelectCallType} onCancel={() => { setShowCallTypeModal(false); setSelectedMemberToCall(null); }} />}
       {showIncomingCallModal && incomingCallData && <IncomingCallModal callerName={incomingCallData.callerName} callType={incomingCallData.callType} onAccept={handleAcceptCall} onReject={handleRejectCall} />}
       {inCall && <VideoCallModal localStream={localStream} remoteStream={remoteStream} onHangUp={handleHangUp} callType={currentCallType} />}
