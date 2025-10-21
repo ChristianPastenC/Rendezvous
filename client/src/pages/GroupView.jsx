@@ -4,12 +4,9 @@ import { useParams, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useConversations } from '../context/ConversationsContext';
-import ConversationsSidebar from '../components/sidebar/ConversationsSidebar';
-import ChatHeader from '../components/chat/ChatHeader';
 import MessageList from '../components/chat/MessageList';
 import MessageInput from '../components/chat/MessageInput';
 import MembersList from '../components/groups/MembersList';
-import CreateGroupModal from '../components/groups/CreateGroupModal';
 import AddMemberModal from '../components/groups/AddMemberModal';
 import VideoCallModal from '../components/chat/VideoCallModal';
 import IncomingCallModal from '../components/chat/IncomingCallModal';
@@ -30,14 +27,13 @@ const GroupView = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { socket } = useSocket();
-  const { conversations, loadConversations } = useConversations();
+  const { conversations } = useConversations();
 
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
   const [groupData, setGroupData] = useState(null);
   const [channelId, setChannelId] = useState(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
-  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
   const [webrtc, setWebrtc] = useState(null);
@@ -50,7 +46,6 @@ const GroupView = () => {
   const [incomingCallData, setIncomingCallData] = useState(null);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMembersOpen, setIsMembersOpen] = useState(false);
 
   const previousChannelId = useRef(null);
@@ -254,41 +249,7 @@ const GroupView = () => {
     }
   };
 
-  const handleSelectConversation = (conv) => {
-    if (conv.type === 'dm') {
-      navigate(`/chat/${conv.userData.uid}`);
-    } else {
-      navigate(`/group/${conv.groupData.id}`);
-    }
-  };
-
-  const handleCreateGroup = async (name, memberIds) => {
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch('http://localhost:3000/api/groups', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ name, memberIds })
-      });
-
-      if (response.ok) {
-        const newGroup = await response.json();
-        setIsCreateGroupModalOpen(false);
-        await loadConversations();
-        navigate(`/group/${newGroup.id}`);
-      } else {
-        alert('Error al crear el grupo.');
-      }
-    } catch (error) {
-      console.error('Error creando grupo:', error);
-    }
-  };
-
   const handleMemberAdded = () => {
-    // Recargar miembros del grupo
     const loadMembers = async () => {
       try {
         const token = await currentUser.getIdToken();
@@ -313,91 +274,71 @@ const GroupView = () => {
 
   return (
     <>
-      <div className="flex h-screen bg-gray-50 text-gray-800 overflow-hidden">
-        <ConversationsSidebar
-          conversations={conversations}
-          selectedId={`group_${groupId}`}
-          onSelectConversation={handleSelectConversation}
-          onCreateGroup={() => setIsCreateGroupModalOpen(true)}
-          onStartConversation={(user) => navigate(`/chat/${user.uid}`)}
-          onEditProfile={() => navigate('/profile')}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-        />
-
-        <main className="flex flex-col flex-1 min-w-0">
-          <div className="flex items-center justify-between p-3 sm:p-4 bg-white shadow-sm border-b border-gray-200">
-            <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
-              >
-                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500 flex items-center justify-center font-bold text-base sm:text-lg flex-shrink-0 text-white">
-                {groupData?.name?.charAt(0).toUpperCase()}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-base sm:text-lg leading-tight text-gray-800 truncate">
-                  {groupData?.name}
-                </h2>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setIsMembersOpen(true)}
-              className="xl:hidden p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
+      <main className="flex flex-col flex-1 min-w-0 h-full pb-16 lg:pb-0">
+        <div className="flex items-center justify-between p-3 sm:p-4 bg-white shadow-sm border-b border-gray-200">
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+          <button
+              onClick={() => navigate('/')}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
             >
               <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
+
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500 flex items-center justify-center font-bold text-base sm:text-lg flex-shrink-0 text-white">
+              {groupData?.name?.charAt(0).toUpperCase()}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <h2 className="font-bold text-base sm:text-lg leading-tight text-gray-800 truncate">
+                {groupData?.name}
+              </h2>
+            </div>
           </div>
 
-          {isLoadingMessages ? (
-            <div className="flex items-center justify-center h-full bg-gray-50">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
-                <p className="text-gray-600">Cargando...</p>
-              </div>
+          <button
+            onClick={() => setIsMembersOpen(true)}
+            className="xl:hidden p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
+          >
+            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </button>
+        </div>
+
+        {isLoadingMessages ? (
+          <div className="flex items-center justify-center h-full bg-gray-50">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
+              <p className="text-gray-600">Cargando...</p>
             </div>
-          ) : (
-            <>
-              <MessageList messages={messages} />
-              {socket && channelId && (
-                <MessageInput
-                  socket={socket}
-                  isDirectMessage={false}
-                  conversationId={channelId}
-                  groupId={groupId}
-                  members={members}
-                />
-              )}
-            </>
-          )}
-        </main>
+          </div>
+        ) : (
+          <>
+            <MessageList messages={messages} />
+            {socket && channelId && (
+              <MessageInput
+                socket={socket}
+                isDirectMessage={false}
+                conversationId={channelId}
+                groupId={groupId}
+                members={members}
+              />
+            )}
+          </>
+        )}
+      </main>
 
-        <MembersList
-          members={members}
-          onCallMember={handleCallMember}
-          currentUserId={currentUser.uid}
-          isOwner={isOwner}
-          onAddMemberClick={() => setIsAddMemberModalOpen(true)}
-          isOpen={isMembersOpen}
-          onClose={() => setIsMembersOpen(false)}
-        />
-      </div>
-
-      <CreateGroupModal
-        isOpen={isCreateGroupModalOpen}
-        onClose={() => setIsCreateGroupModalOpen(false)}
-        onCreate={handleCreateGroup}
+      <MembersList
+        members={members}
+        onCallMember={handleCallMember}
+        currentUserId={currentUser.uid}
+        isOwner={isOwner}
+        onAddMemberClick={() => setIsAddMemberModalOpen(true)}
+        isOpen={isMembersOpen}
+        onClose={() => setIsMembersOpen(false)}
       />
-
       <AddMemberModal
         isOpen={isAddMemberModalOpen}
         onClose={() => setIsAddMemberModalOpen(false)}
@@ -436,4 +377,4 @@ const GroupView = () => {
   );
 };
 
-export default GroupView
+export default GroupView;

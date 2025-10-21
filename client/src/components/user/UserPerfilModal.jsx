@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { signOut } from 'firebase/auth';
 
 const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate, onAccountDelete }) => {
   const { currentUser } = useAuth();
@@ -82,6 +83,16 @@ const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate, onAccountDelete })
       setIsUploading(false);
     }
   };
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      console.log("Usuario cerró sesión exitosamente.");
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
@@ -147,7 +158,16 @@ const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate, onAccountDelete })
             {isUploading ? 'Subiendo...' : (isSaving ? 'Guardando...' : 'Guardar Cambios')}
           </button>
         </div>
-
+        <button
+          onClick={handleSignOut}
+          className="flex-1 p-2 rounded-lg hover:bg-red-50 bg-red-500 flex items-center justify-center"
+          title="Cerrar Sesión"
+        >
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <p>Cerrar Sesión</p>
+        </button>
         <div className="border-t border-red-200 mt-6 pt-4">
           <h3 className="font-bold text-base sm:text-lg text-red-500">Zona de Peligro</h3>
           <p className="text-xs sm:text-sm text-gray-600 mt-1">

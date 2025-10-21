@@ -4,11 +4,9 @@ import { useParams, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useConversations } from '../context/ConversationsContext';
-import ConversationsSidebar from '../components/sidebar/ConversationsSidebar';
 import ChatHeader from '../components/chat/ChatHeader';
 import MessageList from '../components/chat/MessageList';
 import MessageInput from '../components/chat/MessageInput';
-import CreateGroupModal from '../components/groups/CreateGroupModal';
 import VideoCallModal from '../components/chat/VideoCallModal';
 import IncomingCallModal from '../components/chat/IncomingCallModal';
 import CallTypeModal from '../components/chat/CallTypeModal';
@@ -28,13 +26,12 @@ const ChatView = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { socket } = useSocket();
-  const { conversations, loadConversations } = useConversations();
+  const { conversations } = useConversations();
 
   const [messages, setMessages] = useState([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [otherUser, setOtherUser] = useState(null);
-  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
-
+  
   const [webrtc, setWebrtc] = useState(null);
   const [inCall, setInCall] = useState(false);
   const [localStream, setLocalStream] = useState(null);
@@ -43,8 +40,7 @@ const ChatView = () => {
   const [showCallTypeModal, setShowCallTypeModal] = useState(false);
   const [showIncomingCallModal, setShowIncomingCallModal] = useState(false);
   const [incomingCallData, setIncomingCallData] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
+  
   const conversationId = [currentUser.uid, userId].sort().join('_');
   const previousConversationId = useRef(null);
 
@@ -198,100 +194,47 @@ const ChatView = () => {
     }
   };
 
-  const handleSelectConversation = (conv) => {
-    if (conv.type === 'dm') {
-      navigate(`/chat/${conv.userData.uid}`);
-    } else {
-      navigate(`/group/${conv.groupData.id}`);
-    }
-  };
-
-  const handleCreateGroup = async (name, memberIds) => {
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch('http://localhost:3000/api/groups', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ name, memberIds })
-      });
-
-      if (response.ok) {
-        const newGroup = await response.json();
-        setIsCreateGroupModalOpen(false);
-        await loadConversations();
-        navigate(`/group/${newGroup.id}`);
-      } else {
-        alert('Error al crear el grupo.');
-      }
-    } catch (error) {
-      console.error('Error creando grupo:', error);
-    }
-  };
-
   if (!otherUser) {
     return <Loader />;
   }
 
   return (
     <>
-      <div className="flex h-screen bg-gray-50 text-gray-800 overflow-hidden">
-        <ConversationsSidebar
-          conversations={conversations}
-          selectedId={`dm_${userId}`}
-          onSelectConversation={handleSelectConversation}
-          onCreateGroup={() => setIsCreateGroupModalOpen(true)}
-          onStartConversation={(user) => navigate(`/chat/${user.uid}`)}
-          onEditProfile={() => navigate('/profile')}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
+      <main className="flex flex-col flex-1 min-w-0 h-full pb-16 lg:pb-0">
+        <ChatHeader
+          name={otherUser?.displayName}
+          photoURL={otherUser?.photoURL}
+          status={otherUser?.status}
+          lastSeen={otherUser?.lastSeen}
+          onCall={handleCall}
+          inCall={inCall}
+          onBackClick={() => navigate('/')}
         />
 
-        <main className="flex flex-col flex-1 min-w-0">
-          <ChatHeader
-            name={otherUser?.displayName}
-            photoURL={otherUser?.photoURL}
-            status={otherUser?.status}
-            lastSeen={otherUser?.lastSeen}
-            onCall={handleCall}
-            inCall={inCall}
-            onMenuClick={() => setIsSidebarOpen(true)}
-          />
-
-          {isLoadingMessages ? (
-            <div className="flex items-center justify-center h-full bg-gray-50">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
-                <p className="text-gray-600">Cargando mensajes...</p>
-              </div>
+        {isLoadingMessages ? (
+          <div className="flex items-center justify-center h-full bg-gray-50">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3"></div>
+              <p className="text-gray-600">Cargando mensajes...</p>
             </div>
-          ) : (
-            <>
-              <MessageList messages={messages} />
-              {socket && (
-                <MessageInput
-                  socket={socket}
-                  isDirectMessage={true}
-                  conversationId={conversationId}
-                  members={[
-                    { uid: currentUser.uid },
-                    { uid: userId }
-                  ]}
-                />
-              )}
-            </>
-          )}
-        </main>
-      </div>
-
-      <CreateGroupModal
-        isOpen={isCreateGroupModalOpen}
-        onClose={() => setIsCreateGroupModalOpen(false)}
-        onCreate={handleCreateGroup}
-      />
-
+          </div>
+        ) : (
+          <>
+            <MessageList messages={messages} />
+            {socket && (
+              <MessageInput
+                socket={socket}
+                isDirectMessage={true}
+                conversationId={conversationId}
+                members={[
+                  { uid: currentUser.uid },
+                  { uid: userId }
+                ]}
+              />
+            )}
+          </>
+        )}
+      </main>
       {showCallTypeModal && (
         <CallTypeModal
           onSelectType={handleSelectCallType}
