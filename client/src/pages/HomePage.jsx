@@ -79,38 +79,136 @@ const MessageList = ({ messages, currentUserUid }) => {
   );
 };
 
-const MembersList = ({ members, onCallMember, currentUserId, onAddMemberClick, isOwner }) => (
-  <aside className="w-64 bg-gray-800 p-4 border-l border-gray-900 flex-shrink-0 flex flex-col">
-    <h2 className="font-bold text-lg text-white mb-4">Miembros ({members.length})</h2>
+const MembersListContent = ({
+  members,
+  onCallMember,
+  currentUserId,
+  onAddMemberClick,
+  isOwner,
+}) => (
+  <>
+    <h2 className="font-bold text-lg text-white mb-4">
+      Miembros ({members.length})
+    </h2>
     <div className="space-y-2 flex-1 overflow-y-auto">
-      {members.map(member => (
-        <div key={member.uid} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-700 transition-colors">
+      {members.map((member) => (
+        <div
+          key={member.uid}
+          className="flex items-center justify-between p-2 rounded-md hover:bg-gray-700 transition-colors"
+        >
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
-              {member.photoURL ? (<img src={member.photoURL} alt={member.displayName} className="w-8 h-8 rounded-full" />) : (<div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">{member.displayName?.charAt(0).toUpperCase() || '?'}</div>)}
+              {member.photoURL
+                ? (
+                  <img
+                    src={member.photoURL}
+                    alt={member.displayName}
+                    className="w-8 h-8 rounded-full"
+                  />)
+                : (
+                  <div
+                    className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm"
+                  >
+                    {member.displayName?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                )}
               <span
                 className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-gray-800 ${member.status === 'online' ? 'bg-green-500' : 'bg-gray-500'
                   }`}
                 title={member.status === 'online' ? 'Conectado' : `Últ. vez: ${formatLastSeen(member.lastSeen)}`}
               />
             </div>
-            <span className="text-gray-200 text-sm truncate">{member.displayName}</span>
+            <span className="text-gray-200 text-sm truncate">
+              {member.displayName}
+            </span>
           </div>
-          {member.uid !== currentUserId && (<button onClick={() => onCallMember(member)} className="p-1 hover:bg-gray-600 rounded" title="Llamar"><svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></button>)}
+          {member.uid !== currentUserId && (
+            <button
+              onClick={() => onCallMember(member)}
+              className="p-1 hover:bg-gray-600 rounded"
+              title="Llamar"
+            >
+              <svg
+                className="w-5 h-5 text-green-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                />
+              </svg>
+            </button>
+          )}
         </div>
       ))}
     </div>
-    {isOwner && (<button onClick={onAddMemberClick} className="mt-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold w-full transition-colors">Añadir Miembro</button>)}
+    {isOwner && (
+      <button
+        onClick={onAddMemberClick}
+        className="mt-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold w-full transition-colors"
+      >
+        Añadir Miembro
+      </button>
+    )}
+  </>
+);
+
+const MembersList = (props) => (
+  <aside className="hidden md:flex w-64 bg-gray-800 p-4 border-l border-gray-900 flex-shrink-0 flex-col">
+    <MembersListContent {...props} />
   </aside>
 );
 
+const MembersModal = ({ isOpen, onClose, ...props }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="md:hidden fixed inset-0 z-40 flex flex-col bg-gray-900 text-white">
+      <header className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex items-center">
+        <button
+          onClick={onClose}
+          className="p-1 rounded-full text-white hover:bg-gray-700 mr-3"
+          title="Cerrar"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+        </button>
+        <h2 className="font-bold text-lg">Miembros del Grupo</h2>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        <MembersListContent {...props} />
+      </div>
+    </div>
+  );
+};
+
 const HomePage = () => {
-  const { socket, currentUser, selectedConversation, loadAllData } = useOutletContext();
+  const {
+    socket,
+    currentUser,
+    selectedConversation,
+    loadAllData,
+    onClearSelectedConversation,
+  } = useOutletContext();
 
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   const [webrtc, setWebrtc] = useState(null);
   const [inCall, setInCall] = useState(false);
@@ -259,7 +357,26 @@ const HomePage = () => {
       <div className="flex h-full bg-gray-900 text-white">
         <main className="flex flex-col flex-1">
           <header className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex justify-between items-center">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={onClearSelectedConversation}
+                className="md:hidden p-1 rounded-full text-white hover:bg-gray-700"
+                title="Atrás"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+              </button>
               {selectedConversation ? (
                 <>
                   {selectedConversation.type === 'group' ? (
@@ -289,7 +406,33 @@ const HomePage = () => {
                 <h2 className="font-bold text-lg text-gray-400">Selecciona una conversación</h2>
               )}
             </div>
-            {selectedConversation && getCallTarget() && (<button onClick={() => handleCallMember(getCallTarget())} disabled={inCall} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg font-semibold"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></button>)}
+            {selectedConversation && getCallTarget() && (
+              <button
+                onClick={() => handleCallMember(getCallTarget())}
+                disabled={inCall}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg font-semibold"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  />
+                </svg>
+              </button>
+            )}
+            {selectedConversation?.type === 'group' && (
+              <button
+                onClick={() => setIsMembersModalOpen(true)}
+                className="md:hidden px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
+                title="Ver Miembros"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 016-6h6m6 3v-3m0 0v-3m0 0h-3m3 0h3" /></svg>
+              </button>
+            )}
           </header>
           {selectedConversation ? (
             <>
@@ -322,6 +465,20 @@ const HomePage = () => {
           />
         )}
       </div>
+      {selectedConversation?.type === 'group' && (
+        <MembersModal
+          isOpen={isMembersModalOpen}
+          onClose={() => setIsMembersModalOpen(false)}
+          members={members}
+          onCallMember={handleCallMember}
+          currentUserId={currentUser.uid}
+          isOwner={currentUser.uid === selectedConversation.groupData.ownerId}
+          onAddMemberClick={() => {
+            setIsMembersModalOpen(false);
+            setIsAddMemberModalOpen(true);
+          }}
+        />
+      )}
       {selectedConversation?.type === 'group' && (
         <AddMemberModal
           isOpen={isAddMemberModalOpen}

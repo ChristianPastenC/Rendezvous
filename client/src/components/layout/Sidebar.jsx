@@ -44,7 +44,7 @@ const Sidebar = ({
 
   return (
     <aside
-      className={`w-80 h-screen bg-white flex flex-col flex-shrink-0 border-r border-gray-200`}
+      className={`w-full h-full bg-white flex flex-col flex-shrink-0`}
     >
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
