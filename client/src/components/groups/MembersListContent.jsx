@@ -1,4 +1,5 @@
 import { CallIcon } from "../../assets/Icons";
+import { formatLastSeen } from "../../utils/lastSeen";
 
 const MembersListContent = ({
   members,
