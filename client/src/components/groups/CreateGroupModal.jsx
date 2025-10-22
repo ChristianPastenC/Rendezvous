@@ -10,13 +10,13 @@ const CreateGroupModal = ({ isOpen, onClose, onCreate }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-gray-300 bg-opacity-50 z-50 flex items-center justify-center">
+      <div className="bg-gray-400 p-6 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold text-white mb-4">Crear un Nuevo Grupo</h2>
         <form onSubmit={handleSubmit}>
           <input
             type="text" value={groupName} onChange={(e) => setGroupName(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+            className="w-full px-4 py-2 bg-gray-100 rounded-lg text-black"
             placeholder="Nombre del Grupo" autoFocus
           />
           <div className="mt-6 flex justify-end space-x-3">

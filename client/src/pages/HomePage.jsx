@@ -183,14 +183,14 @@ const HomePage = () => {
     return members;
   };
   const getCurrentConversationId = () => {
-    if (selectedConversation?.type === 'dm') 
+    if (selectedConversation?.type === 'dm')
       return [currentUser.uid, selectedConversation.userData.uid].sort().join('_');
     return selectedConversation?.groupData?.channelId;
   };
   const getCallTarget = () => {
-    if (selectedConversation?.type === 'dm') 
+    if (selectedConversation?.type === 'dm')
       return selectedConversation.userData;
-    if (members.length > 1) 
+    if (members.length > 1)
       return members.find(m => m.uid !== currentUser.uid);
     return null;
   };
@@ -198,7 +198,7 @@ const HomePage = () => {
   return (
     <>
       <div className="flex h-full bg-gray-100">
-        <main className="flex flex-col flex-1">
+        <main className="flex flex-col flex-1 bg-white">
           <MainHeader
             selectedConversation={selectedConversation}
             onClearSelectedConversation={onClearSelectedConversation}
@@ -212,9 +212,9 @@ const HomePage = () => {
               {isLoadingMessages ? (
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-3">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-[#3B82F6] mb-3">
                     </div>
-                    <p className="text-gray-400">
+                    <p className="text-gray-500">
                       Cargando mensajes...
                     </p>
                   </div>

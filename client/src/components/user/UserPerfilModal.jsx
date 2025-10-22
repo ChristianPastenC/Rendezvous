@@ -3,10 +3,10 @@ import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
-const ProfileEditModal = ({ 
-  isOpen, 
-  onClose, 
-  onProfileUpdate, 
+const ProfileEditModal = ({
+  isOpen,
+  onClose,
+  onProfileUpdate,
   onAccountDelete,
   onSignOut
 }) => {
@@ -90,58 +90,71 @@ const ProfileEditModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md text-gray-900">
         <h2 className="text-2xl font-bold mb-6">Editar Perfil</h2>
 
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
-            <img
-              src={previewUrl || 'default-avatar.png'}
-              alt="Avatar"
-              className="w-32 h-32 rounded-full object-cover border-4 border-gray-700"
-            />
-            <label htmlFor="photo-upload" className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full cursor-pointer hover:bg-blue-700">
+            {(!previewUrl || previewUrl.startsWith('https://placehold.co')) ? (
+              <div
+                className="w-32 h-32 rounded-full border-4 border-gray-300 flex items-center justify-center bg-gray-200"
+                title={displayName || 'Avatar'}
+              >
+                <span className="text-4xl font-bold text-gray-500">
+                  {displayName?.charAt(0).toUpperCase() || '?'}
+                </span>
+              </div>
+            ) : (
+              <img
+                src={previewUrl}
+                alt="Avatar"
+                className="w-32 h-32 rounded-full object-cover border-4 border-gray-300"
+              />
+            )}
+            <label htmlFor="photo-upload" className="absolute bottom-0 right-0 bg-[#3B82F6] text-white p-2 rounded-full cursor-pointer hover:bg-blue-700">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </label>
             <input id="photo-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
           </div>
 
           <div className="w-full">
-            <label htmlFor="displayName" className="block text-sm font-medium text-gray-400 mb-1">Nombre de usuario</label>
+            <label htmlFor="displayName" className="block text-sm font-medium text-gray-500 mb-1">Nombre de usuario</label>
             <input
               id="displayName"
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full bg-gray-700 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full bg-gray-100 text-gray-900 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
-        {error && <p className="text-red-400 text-sm mt-4 text-center">{error}</p>}
+        {error && <p className="text-red-600 text-sm mt-4 text-center">{error}</p>}
 
         <div className="mt-8 flex justify-end space-x-4">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500">Cancelar</button>
-          <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
             {isUploading ? 'Subiendo...' : (isSaving ? 'Guardando...' : 'Guardar Cambios')}
           </button>
         </div>
         <button
           onClick={onSignOut}
-          className="w-full mt-3 px-4 py-2 rounded bg-red-600 hover:bg-red-500 font-semibold transition-colors"
+          className="w-full mt-3 px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 font-semibold transition-colors"
           title="Cerrar Sesión"
         >
           Cerrar Sesión
         </button>
-        <div className="border-t border-red-500/30 mt-6 pt-4">
-          <h3 className="font-bold text-lg text-red-400">Zona de Peligro</h3>
-          <p className="text-sm text-gray-400 mt-1">
+        <div className="border-t border-red-300 mt-6 pt-4">
+          <h3 className="font-bold text-lg text-red-600">Zona de Peligro</h3>
+          <p className="text-sm text-gray-500 mt-1">
             La eliminación de tu cuenta es una acción permanente y no se puede deshacer.
           </p>
           <button
             onClick={onAccountDelete}
-            className="w-full mt-3 px-4 py-2 rounded bg-red-600 hover:bg-red-500 font-semibold transition-colors"
+            className="w-full mt-3 px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 font-semibold transition-colors"
           >
             Eliminar mi cuenta
           </button>

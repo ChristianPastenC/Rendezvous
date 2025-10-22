@@ -9,14 +9,14 @@ const MembersListContent = ({
   isOwner,
 }) => (
   <>
-    <h2 className="font-bold text-lg text-white mb-4">
+    <h2 className="font-bold text-lg text-gray-800 mb-4">
       Miembros ({members.length})
     </h2>
     <div className="space-y-2 flex-1 overflow-y-auto">
       {members.map((member) => (
         <div
           key={member.uid}
-          className="flex items-center justify-between p-2 rounded-md hover:bg-gray-700 transition-colors"
+          className="flex items-center justify-between p-2 rounded-md hover:bg-gray-300 transition-colors"
         >
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
@@ -35,7 +35,7 @@ const MembersListContent = ({
                   </div>
                 )}
               <span
-                className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-gray-800 
+                className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white 
                   ${member.status === 'online'
                     ? 'bg-green-500'
                     : 'bg-gray-500'
@@ -47,7 +47,7 @@ const MembersListContent = ({
                 }
               />
             </div>
-            <span className="text-gray-200 text-sm truncate">
+            <span className="text-gray-600 text-sm truncate">
               {member.displayName}
             </span>
           </div>
@@ -66,7 +66,7 @@ const MembersListContent = ({
     {isOwner && (
       <button
         onClick={onAddMemberClick}
-        className="mt-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold w-full transition-colors"
+        className="mt-4 p-2 bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg font-semibold w-full transition-colors text-gray-100"
       >
         Añadir Miembro
       </button>

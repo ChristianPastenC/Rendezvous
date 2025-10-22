@@ -5,14 +5,14 @@ const MembersModal = ({ isOpen, onClose, ...props }) => {
 
   return (
     <div
-      className="md:hidden fixed inset-0 z-40 flex flex-col bg-gray-900 text-white"
+      className="md:hidden fixed inset-0 z-40 flex flex-col bg-gray-100 text-black"
     >
       <header
-        className="p-4 bg-gray-800 shadow-lg border-b border-gray-700 flex items-center"
+        className="p-4 bg-gray-800 shadow-lg border-b border-gray-200 flex items-center"
       >
         <button
           onClick={onClose}
-          className="p-1 rounded-full text-white hover:bg-gray-700 mr-3"
+          className="p-1 rounded-full text-black hover:bg-gray-300 mr-3"
           title="Cerrar"
         >
           <svg
