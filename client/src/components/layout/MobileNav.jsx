@@ -1,6 +1,4 @@
 // src/components/layout/MobileNav.jsx
-
-import React from 'react';
 import { PlusIcon, SettingIcon } from '../../assets/Icons';
 
 const MobileNav = ({ onShowSearch, onCreateGroup, onEditProfile }) => {
@@ -42,15 +40,24 @@ const MobileNav = ({ onShowSearch, onCreateGroup, onEditProfile }) => {
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-around shadow-inner z-10">
-      <button className="flex flex-col items-center justify-center text-blue-500 p-2">
+    <nav
+      // Fondo blanco limpio con un borde superior sutil
+      className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-around z-10"
+    >
+      {/* Botón Activo (Chats) - Usa el color azul primario */}
+      <button
+        className="flex flex-col items-center justify-center text-blue-600 p-2"
+        title="Chats"
+      >
         <ICONS.Chat className="w-6 h-6" />
         <span className="text-xs font-medium">Chats</span>
       </button>
 
+      {/* Botones Inactivos */}
       <button
         onClick={onShowSearch}
-        className="flex flex-col items-center justify-center text-gray-600 hover:text-blue-500 p-2"
+        className="flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 p-2 transition-colors"
+        title="Buscar"
       >
         <ICONS.Search className="w-6 h-6" />
         <span className="text-xs font-medium">Buscar</span>
@@ -58,7 +65,8 @@ const MobileNav = ({ onShowSearch, onCreateGroup, onEditProfile }) => {
 
       <button
         onClick={onCreateGroup}
-        className="flex flex-col items-center justify-center text-gray-600 hover:text-blue-500 p-2"
+        className="flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 p-2 transition-colors"
+        title="Crear Grupo"
       >
         <ICONS.Plus className="w-6 h-6" />
         <span className="text-xs font-medium">Grupo</span>
@@ -66,7 +74,8 @@ const MobileNav = ({ onShowSearch, onCreateGroup, onEditProfile }) => {
 
       <button
         onClick={onEditProfile}
-        className="flex flex-col items-center justify-center text-gray-600 hover:text-blue-500 p-2"
+        className="flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 p-2 transition-colors"
+        title="Perfil"
       >
         <ICONS.Settings className="w-6 h-6" />
         <span className="text-xs font-medium">Perfil</span>

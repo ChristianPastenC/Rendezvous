@@ -7,7 +7,7 @@ const AuthLayout = ({ title, subtitle, children }) => {
     >
       <div className="mb-8 text-center">
         <img 
-          src="/vite.svg"
+          src="/rendezvous.svg"
           alt="Logo" 
           className="mx-auto h-16 w-auto mb-4" 
         />

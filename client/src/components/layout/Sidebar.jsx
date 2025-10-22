@@ -1,6 +1,5 @@
 // src/components/layout/Sidebar.jsx
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import UserSearch from '../dms/UserSearch';
 import { PlusIcon, SettingIcon } from '../../assets/Icons';
 import { formatLastSeen } from '../../utils/lastSeen';
@@ -23,42 +22,49 @@ const Sidebar = ({
     return true;
   });
 
+  // const N_REPETICIONES = 10;
+
+  // const conversationsParaTest = Array.from({ length: N_REPETICIONES }).flatMap(() => filteredConversations);
+
   return (
     <aside
-      className={`w-full h-full bg-white flex flex-col flex-shrink-0`}
+      className="w-full h-full bg-white flex flex-col flex-shrink-0 border-r border-gray-200"
     >
+      <img
+        src="/rendezvous.svg"
+        alt="Logo"
+        className="mx-auto h-12 w-auto my-2"
+      />
       <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-lg text-gray-800">
-            Conversaciones
-          </h2>
-        </div>
+        <h2 className="font-bold text-2xl text-gray-900 mb-4">
+          Conversaciones
+        </h2>
 
-        <div className="flex gap-2 mb-3">
+        <div className="flex gap-2 mb-4">
           <button
             onClick={() => setFilter('all')}
-            className={`flex-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${filter === 'all'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              } `}
+            className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'all'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             Todos
           </button>
           <button
             onClick={() => setFilter('dms')}
-            className={`flex-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${filter === 'dms'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              } `}
+            className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'dms'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             Directos
           </button>
           <button
             onClick={() => setFilter('groups')}
-            className={`flex-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${filter === 'groups'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              } `}
+            className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'groups'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             Grupos
           </button>
@@ -71,13 +77,11 @@ const Sidebar = ({
         {filteredConversations.map(conv => (
           <button
             key={conv.id}
-            onClick={() => {
-              onSelectConversation(conv);
-            }}
+            onClick={() => onSelectConversation(conv)}
             className={`w-full text-left p-3 rounded-lg flex items-center space-x-3 transition-colors ${selectedId === conv.id
-              ? 'bg-blue-50 text-gray-800'
-              : 'text-gray-700 hover:bg-gray-50'
-              } `}
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-800 hover:bg-gray-100'
+              }`}
           >
             <div className="relative flex-shrink-0">
               {conv.type === 'group' ? (
@@ -98,22 +102,22 @@ const Sidebar = ({
 
               {conv.type === 'dm' && conv.userData && (
                 <span
-                  className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white 
+                  className={`absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full ring-2 ring-white 
                     ${conv.userData.status === 'online'
                       ? 'bg-green-500'
                       : 'bg-gray-400'
-                    } `}
+                    }`}
                   title={
                     conv.userData.status === 'online'
                       ? 'Conectado'
-                      : `Últ.vez: ${formatLastSeen(conv.userData.lastSeen)} `
+                      : `Últ. vez: ${formatLastSeen(conv.userData.lastSeen)}`
                   }
                 />
               )}
             </div>
 
             <div className="flex-1 min-w-0">
-              <span className="font-medium truncate block text-base">
+              <span className="font-semibold truncate block text-base">
                 {conv.name}
               </span>
             </div>
@@ -121,31 +125,53 @@ const Sidebar = ({
         ))}
       </div>
 
-      <button
-        onClick={onCreateGroup}
-        className="m-3 p-3 rounded-lg bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2 font-semibold text-white text-base"
-      >
-        <PlusIcon className='w-5 h-5' />
-        <span>Crear Grupo</span>
-      </button>
+      <div className="p-3">
+        <button
+          onClick={onCreateGroup}
+          className="w-full p-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 font-semibold text-white text-base"
+        >
+          <PlusIcon className="w-5 h-5" />
+          <span>Crear Grupo</span>
+        </button>
+      </div>
 
       <div className="p-3 border-t border-gray-200 mt-auto">
         {currentUser && (
-          <div className="p-2 bg-gray-100 rounded-lg mb-2">
-            <p className="text-sm font-semibold text-gray-800 truncate" title={currentUser.email}>
-              {currentUser.displayName || currentUser.email}
-            </p>
-          </div>
-        )}
-        <div className="flex items-center gap-2">
           <button
             onClick={onEditProfile}
-            className="flex-1 p-2 rounded-lg hover:bg-gray-100 flex items-center justify-center"
+            className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
             title="Editar Perfil"
           >
-            <SettingIcon className="w-5 h-5 text-gray-600" />
+            <div className="flex-shrink-0">
+              {currentUser.photoURL ? (
+                <img
+                  src={currentUser.photoURL}
+                  alt="Tu perfil"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center font-bold text-lg text-white">
+                  {currentUser.displayName
+                    ? currentUser.displayName.charAt(0).toUpperCase()
+                    : currentUser.email.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-semibold text-gray-800 truncate">
+                {currentUser.displayName || 'Usuario'}
+              </p>
+              <p
+                className="text-xs text-gray-500 truncate"
+                title={currentUser.email}
+              >
+                {currentUser.email}
+              </p>
+            </div>
+            <SettingIcon className="w-5 h-5 text-gray-500 flex-shrink-0" />
           </button>
-        </div>
+        )}
       </div>
     </aside>
   );

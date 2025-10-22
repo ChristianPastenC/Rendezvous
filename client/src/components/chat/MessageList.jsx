@@ -20,7 +20,7 @@ const Avatar = ({ photoURL, displayName, isSender }) => {
   if (showFallback) {
     return (
       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white
-        ${isSender ? 'bg-indigo-400' : 'bg-blue-600'}
+        ${isSender ? 'bg-blue-600' : 'bg-purple-500'}
       `}>
         {displayName?.charAt(0).toUpperCase() || '?'}
       </div>
@@ -31,7 +31,7 @@ const Avatar = ({ photoURL, displayName, isSender }) => {
     <img
       src={photoURL}
       alt={displayName || 'Avatar'}
-      className="w-8 h-8 rounded-full"
+      className="w-8 h-8 rounded-full object-cover" // Añadido object-cover
       loading="lazy"
       onError={() => setImgError(true)}
     />
@@ -46,7 +46,7 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
 
     if (!encryptedDataForUser) {
       return (
-        <p className="text-sm font-normal py-2.5 text-gray-500 dark:text-gray-400 italic">
+        <p className="text-sm font-normal text-gray-500 dark:text-gray-400 italic">
           [No tienes permiso para ver este mensaje]
         </p>
       );
@@ -55,7 +55,7 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
     const decryptedString = cryptoService.decrypt(encryptedDataForUser);
     if (!decryptedString) {
       return (
-        <p className="text-sm font-normal py-2.5 text-red-500 dark:text-red-400 italic">
+        <p className="text-sm font-normal text-red-500 dark:text-red-400 italic">
           [Error al descifrar]
         </p>
       );
@@ -69,12 +69,12 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
               href={messageObject.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2.5"
+              className="mt-1"
             >
               <img
                 src={messageObject.fileUrl}
-                alt={messageObject.content}
-                className="rounded-lg max-w-full max-h-64"
+                alt={messageObject.content || 'Imagen adjunta'}
+                className="rounded-lg max-w-full max-h-64 object-cover"
               />
             </a>
           );
@@ -84,19 +84,21 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
               href={messageObject.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`mt-2 inline-flex items-center p-2 rounded-lg 
+              className={`mt-1.5 inline-flex items-center p-2 rounded-lg 
                 ${isSender
                   ? 'bg-blue-700 hover:bg-blue-800 text-white'
-                  : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white' // Color más claro
                 }`}
             >
-              <FileIcon className="w-5 h-5 mr-2" />
-              {messageObject.content}
+              <FileIcon className="w-5 h-5 mr-2 flex-shrink-0" />
+              <span className="truncate" title={messageObject.content}>
+                {messageObject.content}
+              </span>
             </a>
           );
         default:
           return (
-            <p className={`text-sm font-normal py-2.5 
+            <p className={`text-sm font-normal leading-normal break-words
               ${isSender ? 'text-white' : 'text-gray-900 dark:text-white'}`
             }>
               {messageObject.content}
@@ -105,7 +107,7 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
       }
     } catch (e) {
       return (
-        <p className="text-sm font-normal py-2.5 text-red-500 dark:text-red-400 italic">
+        <p className="text-sm font-normal text-red-500 dark:text-red-400 italic">
           [Mensaje corrupto]
         </p>
       );
@@ -130,7 +132,7 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
         <div className="flex items-center space-x-2 rtl:space-x-reverse">
           <span className={`text-sm font-semibold 
             ${isSender ? 'text-white' : 'text-gray-900 dark:text-white'}`
-            }>
+          }>
             {msg.authorInfo?.displayName || 'Usuario'}
           </span>
           <span className={`text-sm font-normal 
