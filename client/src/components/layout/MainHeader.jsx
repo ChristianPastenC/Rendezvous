@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/layout/MainHeader.jsx
 import { formatLastSeen } from '../../utils/lastSeen';
 import { BackIcon, CallIcon, MembersIcon } from '../../assets/Icons';
 
@@ -11,40 +11,44 @@ const MainHeader = ({
   onMembersClick,
 }) => {
   return (
-    <header className="p-4 bg-white shadow-lg border-b border-gray-300 flex justify-between items-center">
-      <div className="flex items-center space-x-2">
+    <header className="p-4 bg-white border-b border-gray-200 flex justify-between items-center">
+      <div className="flex items-center space-x-3 min-w-0">
         <button
           onClick={onClearSelectedConversation}
-          className="md:hidden p-1 rounded-full text-gray-500 hover:bg-gray-100"
+          className="md:hidden p-2 rounded-full text-gray-600 hover:bg-gray-100"
           title="Atrás"
         >
           <BackIcon className="w-6 h-6" />
         </button>
+
         {selectedConversation ? (
           <>
-            {selectedConversation.type === 'group' ? (
-              <div className="w-10 h-10 rounded-full bg-[#3B82F6] flex items-center justify-center font-bold text-lg flex-shrink-0 text-white">
-                {selectedConversation.name.charAt(0).toUpperCase()}
-              </div>
-            ) : selectedConversation.photoURL ? (
-              <img
-                src={selectedConversation.photoURL}
-                alt={selectedConversation.name}
-                className="w-10 h-10 rounded-full flex-shrink-0"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center font-bold text-lg flex-shrink-0 text-white">
-                {selectedConversation.name.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <h2 className="font-bold text-lg leading-tight text-gray-900">
+            <div className="flex-shrink-0">
+              {selectedConversation.type === 'group' ? (
+                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white">
+                  {selectedConversation.name.charAt(0).toUpperCase()}
+                </div>
+              ) : selectedConversation.photoURL ? (
+                <img
+                  src={selectedConversation.photoURL}
+                  alt={selectedConversation.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center font-bold text-lg flex-shrink-0 text-white">
+                  {selectedConversation.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <h2 className="font-bold text-lg leading-tight text-gray-900 truncate">
                 {selectedConversation.name}
               </h2>
               {selectedConversation.type === 'dm' && selectedConversation.userData && (
                 <p className="text-xs text-gray-500">
                   {selectedConversation.userData.status === 'online' ? (
-                    <span className="text-green-600">
+                    <span className="text-green-600 font-medium">
                       Conectado
                     </span>)
                     : (`Últ. vez ${formatLastSeen(selectedConversation.userData.lastSeen)}`)
@@ -59,24 +63,29 @@ const MainHeader = ({
           </h2>
         )}
       </div>
-      {selectedConversation && callTarget && (
-        <button
-          onClick={onCallClick}
-          disabled={inCall}
-          className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 disabled:bg-gray-300 rounded-lg font-semibold"
-        >
-          <CallIcon className="w-6 h-6" />
-        </button>
-      )}
-      {selectedConversation?.type === 'group' && (
-        <button
-          onClick={onMembersClick}
-          className="md:hidden px-3 py-2 bg-[#3B82F6] hover:bg-blue-600 rounded-lg"
-          title="Ver Miembros"
-        >
-          <MembersIcon className="w-5 h-5 text-white" />
-        </button>
-      )}
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {selectedConversation && callTarget && (
+          <button
+            onClick={onCallClick}
+            disabled={inCall}
+            className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            title="Llamar"
+          >
+            <CallIcon className="w-6 h-6 text-green-600" />
+          </button>
+        )}
+
+        {selectedConversation?.type === 'group' && (
+          <button
+            onClick={onMembersClick}
+            className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
+            title="Ver Miembros"
+          >
+            <MembersIcon className="w-5 h-5 text-blue-600" />
+          </button>
+        )}
+      </div>
     </header>
   );
 };

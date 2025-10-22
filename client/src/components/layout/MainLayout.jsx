@@ -1,10 +1,8 @@
 // src/components/layout/MainLayout.jsx
-
-import React, { 
-  useCallback, 
-  useState, 
-  useEffect, 
-  useRef 
+import React, {
+  useCallback,
+  useState,
+  useRef
 } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { signOut } from 'firebase/auth';
@@ -15,8 +13,8 @@ import CreateGroupModal from '../groups/CreateGroupModal';
 import ProfileEditModal from '../user/UserPerfilModal';
 import MobileNav from './MobileNav';
 import UserSearchModal from '../dms/UserSearchModal';
-import { initSocket } from '../../lib/socket';
-import { cryptoService } from '../../lib/cryptoService';
+import { useSocketManager } from '../../hooks/useSocketManager';
+import { useConversations } from '../../hooks/useConversations';
 
 const Loader = () => (
   <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -31,12 +29,15 @@ const MainLayout = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  const [socket, setSocket] = useState(null);
-  const [conversations, setConversations] = useState([]);
+  const socket = useSocketManager(currentUser);
+  const { conversations, setConversations, loadAllData, isLoading } = useConversations(
+    currentUser,
+    socket
+  );
+  
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isUserSearchModalOpen, setIsUserSearchModalOpen] = useState(false);
 
   const messagesCache = useRef({});
@@ -51,96 +52,6 @@ const MainLayout = () => {
       console.error('Error al cerrar sesión:', error);
     }
   }, [navigate]);
-
-  const loadAllData = useCallback(async () => {
-    if (!currentUser) return;
-    setIsLoading(true);
-    try {
-      const token = await currentUser.getIdToken();
-      const [groupsRes, contactsRes] = await Promise.all([
-        fetch('http://localhost:3000/api/groups', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('http://localhost:3000/api/contacts', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-      const groupsData = await groupsRes.json();
-      const contactsData = await contactsRes.json();
-      const unifiedConversations = [
-        ...contactsData.map((contact) => ({
-          id: `dm_${contact.uid}`,
-          type: 'dm',
-          name: contact.displayName,
-          photoURL: contact.photoURL,
-          userData: contact,
-        })),
-        ...groupsData.map((group) => ({
-          id: `group_${group.id}`,
-          type: 'group',
-          name: group.name,
-          groupData: group,
-        })),
-      ];
-      setConversations(unifiedConversations);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    let socketInstance;
-    const connect = async () => {
-      socketInstance = await initSocket();
-      if (socketInstance) {
-        setSocket(socketInstance);
-        const { publicKey } = await cryptoService.generateAndStoreKeys();
-        socketInstance.emit('security:register-public-key', { publicKey });
-      }
-    };
-    connect();
-    return () => {
-      if (socketInstance) socketInstance.disconnect();
-    };
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleStatusUpdate = ({ uid, status, lastSeen }) => {
-      setConversations(prevConvs =>
-        prevConvs.map(conv => {
-          if (conv.type === 'dm' && conv.userData.uid === uid) {
-            return {
-              ...conv,
-              userData: { ...conv.userData, status, lastSeen },
-            };
-          }
-          return conv;
-        })
-      );
-    };
-
-    socket.on('statusUpdate', handleStatusUpdate);
-
-    if (conversations.length > 0) {
-      const userIdsToWatch = conversations
-        .filter(c => c.type === 'dm')
-        .map(c => c.userData.uid);
-      socket.emit('subscribeToStatus', userIdsToWatch);
-    }
-
-    return () => {
-      socket.off('statusUpdate', handleStatusUpdate);
-    };
-  }, [socket, conversations]);
 
   const handleSelectConversation = useCallback((conv) => {
     setSelectedConversation(conv);
@@ -165,7 +76,7 @@ const MainLayout = () => {
         setSelectedConversation(newConv);
       }
     },
-    [conversations]
+    [conversations, setConversations]
   );
 
   const handleStartConversationAndCloseModal = useCallback(
