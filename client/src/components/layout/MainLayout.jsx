@@ -1,5 +1,5 @@
 // src/components/layout/MainLayout.jsx
-import React, {
+import {
   useCallback,
   useState,
   useRef
@@ -152,6 +152,16 @@ const MainLayout = () => {
 
   if (isLoading) return <Loader />;
 
+  const outletContext = {
+    socket,
+    currentUser,
+    selectedConversation,
+    loadAllData,
+    onClearSelectedConversation: handleClearSelectedConversation,
+    messagesCache,
+    membersCache
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800 overflow-hidden">
       <div className="hidden md:block w-80 h-screen border-r border-gray-200 flex-shrink-0">
@@ -181,26 +191,14 @@ const MainLayout = () => {
               />
             ) : (
               <Outlet
-                context={{
-                  socket,
-                  currentUser,
-                  selectedConversation,
-                  loadAllData,
-                  onClearSelectedConversation: handleClearSelectedConversation,
-                }}
+                context={outletContext}
               />
             )}
           </div>
 
           <div className="hidden md:block h-full">
             <Outlet
-              context={{
-                socket,
-                currentUser,
-                selectedConversation,
-                loadAllData,
-                onClearSelectedConversation: handleClearSelectedConversation,
-              }}
+              context={outletContext}
             />
           </div>
         </main>

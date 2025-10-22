@@ -7,36 +7,8 @@ import {
 } from "react";
 import { cryptoService } from "../../lib/cryptoService";
 import { FileIcon } from "../../assets/Icons";
+import UserAvatar from "../user/UserAvatar";
 
-const Avatar = ({ photoURL, displayName, isSender }) => {
-  const [imgError, setImgError] = useState(false);
-
-  useEffect(() => {
-    setImgError(false);
-  }, [photoURL]);
-
-  const showFallback = !photoURL || imgError;
-
-  if (showFallback) {
-    return (
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white
-        ${isSender ? 'bg-blue-600' : 'bg-purple-500'}
-      `}>
-        {displayName?.charAt(0).toUpperCase() || '?'}
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={photoURL}
-      alt={displayName || 'Avatar'}
-      className="w-8 h-8 rounded-full object-cover" // Añadido object-cover
-      loading="lazy"
-      onError={() => setImgError(true)}
-    />
-  );
-};
 
 const MessageItem = memo(({ msg, currentUserUid }) => {
   const isSender = msg.authorId === currentUserUid;
@@ -117,10 +89,9 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
   return (
     <div className={`flex items-start gap-2.5 ${isSender ? 'self-end flex-row-reverse' : 'self-start'}`}>
       <div className="flex-shrink-0">
-        <Avatar
+        <UserAvatar
           photoURL={msg.authorInfo?.photoURL}
           displayName={msg.authorInfo?.displayName}
-          isSender={isSender}
         />
       </div>
       <div className={`flex flex-col w-full max-w-xs sm:max-w-sm md:max-w-md leading-1.5 p-4

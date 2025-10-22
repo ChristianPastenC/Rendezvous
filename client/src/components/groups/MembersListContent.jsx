@@ -1,5 +1,6 @@
 import { CallIcon } from "../../assets/Icons";
 import { formatLastSeen } from "../../utils/lastSeen";
+import UserAvatar from "../user/UserAvatar";
 
 const MembersListContent = ({
   members,
@@ -7,8 +8,8 @@ const MembersListContent = ({
   currentUserId,
   onAddMemberClick,
   isOwner,
-}) => (
-  <>
+}) => {
+  return <>
     <h2 className="font-bold text-lg text-gray-800 mb-4">
       Miembros ({members.length})
     </h2>
@@ -20,20 +21,10 @@ const MembersListContent = ({
         >
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
-              {member.photoURL
-                ? (
-                  <img
-                    src={member.photoURL}
-                    alt={member.displayName}
-                    className="w-8 h-8 rounded-full"
-                  />)
-                : (
-                  <div
-                    className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm"
-                  >
-                    {member.displayName?.charAt(0).toUpperCase() || '?'}
-                  </div>
-                )}
+              <UserAvatar
+                photoURL={member.photoURL}
+                displayName={member.displayName}
+              />
               <span
                 className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white 
                   ${member.status === 'online'
@@ -71,6 +62,6 @@ const MembersListContent = ({
         Añadir Miembro
       </button>
     )}
-  </>
-);
+  </>;
+};
 export default MembersListContent;

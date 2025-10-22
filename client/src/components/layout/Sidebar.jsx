@@ -3,6 +3,7 @@ import { useState } from 'react';
 import UserSearch from '../dms/UserSearch';
 import { PlusIcon, SettingIcon } from '../../assets/Icons';
 import { formatLastSeen } from '../../utils/lastSeen';
+import UserAvatar from '../user/UserAvatar';
 
 const Sidebar = ({
   currentUser,
@@ -79,31 +80,22 @@ const Sidebar = ({
             key={conv.id}
             onClick={() => onSelectConversation(conv)}
             className={`w-full text-left p-3 rounded-lg flex items-center space-x-3 transition-colors ${selectedId === conv.id
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-800 hover:bg-gray-100'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-800 hover:bg-gray-100'
               }`}
           >
             <div className="relative flex-shrink-0">
-              {conv.type === 'group' ? (
-                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center font-bold text-lg text-white">
-                  {conv.name.charAt(0).toUpperCase()}
-                </div>
-              ) : conv.photoURL ? (
-                <img
-                  src={conv.photoURL}
-                  alt={conv.name}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center font-bold text-lg text-white">
-                  {conv.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <UserAvatar
+                photoURL={conv.type === 'group' ? null : conv.photoURL}
+                displayName={conv.name}
+                size="lg"
+                fallbackColor={conv.type === 'group' ? 'blue' : 'purple'}
+              />
 
               {conv.type === 'dm' && conv.userData && (
                 <span
                   className={`absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full ring-2 ring-white 
-                    ${conv.userData.status === 'online'
+              ${conv.userData.status === 'online'
                       ? 'bg-green-500'
                       : 'bg-gray-400'
                     }`}
