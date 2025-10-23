@@ -31,7 +31,9 @@ const registerSocketHandlers = (io, userSocketMap) => {
       io.to(`status_${socket.user.uid}`).emit('statusUpdate', {
         uid: socket.user.uid,
         status: 'online',
-        lastSeen: null
+        lastSeen: null,
+        photoURL: socket.user.photoURL,
+        displayName: socket.user.displayName
       });
       console.log(`[Status] Usuario ${socket.user.uid} está online.`);
     } catch (error) {
@@ -74,6 +76,8 @@ const registerSocketHandlers = (io, userSocketMap) => {
           uid: socket.user.uid,
           status: 'offline',
           lastSeen: new Date().toISOString(),
+          photoURL: socket.user.photoURL,
+          displayName: socket.user.displayName
         });
         console.log(`[Status] Usuario ${socket.user.uid} está offline.`);
       } catch (error) {

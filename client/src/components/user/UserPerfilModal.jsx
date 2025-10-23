@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import UserAvatar from './UserAvatar';
+import { CameraIcon, CloseIcon } from '../../assets/Icons';
 
-const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate, onAccountDelete }) => {
+const ProfileEditModal = ({
+  isOpen,
+  onClose,
+  onProfileUpdate,
+  onAccountDelete,
+  onSignOut
+}) => {
   const { currentUser } = useAuth();
   const [displayName, setDisplayName] = useState(currentUser.displayName || '');
   const [photoFile, setPhotoFile] = useState(null);
@@ -84,54 +92,96 @@ const ProfileEditModal = ({ isOpen, onClose, onProfileUpdate, onAccountDelete })
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md text-white">
-        <h2 className="text-2xl font-bold mb-6">Editar Perfil</h2>
-
-        <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <img
-              src={previewUrl || 'default-avatar.png'}
-              alt="Avatar"
-              className="w-32 h-32 rounded-full object-cover border-4 border-gray-700"
-            />
-            <label htmlFor="photo-upload" className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full cursor-pointer hover:bg-blue-700">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </label>
-            <input id="photo-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-          </div>
-
-          <div className="w-full">
-            <label htmlFor="displayName" className="block text-sm font-medium text-gray-400 mb-1">Nombre de usuario</label>
-            <input
-              id="displayName"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full bg-gray-700 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-          </div>
-        </div>
-
-        {error && <p className="text-red-400 text-sm mt-4 text-center">{error}</p>}
-
-        <div className="mt-8 flex justify-end space-x-4">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500">Cancelar</button>
-          <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
-            {isUploading ? 'Subiendo...' : (isSaving ? 'Guardando...' : 'Guardar Cambios')}
-          </button>
-        </div>
-        <div className="border-t border-red-500/30 mt-6 pt-4">
-          <h3 className="font-bold text-lg text-red-400">Zona de Peligro</h3>
-          <p className="text-sm text-gray-400 mt-1">
-            La eliminación de tu cuenta es una acción permanente y no se puede deshacer.
-          </p>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-semibold text-gray-900">Editar Perfil</h2>
           <button
-            onClick={onAccountDelete}
-            className="w-full mt-3 px-4 py-2 rounded bg-red-600 hover:bg-red-500 font-semibold transition-colors"
+            onClick={onClose}
+            className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            title="Cerrar"
           >
-            Eliminar mi cuenta
+            <CloseIcon className="w-6 h-6" />
           </button>
+        </div>
+
+        <div className="p-6">
+          <div className="flex flex-col items-center space-y-6">
+            <div className="relative">
+              <UserAvatar
+                photoURL={previewUrl}
+                displayName={displayName}
+                className="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
+                size="lg"
+              />
+              <label
+                htmlFor="photo-upload"
+                className="absolute bottom-1 right-1 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-all shadow-md active:scale-95"
+                title="Cambiar foto de perfil"
+              >
+                <CameraIcon className="w-5 h-5" />
+              </label>
+              <input
+                id="photo-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+            <div className="w-full">
+              <label htmlFor="displayName" className="block text-sm font-medium text-gray-600 mb-2">
+                Nombre de usuario
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full p-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Escribe tu nombre"
+              />
+            </div>
+          </div>
+          {error && (
+            <p className="text-red-600 text-sm mt-4 text-center">{error}</p>
+          )}
+          <div className="mt-8 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-4 gap-3">
+            <button
+              onClick={onClose}
+              className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              {isUploading ? 'Subiendo...' : (isSaving ? 'Guardando...' : 'Guardar Cambios')}
+            </button>
+          </div>
+        </div>
+        <div className="border-t border-gray-200 mt-2 p-6 space-y-5">
+          <button
+            onClick={onSignOut}
+            className="w-full px-4 py-2.5 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            title="Cerrar Sesión"
+          >
+            Cerrar Sesión
+          </button>
+          <div className="border border-red-300 bg-red-50 rounded-lg p-4">
+            <h3 className="font-semibold text-lg text-red-700">Zona de Peligro</h3>
+            <p className="text-sm text-red-600 mt-1">
+              La eliminación de tu cuenta es una acción permanente y no se puede deshacer.
+            </p>
+            <button
+              onClick={onAccountDelete}
+              className="w-full mt-3 px-4 py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+            >
+              Eliminar mi cuenta
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -89,13 +89,13 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-lg text-white">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg text-gray-900">
         <h2 className="text-2xl font-bold mb-4">
           {fileType === 'image' ? 'Confirmar envío de imagen' : 'Confirmar envío de archivo'}
         </h2>
 
-        <div className="flex justify-center items-center my-6 bg-gray-900 rounded-lg p-4 min-h-[200px]">
+        <div className="flex justify-center items-center my-6 bg-gray-100 rounded-lg p-4 min-h-[200px]">
           {fileType === 'image' ? (
             <img
               src={url}
@@ -106,7 +106,7 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
             <div className="flex flex-col items-center gap-4">
               {getFileIcon(fileType)}
               <div className="text-center">
-                <span className="inline-block px-3 py-1 bg-gray-700 rounded-full text-sm font-semibold">
+                <span className="inline-block px-3 py-1 bg-gray-300 rounded-full text-sm font-semibold text-gray-800">
                   {getFileExtension(file.name)}
                 </span>
               </div>
@@ -114,7 +114,7 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
           )}
         </div>
 
-        <div className="space-y-2 text-gray-300 bg-gray-900 rounded-lg p-4">
+        <div className="space-y-2 text-gray-700 bg-gray-100 rounded-lg p-4">
           <div className="flex justify-between">
             <span className="font-semibold">Nombre:</span>
             <span className="text-right truncate ml-2 max-w-[250px]" title={file.name}>
@@ -135,14 +135,14 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-semibold transition-colors"
+            className="px-6 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-lg font-semibold transition-colors"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={() => onConfirm(file)}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors"
+            className="px-6 py-2 bg-[#3B82F6] text-white hover:bg-blue-700 rounded-lg font-semibold transition-colors"
           >
             Enviar
           </button>

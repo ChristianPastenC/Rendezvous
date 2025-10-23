@@ -5,6 +5,7 @@ import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import FilePreviewModal from './FilePreviewModal';
 import EmojiPicker from 'emoji-picker-react';
+import { EmojiIcon, PlusIcon, SendIcon } from '../../assets/Icons';
 
 const MAX_FILE_SIZE_MB = 5;
 
@@ -202,29 +203,29 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
 
   return (
     <>
-      <div className="relative p-4 bg-gray-800 border-t border-gray-900">
+      <div className="relative p-4 bg-white border-t border-gray-300">
         {showEmojiPicker && (
           <div ref={emojiPickerRef} className="absolute bottom-full mb-2">
-            <EmojiPicker onEmojiClick={onEmojiClick} theme="dark" emojiStyle="native" />
+            <EmojiPicker onEmojiClick={onEmojiClick} theme="light" emojiStyle="native" />
           </div>
         )}
 
         {showAttachMenu && (
-          <div ref={attachMenuRef} className="absolute bottom-full mb-2 bg-gray-700 rounded-lg shadow-lg overflow-hidden">
-            <button onClick={() => handleAttachClick('image')} className="w-full text-left px-4 py-3 text-white hover:bg-gray-600 flex items-center gap-3">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div ref={attachMenuRef} className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-300">
+            <button onClick={() => handleAttachClick('image')} className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l-1.586-1.586a2 2 0 010-2.828L14 8" />
               </svg>
               Enviar Imagen
             </button>
-            <button onClick={() => handleAttachClick('document')} className="w-full text-left px-4 py-3 text-white hover:bg-gray-600 flex items-center gap-3">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onClick={() => handleAttachClick('document')} className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Enviar Documento
             </button>
-            <button onClick={() => handleAttachClick('code')} className="w-full text-left px-4 py-3 text-white hover:bg-gray-600 flex items-center gap-3">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onClick={() => handleAttachClick('code')} className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
               </svg>
               Enviar Código
@@ -234,10 +235,8 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
 
         <form onSubmit={handleTextSubmit} className="flex items-center space-x-2">
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={sending} className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={sending} className="p-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">
+            <PlusIcon className="w-6 h-6" />
           </button>
           <div className="relative flex-1">
             <input
@@ -245,19 +244,15 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Escribe un mensaje..."
-              className="w-full bg-gray-700 text-white p-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full bg-gray-100 text-gray-900 p-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={sending}
             />
-            <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-600" title="Añadir emoji">
-              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-200" title="Añadir emoji">
+              <EmojiIcon className="w-6 h-6 text-gray-600" />
             </button>
           </div>
-          <button type="submit" disabled={!content.trim() || sending} className="p-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
+          <button type="submit" disabled={!content.trim() || sending} className="p-3 rounded-lg bg-[#3B82F6] text-white hover:bg-blue-700 transition-colors disabled:opacity-50">
+            <SendIcon className="w-6 h-6" />
           </button>
         </form>
       </div>
