@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import UserSearch from '../dms/UserSearch';
+import { CloseIcon } from '../../assets/Icons';
 
 const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
   const { currentUser } = useAuth();
@@ -52,31 +53,48 @@ const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-100 bg-opacity-75 z-50 flex items-center justify-center">
-      <div className="bg-gray-200 p-6 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-2xl font-bold text-black mb-4">Añadir Miembro al Grupo</h2>
-        <UserSearch onSelectUser={handleSelectUser} />
-
-        {selectedUser && (
-          <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-            <p className="text-white">
-              Añadir a 
-              <span className="font-bold">{selectedUser.displayName}</span> al grupo?
-            </p>
-            {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-            <div className="mt-4 flex justify-end space-x-3">
-              <button onClick={() => setSelectedUser(null)} className="px-4 py-2 bg-gray-600 rounded-lg">Cancelar</button>
-              <button onClick={handleAddClick} disabled={isAdding} className="px-4 py-2 bg-blue-600 rounded-lg disabled:opacity-50">
-                {isAdding ? 'Añadiendo...' : 'Añadir'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-6 flex justify-end">
-          <button onClick={handleClose} className="px-4 py-2 bg-gray-200 hover:bg-gray-100 rounded-lg font-semibold">
-            Cancelar
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-semibold text-gray-900">Añadir Miembro</h2>
+          <button
+            onClick={handleClose}
+            className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            title="Cerrar"
+          >
+            <CloseIcon className="w-6 h-6" />
           </button>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-gray-600 mb-4">
+            Busca a un usuario para añadirlo al grupo.
+          </p>
+          <UserSearch onSelectUser={handleSelectUser} />
+          {selectedUser && (
+            <div className="mt-5 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-gray-700">
+                ¿Añadir a <span className="font-bold text-gray-900">{selectedUser.displayName}</span> al grupo?
+              </p>
+
+              {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+
+              <div className="mt-4 flex justify-end space-x-3">
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddClick}
+                  disabled={isAdding}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {isAdding ? 'Añadiendo...' : 'Añadir'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

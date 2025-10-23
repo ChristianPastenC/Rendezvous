@@ -136,10 +136,10 @@ const Sidebar = ({
           >
             <div className="flex-shrink-0">
               {currentUser.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt="Tu perfil"
-                  className="w-10 h-10 rounded-full object-cover"
+                <UserAvatar 
+                  photoURL={currentUser.photoURL}
+                  displayName={currentUser.displayName}
+                  size="lg"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center font-bold text-lg text-white">

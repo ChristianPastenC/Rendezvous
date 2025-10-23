@@ -1,40 +1,30 @@
 import MembersListContent from "./MembersListContent";
+import { BackArrowIcon } from "../../assets/Icons";
 
 const MembersModal = ({ isOpen, onClose, ...props }) => {
   if (!isOpen) return null;
 
   return (
     <div
-      className="md:hidden fixed inset-0 z-40 flex flex-col bg-gray-100 text-black"
+      className="md:hidden fixed inset-0 z-40 flex flex-col bg-white text-gray-900"
     >
       <header
-        className="p-4 bg-gray-800 shadow-lg border-b border-gray-200 flex items-center"
+        className="p-4 bg-white shadow-sm border-b border-gray-200 flex items-center sticky top-0"
       >
         <button
           onClick={onClose}
-          className="p-1 rounded-full text-black hover:bg-gray-300 mr-3"
+          className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800 mr-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           title="Cerrar"
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
+          <BackArrowIcon className="w-6 h-6" />
         </button>
-        <h2 className="font-bold text-lg">
+        <h2 className="font-semibold text-lg text-gray-900">
           Miembros del Grupo
         </h2>
       </header>
-
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4
+          scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full"
+      >
         <MembersListContent
           {...props}
         />

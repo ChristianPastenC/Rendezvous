@@ -1,6 +1,7 @@
 // src/components/layout/MainHeader.jsx
 import { formatLastSeen } from '../../utils/lastSeen';
 import { BackIcon, CallIcon, MembersIcon } from '../../assets/Icons';
+import UserAvatar from '../user/UserAvatar';
 
 const MainHeader = ({
   selectedConversation,
@@ -28,16 +29,12 @@ const MainHeader = ({
                 <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white">
                   {selectedConversation.name.charAt(0).toUpperCase()}
                 </div>
-              ) : selectedConversation.photoURL ? (
-                <img
-                  src={selectedConversation.photoURL}
-                  alt={selectedConversation.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center font-bold text-lg flex-shrink-0 text-white">
-                  {selectedConversation.name.charAt(0).toUpperCase()}
-                </div>
+                <UserAvatar
+                  photoURL={selectedConversation.photoURL}
+                  displayName={selectedConversation.name}
+                  size="lg"
+                />
               )}
             </div>
 

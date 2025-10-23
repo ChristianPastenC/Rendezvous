@@ -17,7 +17,7 @@ const MembersListContent = ({
       {members.map((member) => (
         <div
           key={member.uid}
-          className="flex items-center justify-between p-2 rounded-md hover:bg-gray-300 transition-colors"
+          className="flex items-center justify-between p-2 rounded-md transition-colors"
         >
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
@@ -45,7 +45,7 @@ const MembersListContent = ({
           {member.uid !== currentUserId && (
             <button
               onClick={() => onCallMember(member)}
-              className="p-1 hover:bg-gray-600 rounded"
+              className="p-2 hover:bg-gray-300 rounded-full transition-colors"
               title="Llamar"
             >
               <CallIcon className="w-5 h-5 text-green-400" />

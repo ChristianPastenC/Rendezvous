@@ -2,11 +2,10 @@ import {
   useRef,
   useEffect,
   memo,
-  useMemo,
-  useState
+  useMemo
 } from "react";
 import { cryptoService } from "../../lib/cryptoService";
-import { FileIcon } from "../../assets/Icons";
+import { EmptyStateIcon, FileIcon } from "../../assets/Icons";
 import UserAvatar from "../user/UserAvatar";
 
 
@@ -126,15 +125,33 @@ const MessageList = ({ messages, currentUserUid }) => {
   }, [messages]);
 
   return (
-    <div className="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col">
-      {messages.map(msg => (
-        <MessageItem
-          key={msg.id}
-          msg={msg}
-          currentUserUid={currentUserUid}
-        />
-      ))}
-      <div ref={messagesEndRef} />
+    <div className="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col
+        scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+    >
+      {messages.length > 0 ? (
+        <>
+          {messages.map(msg => (
+            <MessageItem
+              key={msg.id}
+              msg={msg}
+              currentUserUid={currentUserUid}
+            />
+          ))}
+          <div ref={messagesEndRef} />
+        </>
+      ) : (
+          <div className="flex-1 flex flex-col items-center justify-center h-full p-6 text-center">
+            <EmptyStateIcon 
+              className="w-16 h-16 text-gray-300" 
+            />
+            <h3 className="mt-4 text-xl font-semibold text-gray-800 dark:text-gray-200">
+              Aún no hay mensajes
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              ¡Sé el primero en enviar un saludo! 👋
+            </p>
+          </div>
+      )}
     </div>
   );
 };
