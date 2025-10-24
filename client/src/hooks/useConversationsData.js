@@ -132,6 +132,46 @@ export const useConversationsData = (
     getCurrentConversationId
   ]);
 
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (newMessage) => {
+      const messageConvId = newMessage.conversationId;
+      if (!messageConvId) {
+        console.error("Mensaje recibido sin conversationId:", newMessage);
+        return;
+      }
+
+      const currentCache = messagesCache.current[messageConvId] || [];
+      const messageExistsInCache = currentCache.some(msg => msg.id === newMessage.id);
+
+      if (!messageExistsInCache) {
+        messagesCache.current[messageConvId] = [...currentCache, newMessage];
+      }
+
+      const activeConversationId = getCurrentConversationId();
+      if (messageConvId === activeConversationId) {
+
+        setMessages(prevMessages => {
+          const messageExistsInState = prevMessages.some(msg => msg.id === newMessage.id);
+
+          if (!messageExistsInState) {
+            return [...prevMessages, newMessage];
+          }
+
+          return prevMessages;
+        });
+      }
+    };
+
+    socket.on('encryptedMessage', handleNewMessage);
+
+    return () => {
+      socket.off('encryptedMessage', handleNewMessage);
+    };
+
+  }, [socket, messagesCache, getCurrentConversationId, setMessages]);
+
   const refetchData = () => {
     const conversationId = getCurrentConversationId();
     if (conversationId) {

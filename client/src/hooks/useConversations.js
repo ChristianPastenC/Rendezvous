@@ -66,14 +66,8 @@ export const useConversations = (currentUser, socket) => {
 
             if (status !== undefined) updatedUserData.status = status;
             if (lastSeen !== undefined) updatedUserData.lastSeen = lastSeen;
-
-            if (photoURL !== undefined) {
-              updatedUserData.photoURL = photoURL;
-            }
-
-            if (displayName !== undefined) {
-              updatedUserData.displayName = displayName;
-            }
+            if (photoURL !== undefined) updatedUserData.photoURL = photoURL;
+            if (displayName !== undefined) updatedUserData.displayName = displayName;
 
             return {
               ...conv,
@@ -89,19 +83,22 @@ export const useConversations = (currentUser, socket) => {
 
     socket.on('statusUpdate', handleStatusUpdate);
 
-    if (conversations.length > 0) {
-      const userIdsToWatch = conversations
-        .filter(c => c.type === 'dm')
-        .map(c => c.userData.uid);
-
-      if (userIdsToWatch.length > 0) {
-        socket.emit('subscribeToStatus', userIdsToWatch);
-      }
-    }
-
     return () => {
       socket.off('statusUpdate', handleStatusUpdate);
     };
+  }, [socket, setConversations]);
+
+  useEffect(() => {
+    if (!socket || conversations.length === 0) return;
+
+    const userIdsToWatch = conversations
+      .filter(c => c.type === 'dm')
+      .map(c => c.userData.uid);
+
+    if (userIdsToWatch.length > 0) {
+      socket.emit('subscribeToStatus', userIdsToWatch);
+    }
+
   }, [socket, conversations]);
 
   return { conversations, setConversations, loadAllData, isLoading };
