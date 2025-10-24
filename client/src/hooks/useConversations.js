@@ -1,9 +1,15 @@
 // src/hooks/useConversations.js
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'; // <-- Añadimos useRef
 
 export const useConversations = (currentUser, socket) => {
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const conversationsRef = useRef(conversations);
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
+  
 
   const loadAllData = useCallback(async () => {
     if (!currentUser) return;
@@ -25,6 +31,31 @@ export const useConversations = (currentUser, socket) => {
       const groupsData = await groupsRes.json();
       const contactsData = await contactsRes.json();
 
+      const groupsWithChannels = await Promise.all(
+        groupsData.map(async (group) => {
+          try {
+            const channelsRes = await fetch(`http://localhost:3000/api/groups/${group.id}/channels`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!channelsRes.ok) {
+              console.error(`No se pudieron cargar canales para el grupo ${group.id}`);
+              return { ...group, channelId: null };
+            }
+
+            const channels = await channelsRes.json();
+
+            return {
+              ...group,
+              channelId: channels.length > 0 ? channels[0].id : null
+            };
+          } catch (e) {
+            console.error(`Error cargando canales para ${group.id}:`, e);
+            return { ...group, channelId: null };
+          }
+        })
+      );
+
       const unifiedConversations = [
         ...contactsData.map((contact) => ({
           id: `dm_${contact.uid}`,
@@ -33,7 +64,7 @@ export const useConversations = (currentUser, socket) => {
           photoURL: contact.photoURL,
           userData: contact,
         })),
-        ...groupsData.map((group) => ({
+        ...groupsWithChannels.map((group) => ({
           id: `group_${group.id}`,
           type: 'group',
           name: group.name,
@@ -86,8 +117,75 @@ export const useConversations = (currentUser, socket) => {
     return () => {
       socket.off('statusUpdate', handleStatusUpdate);
     };
-  }, [socket, setConversations]);
+  }, [socket]);
 
+  useEffect(() => {
+    if (!socket || !currentUser) return;
+
+    const handleNewConversation = (newConv) => {
+      const convExists = conversationsRef.current.some(c => c.id === newConv.id);
+      if (!convExists) {
+        console.log('[Socket] Añadiendo nueva conversación de grupo:', newConv.name);
+        setConversations(prevConvs => [newConv, ...prevConvs]);
+      }
+    };
+
+    const handleNewMessage = async (newMessage) => {
+      if (newMessage.authorId === currentUser.uid) return;
+
+      if (!newMessage.conversationId.includes('_')) {
+        return;
+      }
+
+      const conversationExists = conversationsRef.current.some(
+        c => c.id === `dm_${newMessage.authorId}`
+      );
+
+      if (conversationExists) {
+        setConversations(prevConvs => {
+          const convToMove = prevConvs.find(c => c.id === `dm_${newMessage.authorId}`);
+          if (!convToMove) return prevConvs;
+
+          const otherConvs = prevConvs.filter(c => c.id !== `dm_${newMessage.authorId}`);
+          return [convToMove, ...otherConvs];
+        });
+
+      } else {
+        console.log(`[Socket] Nuevo DM detectado de: ${newMessage.authorId}. Cargando perfil...`);
+        try {
+          const token = await currentUser.getIdToken();
+          const res = await fetch(`http://localhost:3000/api/users/${newMessage.authorId}/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (res.ok) {
+            const userData = await res.json();
+            const newConv = {
+              id: `dm_${userData.uid}`,
+              type: 'dm',
+              name: userData.displayName,
+              photoURL: userData.photoURL,
+              userData: userData,
+            };
+
+            setConversations(prevConvs => [newConv, ...prevConvs]);
+          }
+        } catch (error) {
+          console.error("Error al cargar perfil de nuevo DM:", error);
+        }
+      }
+    };
+
+    socket.on('newConversation', handleNewConversation);
+    socket.on('encryptedMessage', handleNewMessage);
+
+    return () => {
+      socket.off('newConversation', handleNewConversation);
+      socket.off('encryptedMessage', handleNewMessage);
+    };
+
+  }, [socket, currentUser]);
+  
   useEffect(() => {
     if (!socket || conversations.length === 0) return;
 

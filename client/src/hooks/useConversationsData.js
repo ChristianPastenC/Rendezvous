@@ -56,6 +56,7 @@ export const useConversationsData = (
 
   }, [socket, messagesCache, getCurrentConversationId]);
 
+
   useEffect(() => {
     const conversationId = getCurrentConversationId();
     if (previousConversationId.current && previousConversationId.current !== conversationId) {
@@ -74,50 +75,62 @@ export const useConversationsData = (
 
       setIsLoadingMessages(true);
 
-      socket?.emit('joinChannel', { conversationId });
-      previousConversationId.current = conversationId;
+      try {
+        socket?.emit('joinChannel', { conversationId });
+        previousConversationId.current = conversationId;
 
-      let membersToSet = [];
-      let isDirectMessage = selectedConversation.type === 'dm';
+        let membersToSet = [];
+        let isDirectMessage = selectedConversation.type === 'dm';
 
-      if (isDirectMessage) {
-        membersToSet = [currentUser, selectedConversation.userData];
-      } else {
-        const groupId = selectedConversation.groupData.id;
-        if (membersCache.current[groupId]) {
-          membersToSet = membersCache.current[groupId];
+        if (isDirectMessage) {
+          membersToSet = [currentUser, selectedConversation.userData];
+        } else {
+          const groupId = selectedConversation.groupData.id;
+          if (membersCache.current[groupId]) {
+            membersToSet = membersCache.current[groupId];
+          } else {
+            const token = await currentUser.getIdToken();
+            const membersRes = await fetch(
+              `http://localhost:3000/api/groups/${groupId}/members`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            if (!membersRes.ok) throw new Error('Error al cargar miembros');
+            membersToSet = await membersRes.json();
+            membersCache.current[groupId] = membersToSet;
+          }
+          if (socket && membersToSet.length > 0) {
+            socket.emit('subscribeToStatus', membersToSet.map((m) => m.uid));
+          }
+        }
+        setMembers(membersToSet);
+
+        if (messagesCache.current[conversationId]) {
+          setMessages(messagesCache.current[conversationId]);
         } else {
           const token = await currentUser.getIdToken();
-          const membersRes = await fetch(
-            `http://localhost:3000/api/groups/${groupId}/members`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          membersToSet = await membersRes.json();
-          membersCache.current[groupId] = membersToSet;
-        }
-        if (socket && membersToSet.length > 0) {
-          socket.emit('subscribeToStatus', membersToSet.map((m) => m.uid));
-        }
-      }
-      setMembers(membersToSet);
+          const endpoint = isDirectMessage
+            ? `/api/dms/${conversationId}/messages`
+            : `/api/groups/${selectedConversation.groupData.id}/channels/${conversationId}/messages`;
 
-      if (messagesCache.current[conversationId]) {
-        setMessages(messagesCache.current[conversationId]);
-      } else {
-        const token = await currentUser.getIdToken();
-        const endpoint = isDirectMessage
-          ? `/api/dms/${conversationId}/messages`
-          : `/api/groups/${selectedConversation.groupData.id}/channels/${conversationId}/messages`;
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const messagesData = response.ok ? await response.json() : [];
-        messagesCache.current[conversationId] = messagesData;
-        setMessages(messagesData);
+          const response = await fetch(`http://localhost:3000${endpoint}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const messagesData = response.ok ? await response.json() : [];
+
+          messagesCache.current[conversationId] = messagesData;
+          setMessages(messagesData);
+        }
+
+      } catch (error) {
+        console.error("Error al cargar la conversación:", error);
+        setMessages([]);
+
+      } finally {
+        setIsLoadingMessages(false);
       }
-      setIsLoadingMessages(false);
     };
 
     loadConversation();
