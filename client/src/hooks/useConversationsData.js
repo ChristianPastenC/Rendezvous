@@ -1,5 +1,5 @@
 // src/hooks/useConversationsData.js
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const useConversationsData = (
   socket,
@@ -14,7 +14,7 @@ export const useConversationsData = (
   const [forceRefetch, setForceRefetch] = useState(0);
   const previousConversationId = useRef(null);
 
-  const getCurrentConversationId = () => {
+  const getCurrentConversationId = useCallback(() => {
     if (!selectedConversation || !currentUser) return null;
     if (selectedConversation.type === 'dm') {
       return [currentUser.uid, selectedConversation.userData.uid]
@@ -22,25 +22,27 @@ export const useConversationsData = (
         .join('_');
     }
     return selectedConversation.groupData?.channelId;
-  };
+  }, [selectedConversation, currentUser]);
 
   useEffect(() => {
     if (!socket) return;
 
     const handleNewMessage = (newMessage) => {
-      const conversationId = getCurrentConversationId();
-      if (!conversationId) return;
+      const messageConvId = newMessage.conversationId;
+      if (!messageConvId) {
+        console.error("Mensaje recibido sin conversationId:", newMessage);
+        return;
+      }
 
-      const currentCache = messagesCache.current[conversationId] || [];
-
-      // Verificar si el mensaje ya existe en el cache
+      const currentCache = messagesCache.current[messageConvId] || [];
       const messageExists = currentCache.some(msg => msg.id === newMessage.id);
 
       if (!messageExists) {
         const updatedCache = [...currentCache, newMessage];
-        messagesCache.current[conversationId] = updatedCache;
+        messagesCache.current[messageConvId] = updatedCache;
 
-        if (conversationId === previousConversationId.current) {
+        const activeConversationId = getCurrentConversationId();
+        if (messageConvId === activeConversationId) {
           setMessages(updatedCache);
         }
       }
@@ -51,49 +53,37 @@ export const useConversationsData = (
     return () => {
       socket.off('encryptedMessage', handleNewMessage);
     };
+
   }, [socket, messagesCache, getCurrentConversationId]);
 
   useEffect(() => {
+    const conversationId = getCurrentConversationId();
+    if (previousConversationId.current && previousConversationId.current !== conversationId) {
+      socket?.emit('leaveChannel', {
+        conversationId: previousConversationId.current,
+      });
+    }
+
     const loadConversation = async () => {
-      if (!selectedConversation || !currentUser) {
+      if (!conversationId) {
         setMessages([]);
         setMembers([]);
+        previousConversationId.current = null;
         return;
       }
+
       setIsLoadingMessages(true);
 
-      let conversationId,
-        membersToSet = [];
+      socket?.emit('joinChannel', { conversationId });
+      previousConversationId.current = conversationId;
+
+      let membersToSet = [];
       let isDirectMessage = selectedConversation.type === 'dm';
 
       if (isDirectMessage) {
-        conversationId = [
-          currentUser.uid,
-          selectedConversation.userData.uid,
-        ]
-          .sort()
-          .join('_');
         membersToSet = [currentUser, selectedConversation.userData];
       } else {
         const groupId = selectedConversation.groupData.id;
-        let channelId = selectedConversation.groupData.channelId;
-
-        if (!channelId) {
-          const token = await currentUser.getIdToken();
-          const channelsRes = await fetch(
-            `http://localhost:3000/api/groups/${groupId}/channels`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          const channelsData = await channelsRes.json();
-          if (channelsData.length > 0) {
-            channelId = channelsData[0].id;
-            selectedConversation.groupData.channelId = channelId;
-          }
-        }
-        conversationId = channelId;
-
         if (membersCache.current[groupId]) {
           membersToSet = membersCache.current[groupId];
         } else {
@@ -107,41 +97,31 @@ export const useConversationsData = (
           membersToSet = await membersRes.json();
           membersCache.current[groupId] = membersToSet;
         }
-
         if (socket && membersToSet.length > 0) {
-          const memberIds = membersToSet.map((m) => m.uid);
-          socket.emit('subscribeToStatus', memberIds);
+          socket.emit('subscribeToStatus', membersToSet.map((m) => m.uid));
         }
       }
-
       setMembers(membersToSet);
 
-      if (previousConversationId.current)
-        socket?.emit('leaveChannel', {
-          conversationId: previousConversationId.current,
+      if (messagesCache.current[conversationId]) {
+        setMessages(messagesCache.current[conversationId]);
+      } else {
+        const token = await currentUser.getIdToken();
+        const endpoint = isDirectMessage
+          ? `/api/dms/${conversationId}/messages`
+          : `/api/groups/${selectedConversation.groupData.id}/channels/${conversationId}/messages`;
+        const response = await fetch(`http://localhost:3000${endpoint}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-      if (conversationId) {
-        socket?.emit('joinChannel', { conversationId });
-        previousConversationId.current = conversationId;
-
-        if (messagesCache.current[conversationId]) {
-          setMessages(messagesCache.current[conversationId]);
-        } else {
-          const token = await currentUser.getIdToken();
-          const endpoint = isDirectMessage
-            ? `/api/dms/${conversationId}/messages`
-            : `/api/groups/${selectedConversation.groupData.id}/channels/${conversationId}/messages`;
-          const response = await fetch(`http://localhost:3000${endpoint}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const messagesData = response.ok ? await response.json() : [];
-          messagesCache.current[conversationId] = messagesData;
-          setMessages(messagesData);
-        }
+        const messagesData = response.ok ? await response.json() : [];
+        messagesCache.current[conversationId] = messagesData;
+        setMessages(messagesData);
       }
       setIsLoadingMessages(false);
     };
+
     loadConversation();
+
   }, [
     selectedConversation,
     currentUser,
@@ -149,6 +129,7 @@ export const useConversationsData = (
     messagesCache,
     membersCache,
     forceRefetch,
+    getCurrentConversationId
   ]);
 
   const refetchData = () => {

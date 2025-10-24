@@ -9,6 +9,7 @@ import { EmojiIcon, PlusIcon, SendIcon } from '../../assets/Icons';
 
 const MAX_FILE_SIZE_MB = 5;
 
+// (Tu lista de tipos de archivo permitidos permanece igual...)
 const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
   'image/png',
@@ -16,7 +17,6 @@ const ALLOWED_IMAGE_TYPES = [
   'image/webp',
   'image/svg+xml'
 ];
-
 const ALLOWED_DOC_TYPES = [
   'application/pdf',
   'text/plain',
@@ -27,7 +27,6 @@ const ALLOWED_DOC_TYPES = [
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 ];
-
 const ALLOWED_DEV_TYPES = [
   'text/html',
   'text/css',
@@ -53,18 +52,15 @@ const ALLOWED_DEV_TYPES = [
   'text/x-yaml',
   'application/x-yaml'
 ];
-
 const ALL_ALLOWED_TYPES = [
   ...ALLOWED_IMAGE_TYPES,
   ...ALLOWED_DOC_TYPES,
   ...ALLOWED_DEV_TYPES
 ];
-
 const isFileTypeAllowed = (file) => {
   if (ALL_ALLOWED_TYPES.includes(file.type)) {
     return true;
   }
-
   const fileName = file.name.toLowerCase();
   const devExtensions = [
     '.html', '.htm', '.css', '.js', '.jsx', '.ts', '.tsx',
@@ -73,9 +69,9 @@ const isFileTypeAllowed = (file) => {
     '.yml', '.md', '.txt', '.sql', '.env', '.gitignore',
     '.vue', '.svelte', '.scss', '.sass', '.less'
   ];
-
   return devExtensions.some(ext => fileName.endsWith(ext));
 };
+
 
 const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, members }) => {
   const { currentUser } = useAuth();
@@ -127,14 +123,18 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
       console.error("Error al cifrar o enviar el mensaje:", error);
       alert("Error: No se pudo enviar el mensaje cifrado.");
     } finally {
+      // Esto ahora se ejecutará DESPUÉS de que el await en handleConfirmUpload termine
       setSending(false);
     }
   };
 
-  const handleTextSubmit = (e) => {
+  const handleTextSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim() || sending) return;
-    encryptAndSendMessage({ type: 'text', content: content.trim() });
+
+    // CORRECCIÓN: Esperar a que la función termine
+    await encryptAndSendMessage({ type: 'text', content: content.trim() });
+
     setContent('');
     setShowEmojiPicker(false);
   };
@@ -164,7 +164,10 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     setPreviewData(null);
     const storageRef = ref(storage, `uploads/${currentUser.uid}/${Date.now()}_${file.name}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
+
+    // Establece sending en true para la subida
     setSending(true);
+
     uploadTask.on('state_changed',
       (snapshot) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
       (error) => {
@@ -174,9 +177,20 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
         alert("Error al subir el archivo.");
       },
       () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          encryptAndSendMessage({ type: file.type.startsWith('image/') ? 'image' : 'file', fileUrl: downloadURL, content: file.name });
-          setSending(false);
+        // --- CORRECCIÓN CRÍTICA ---
+        getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
+
+          // 1. Esperar (await) a que la encriptación Y el envío al socket terminen
+          await encryptAndSendMessage({
+            type: file.type.startsWith('image/') ? 'image' : 'file',
+            fileUrl: downloadURL,
+            content: file.name
+          });
+
+          // 2. La línea "setSending(false)" fue ELIMINADA de aquí
+          //    Ahora se maneja en el 'finally' de encryptAndSendMessage
+
+          // 3. Limpiar el progreso DESPUÉS de que todo terminó
           setUploadProgress(0);
         });
       }
@@ -204,12 +218,12 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
   return (
     <>
       <div className="relative p-4 bg-white border-t border-gray-300">
+        {/* Tu JSX para EmojiPicker y AttachMenu (sin cambios) */}
         {showEmojiPicker && (
           <div ref={emojiPickerRef} className="absolute bottom-full mb-2">
             <EmojiPicker onEmojiClick={onEmojiClick} theme="light" emojiStyle="native" />
           </div>
         )}
-
         {showAttachMenu && (
           <div ref={attachMenuRef} className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-300">
             <button onClick={() => handleAttachClick('image')} className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3">
@@ -233,6 +247,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
           </div>
         )}
 
+        {/* Tu JSX para el formulario (sin cambios) */}
         <form onSubmit={handleTextSubmit} className="flex items-center space-x-2">
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
           <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={sending} className="p-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">
