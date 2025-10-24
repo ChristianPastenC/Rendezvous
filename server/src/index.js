@@ -428,32 +428,27 @@ app.get("/api/users/search", authMiddleware, async (req, res) => {
   }
 });
 
-app.post("/api/groups/:groupId/members", authMiddleware, async (req, res) => {
+app.get("/api/groups/:groupId/members", authMiddleware, async (req, res) => {
   const { groupId } = req.params;
-  const { userIdToAdd } = req.body;
-  const requesterId = req.user.uid;
-
-  if (!userIdToAdd) {
-    return res.status(400).json({ error: "Se requiere el ID del usuario a agregar." });
-  }
-
+  const userId = req.user.uid;
   try {
     const groupRef = db.collection('groups').doc(groupId);
     const groupDoc = await groupRef.get();
 
-    if (!groupDoc.exists || groupDoc.data().ownerId !== requesterId) {
-      return res.status(403).json({ error: "No tienes permiso para añadir miembros a este grupo." });
+    if (!groupDoc.exists || !groupDoc.data().members.includes(userId)) {
+      return res.status(403).json({ error: "No tienes permiso para ver estos miembros." });
     }
 
-    await groupRef.update({
-      members: FieldValue.arrayUnion(userIdToAdd)
-    });
+    const memberIds = groupDoc.data().members || [];
+    const membersPromises = memberIds.map(id => db.collection('users').doc(id).get());
+    const memberDocs = await Promise.all(membersPromises);
+    const members = memberDocs.map(processUserDoc).filter(m => m !== null);
 
-    res.status(200).json({ success: true, message: "Usuario añadido al grupo." });
+    res.status(200).json(members);
 
   } catch (error) {
-    console.error("Error al añadir miembro:", error);
-    res.status(500).json({ error: "No se pudo añadir el miembro al grupo." });
+    console.error("Error al obtener miembros:", error);
+    res.status(500).json({ error: "Error al obtener miembros." });
   }
 });
 

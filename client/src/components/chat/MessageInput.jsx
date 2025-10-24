@@ -103,16 +103,25 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
   const encryptAndSendMessage = async (messageObject) => {
     setSending(true);
     try {
-      const selfKey = cryptoService.getPublicKey();
-      const allMembers = [...members, { uid: currentUser.uid, publicKey: selfKey }];
-      const uniqueMembers = Array.from(new Map(allMembers.map(item => [item.uid, item])).values());
-      const encryptedPayload = {};
-      for (const member of uniqueMembers) {
-        const publicKey = member.publicKey || await cryptoService.fetchPublicKey(member.uid);
-        if (publicKey) {
-          const encrypted = cryptoService.encrypt(JSON.stringify(messageObject), publicKey);
-          if (encrypted) encryptedPayload[member.uid] = encrypted;
+      let memberKeys;
+      if (isDirectMessage) {
+        // Para DMs, solo necesitamos la clave del otro usuario y la propia.
+        const otherUserId = members[0]?.uid;
+        const selfKey = cryptoService.getPublicKey();
+        memberKeys = [{ uid: currentUser.uid, publicKey: selfKey }];
+        if (otherUserId) {
+          const otherUserKey = await cryptoService.fetchPublicKey(otherUserId);
+          if (otherUserKey) memberKeys.push({ uid: otherUserId, publicKey: otherUserKey });
         }
+      } else {
+        // Para grupos, obtenemos todas las claves de los miembros del grupo.
+        memberKeys = await cryptoService.fetchPublicKeysForGroup(groupId);
+      }
+
+      const encryptedPayload = {};
+      for (const member of memberKeys) {
+        const encrypted = cryptoService.encrypt(JSON.stringify(messageObject), member.publicKey);
+        if (encrypted) encryptedPayload[member.uid] = encrypted;
       }
       if (Object.keys(encryptedPayload).length > 0) {
         socket.emit('sendMessage', { conversationId, isDirectMessage, groupId, encryptedPayload });
@@ -123,7 +132,6 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
       console.error("Error al cifrar o enviar el mensaje:", error);
       alert("Error: No se pudo enviar el mensaje cifrado.");
     } finally {
-      // Esto ahora se ejecutará DESPUÉS de que el await en handleConfirmUpload termine
       setSending(false);
     }
   };
@@ -132,7 +140,6 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     e.preventDefault();
     if (!content.trim() || sending) return;
 
-    // CORRECCIÓN: Esperar a que la función termine
     await encryptAndSendMessage({ type: 'text', content: content.trim() });
 
     setContent('');
@@ -165,7 +172,6 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     const storageRef = ref(storage, `uploads/${currentUser.uid}/${Date.now()}_${file.name}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
-    // Establece sending en true para la subida
     setSending(true);
 
     uploadTask.on('state_changed',
@@ -177,20 +183,14 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
         alert("Error al subir el archivo.");
       },
       () => {
-        // --- CORRECCIÓN CRÍTICA ---
         getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
 
-          // 1. Esperar (await) a que la encriptación Y el envío al socket terminen
           await encryptAndSendMessage({
             type: file.type.startsWith('image/') ? 'image' : 'file',
             fileUrl: downloadURL,
             content: file.name
           });
 
-          // 2. La línea "setSending(false)" fue ELIMINADA de aquí
-          //    Ahora se maneja en el 'finally' de encryptAndSendMessage
-
-          // 3. Limpiar el progreso DESPUÉS de que todo terminó
           setUploadProgress(0);
         });
       }
@@ -218,7 +218,6 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
   return (
     <>
       <div className="relative p-4 bg-white border-t border-gray-300">
-        {/* Tu JSX para EmojiPicker y AttachMenu (sin cambios) */}
         {showEmojiPicker && (
           <div ref={emojiPickerRef} className="absolute bottom-full mb-2">
             <EmojiPicker onEmojiClick={onEmojiClick} theme="light" emojiStyle="native" />
@@ -247,7 +246,6 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
           </div>
         )}
 
-        {/* Tu JSX para el formulario (sin cambios) */}
         <form onSubmit={handleTextSubmit} className="flex items-center space-x-2">
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
           <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} disabled={sending} className="p-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">

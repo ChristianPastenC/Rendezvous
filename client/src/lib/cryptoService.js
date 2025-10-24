@@ -213,6 +213,39 @@ class CryptoService {
     }
   }
 
+  async fetchPublicKeysForGroup(groupId) {
+    try {
+      if (!auth.currentUser) throw new Error('Usuario no autenticado para obtener token.');
+      const token = await auth.currentUser.getIdToken();
+
+      const response = await fetch(`http://localhost:3000/api/groups/${groupId}/members`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        console.error(`[Crypto] Error al obtener miembros del grupo ${groupId}`);
+        return [];
+      }
+
+      const members = await response.json();
+      const keys = [];
+
+      for (const member of members) {
+        if (member.publicKey) {
+          keys.push({ uid: member.uid, publicKey: member.publicKey });
+          this.publicKeyCache.set(member.uid, member.publicKey);
+        } else {
+          const fetchedKey = await this.fetchPublicKey(member.uid);
+          if (fetchedKey) keys.push({ uid: member.uid, publicKey: fetchedKey });
+        }
+      }
+      return keys;
+    } catch (error) {
+      console.error(`[Crypto] Error al obtener claves para el grupo ${groupId}:`, error);
+      return [];
+    }
+  }
+
   encrypt(text, recipientPublicKey) {
     try {
       const aesKey = CryptoJS.lib.WordArray.random(32).toString(CryptoJS.enc.Hex);
