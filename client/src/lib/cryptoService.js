@@ -1,15 +1,16 @@
 import JSEncrypt from 'jsencrypt';
 import CryptoJS from 'crypto-js';
-import { auth } from './firebase'; // Importar auth directamente
+import { auth } from './firebase';
 
 const KEY_SIZE = 2048;
-const STORAGE_KEY_PRIVATE = 'crypto_private_key';
 const STORAGE_KEY_PUBLIC = 'crypto_public_key';
+const SESSION_KEY_PRIVATE = 'crypto_private_key_decrypted';
+const SESSION_KEY_PASSPHRASE = 'crypto_user_passphrase';
 
 class CryptoService {
   constructor() {
     this.jsEncrypt = new JSEncrypt({ default_key_size: KEY_SIZE });
-    this.privateKey = localStorage.getItem(STORAGE_KEY_PRIVATE);
+    this.privateKey = sessionStorage.getItem(SESSION_KEY_PRIVATE);
     this.publicKey = localStorage.getItem(STORAGE_KEY_PUBLIC);
     this.publicKeyCache = new Map();
 
@@ -18,15 +19,169 @@ class CryptoService {
     }
   }
 
-  async generateAndStoreKeys() {
-    if (this.privateKey && this.publicKey) {
-      return { publicKey: this.publicKey, privateKey: this.privateKey };
+  isGoogleAuthUser(user) {
+    if (!user || !user.providerData) return false;
+    return user.providerData.some(provider => provider.providerId === 'google.com');
+  }
+
+  deriveKeyFromPassphrase(passphrase, salt) {
+    return CryptoJS.PBKDF2(passphrase, salt, {
+      keySize: 256 / 32,
+      iterations: 10000
+    }).toString();
+  }
+
+  encryptPrivateKey(privateKey, passphrase) {
+    const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
+    const derivedKey = this.deriveKeyFromPassphrase(passphrase, salt);
+    const encrypted = CryptoJS.AES.encrypt(privateKey, derivedKey).toString();
+    return JSON.stringify({ encrypted, salt });
+  }
+
+  decryptPrivateKey(wrappedKey, passphrase) {
+    try {
+      const { encrypted, salt } = JSON.parse(wrappedKey);
+      const derivedKey = this.deriveKeyFromPassphrase(passphrase, salt);
+      const decrypted = CryptoJS.AES.decrypt(encrypted, derivedKey);
+      return decrypted.toString(CryptoJS.enc.Utf8);
+    } catch (error) {
+      console.error('[Crypto] Error al descifrar clave privada:', error);
+      return null;
     }
+  }
+
+  async getOrPromptPassphrase(isNewUser = false) {
+    const cachedPassphrase = sessionStorage.getItem(SESSION_KEY_PASSPHRASE);
+    if (cachedPassphrase) {
+      return cachedPassphrase;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const isGoogleAuth = this.isGoogleAuthUser(currentUser);
+
+    if (!isGoogleAuth) {
+      const passphrase = currentUser.email;
+      sessionStorage.setItem(SESSION_KEY_PASSPHRASE, passphrase);
+      return passphrase;
+    }
+
+    return new Promise((resolve) => {
+      const message = isNewUser
+        ? 'Configuración de Seguridad\n\n' +
+        'Para proteger tus mensajes cifrados, crea una frase de seguridad.\n' +
+        'Esta frase es necesaria para descifrar tus mensajes.\n\n' +
+        'IMPORTANTE: Guarda esta frase en un lugar seguro.\n' +
+        'Si la olvidas, no podrás leer tus mensajes anteriores.\n\n' +
+        'Ingresa tu frase de seguridad (mínimo 8 caracteres):'
+        : 'Verificación de Seguridad\n\n' +
+        'Ingresa tu frase de seguridad para descifrar tus mensajes:';
+
+      const passphrase = prompt(message);
+
+      if (passphrase && passphrase.trim().length >= 8) {
+        sessionStorage.setItem(SESSION_KEY_PASSPHRASE, passphrase.trim());
+        resolve(passphrase.trim());
+      } else if (passphrase !== null) {
+        alert('La frase de seguridad debe tener al menos 8 caracteres.');
+        resolve(this.getOrPromptPassphrase(isNewUser));
+      } else {
+        resolve(null);
+      }
+    });
+  }
+
+  async generateAndStoreKeys() {
+    if (!auth.currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const token = await auth.currentUser.getIdToken();
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/users/me/keys`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        if (data.publicKey && data.wrappedPrivateKey) {
+          console.log('[Crypto] Recuperando claves existentes...');
+          const passphrase = await this.getOrPromptPassphrase(false);
+
+          if (!passphrase) {
+            throw new Error('Se requiere la frase de seguridad para continuar');
+          }
+
+          const privateKey = this.decryptPrivateKey(data.wrappedPrivateKey, passphrase);
+
+          if (!privateKey) {
+            sessionStorage.removeItem(SESSION_KEY_PASSPHRASE);
+            alert('Frase de seguridad incorrecta.\n\nPor favor, inténtalo de nuevo.');
+            return this.generateAndStoreKeys();
+          }
+
+          this.privateKey = privateKey;
+          this.publicKey = data.publicKey;
+          this.jsEncrypt.setPrivateKey(this.privateKey);
+
+          sessionStorage.setItem(SESSION_KEY_PRIVATE, this.privateKey);
+          localStorage.setItem(STORAGE_KEY_PUBLIC, this.publicKey);
+
+          console.log('[Crypto] Claves recuperadas exitosamente');
+          return { publicKey: this.publicKey, privateKey: this.privateKey };
+        }
+      }
+    } catch (error) {
+      if (!error.message || !error.message.includes('404')) {
+        console.error('[Crypto] Error al verificar claves existentes:', error);
+      }
+    }
+
+    console.log('[Crypto] Generando nuevas claves...');
+    const passphrase = await this.getOrPromptPassphrase(true);
+
+    if (!passphrase) {
+      throw new Error('Se requiere la frase de seguridad para continuar');
+    }
+
     this.jsEncrypt.getKey();
     this.privateKey = this.jsEncrypt.getPrivateKey();
     this.publicKey = this.jsEncrypt.getPublicKey();
-    localStorage.setItem(STORAGE_KEY_PRIVATE, this.privateKey);
+
+    const wrappedPrivateKey = this.encryptPrivateKey(this.privateKey, passphrase);
+
+    try {
+      const saveResponse = await fetch(`http://localhost:3000/api/users/me/keys`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          publicKey: this.publicKey,
+          wrappedPrivateKey
+        })
+      });
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json();
+        throw new Error(errorData.error || 'Error al guardar las claves en el servidor');
+      }
+
+      console.log('[Crypto] Nuevas claves guardadas exitosamente');
+    } catch (error) {
+      console.error('[Crypto] Error al guardar claves:', error);
+      throw error;
+    }
+
+    sessionStorage.setItem(SESSION_KEY_PRIVATE, this.privateKey);
     localStorage.setItem(STORAGE_KEY_PUBLIC, this.publicKey);
+
     return { publicKey: this.publicKey, privateKey: this.privateKey };
   }
 
@@ -83,6 +238,14 @@ class CryptoService {
     } catch (error) {
       return '[Mensaje no se pudo descifrar]';
     }
+  }
+
+  clearSession() {
+    sessionStorage.removeItem(SESSION_KEY_PRIVATE);
+    sessionStorage.removeItem(SESSION_KEY_PASSPHRASE);
+    this.privateKey = null;
+    this.publicKeyCache.clear();
+    console.log('[Crypto] Sesión limpiada');
   }
 }
 

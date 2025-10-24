@@ -47,11 +47,15 @@ app.post("/api/auth/sync", async (req, res) => {
         photoURL: picture || null,
         createdAt: FieldValue.serverTimestamp(),
         publicKey: null,
+        wrappedPrivateKey: null,
         status: 'offline',
         lastSeen: null
       }, { merge: true });
     } else {
-      await userRef.update({ displayName: name, photoURL: picture || (userDoc.data() && userDoc.data().photoURL) || null });
+      await userRef.update({
+        displayName: name,
+        photoURL: picture || (userDoc.data() && userDoc.data().photoURL) || null
+      });
     }
     res.status(200).json({ status: "success", uid });
   } catch (error) {
@@ -121,6 +125,82 @@ app.delete("/api/users/me", authMiddleware, async (req, res) => {
   }
 });
 
+app.get("/api/users/me/keys", authMiddleware, async (req, res) => {
+  const userId = req.user.uid;
+
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const userData = userDoc.data();
+
+    if (userData.publicKey && userData.wrappedPrivateKey) {
+      console.log(`[Keys] Claves recuperadas para usuario ${userId}`);
+      return res.status(200).json({
+        publicKey: userData.publicKey,
+        wrappedPrivateKey: userData.wrappedPrivateKey
+      });
+    }
+
+    console.log(`[Keys] Usuario ${userId} no tiene claves generadas`);
+    return res.status(404).json({ error: 'Claves no encontradas' });
+  } catch (error) {
+    console.error(`[Keys] Error al obtener claves para ${userId}:`, error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.post("/api/users/me/keys", authMiddleware, async (req, res) => {
+  const userId = req.user.uid;
+  const { publicKey, wrappedPrivateKey } = req.body;
+
+  if (!publicKey || !wrappedPrivateKey) {
+    return res.status(400).json({
+      error: 'Se requieren publicKey y wrappedPrivateKey'
+    });
+  }
+
+  try {
+    await db.collection('users').doc(userId).update({
+      publicKey,
+      wrappedPrivateKey,
+      updatedAt: FieldValue.serverTimestamp()
+    });
+
+    console.log(`[Keys] Claves guardadas/actualizadas para usuario ${userId}`);
+    res.status(200).json({
+      success: true,
+      message: 'Claves guardadas correctamente'
+    });
+  } catch (error) {
+    console.error(`[Keys] Error al guardar claves para ${userId}:`, error);
+
+    if (error.code === 5) {
+      try {
+        await db.collection('users').doc(userId).set({
+          publicKey,
+          wrappedPrivateKey,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        console.log(`[Keys] Usuario ${userId} creado con claves`);
+        return res.status(200).json({
+          success: true,
+          message: 'Claves guardadas correctamente'
+        });
+      } catch (createError) {
+        console.error(`[Keys] Error al crear usuario ${userId}:`, createError);
+        return res.status(500).json({ error: 'Error al crear usuario' });
+      }
+    }
+
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 
 app.get("/api/contacts", authMiddleware, async (req, res) => {
   const userId = req.user.uid;
@@ -281,7 +361,6 @@ app.get("/api/users/search", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Error interno del servidor." });
   }
 });
-
 
 app.post("/api/groups/:groupId/members", authMiddleware, async (req, res) => {
   const { groupId } = req.params;
