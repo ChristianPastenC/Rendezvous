@@ -37,7 +37,7 @@ const MainLayout = () => {
   const { conversations, setConversations, loadAllData, isLoading } = useConversations(
     currentUser,
     socket,
-    messagesCache // <-- [IMPORTANTE] Asegúrate de que esto se está pasando
+    messagesCache
   );
 
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -45,7 +45,6 @@ const MainLayout = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserSearchModalOpen, setIsUserSearchModalOpen] = useState(false);
 
-  // ... (toda la lógica de handle... no cambia)
   const handleSignOut = useCallback(async () => {
     try {
       await signOut(auth);

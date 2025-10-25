@@ -8,11 +8,8 @@ import { cryptoService } from "../../lib/cryptoService";
 import { EmptyStateIcon, FileIcon } from "../../assets/Icons";
 import UserAvatar from "../user/UserAvatar";
 
-
-const MessageItem = memo(({ msg, currentUserUid }) => {
-  const isSender = msg.authorId === currentUserUid;
-
-  const content = useMemo(() => {
+const MessageContent = memo(({ msg, currentUserUid, isSender }) => {
+  return useMemo(() => {
     const encryptedDataForUser = msg.encryptedPayload?.[currentUserUid];
 
     if (!encryptedDataForUser) {
@@ -31,6 +28,7 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
         </p>
       );
     }
+
     try {
       const messageObject = JSON.parse(decryptedString);
       switch (messageObject.type) {
@@ -58,7 +56,7 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
               className={`mt-1.5 inline-flex items-center p-2 rounded-lg 
                 ${isSender
                   ? 'bg-blue-700 hover:bg-blue-800 text-white'
-                  : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white' // Color más claro
+                  : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white'
                 }`}
             >
               <FileIcon className="w-5 h-5 mr-2 flex-shrink-0" />
@@ -83,35 +81,60 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
         </p>
       );
     }
-  }, [msg, currentUserUid, isSender]);
+  }, [msg.encryptedPayload, currentUserUid, isSender]);
+});
+
+const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, isSender }) => {
+  const displayName = isSender ? 'Tú' : (authorInfo?.displayName || 'Usuario');
 
   return (
     <div className={`flex items-start gap-2.5 ${isSender ? 'self-end flex-row-reverse' : 'self-start'}`}>
-      <div className="flex-shrink-0">
-        <UserAvatar
-          photoURL={msg.authorInfo?.photoURL}
-          displayName={msg.authorInfo?.displayName}
-        />
+      <div className="flex-shrink-0" style={{ width: '40px' }}>
+        {showAvatar && (
+          <UserAvatar
+            photoURL={authorInfo?.photoURL}
+            displayName={authorInfo?.displayName}
+          />
+        )}
       </div>
-      <div className={`flex flex-col w-full max-w-xs sm:max-w-sm md:max-w-md leading-1.5 p-4
-        ${isSender
-          ? 'bg-blue-600 rounded-s-xl rounded-ee-xl'
-          : 'bg-gray-100 dark:bg-gray-700 rounded-e-xl rounded-es-xl'
-        }`}
-      >
-        <div className="flex items-center space-x-2 rtl:space-x-reverse">
-          <span className={`text-sm font-semibold 
-            ${isSender ? 'text-white' : 'text-gray-900 dark:text-white'}`
-          }>
-            {msg.authorInfo?.displayName || 'Usuario'}
-          </span>
-          <span className={`text-sm font-normal 
-            ${isSender ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`
-          }>
-            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        </div>
-        {content}
+      <div className="flex flex-col gap-1 w-full max-w-xs sm:max-w-sm md:max-w-md">
+        {messages.map((msg, idx) => (
+          <div
+            key={msg.id}
+            className={`flex flex-col leading-1.5 p-4
+              ${isSender
+                ? 'bg-blue-600 rounded-s-xl rounded-ee-xl'
+                : 'bg-gray-100 dark:bg-gray-700 rounded-e-xl rounded-es-xl'
+              }`}
+          >
+            {idx === 0 && (
+              <div className="flex items-center space-x-2 rtl:space-x-reverse mb-1">
+                <span className={`text-sm font-semibold 
+                  ${isSender ? 'text-white' : 'text-gray-900 dark:text-white'}`
+                }>
+                  {displayName}
+                </span>
+                <span className={`text-sm font-normal 
+                  ${isSender ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`
+                }>
+                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            )}
+            <MessageContent
+              msg={msg}
+              currentUserUid={currentUserUid}
+              isSender={isSender}
+            />
+            {idx > 0 && (
+              <span className={`text-xs font-normal mt-1 
+                ${isSender ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`
+              }>
+                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -119,6 +142,36 @@ const MessageItem = memo(({ msg, currentUserUid }) => {
 
 const MessageList = ({ messages, currentUserUid }) => {
   const messagesEndRef = useRef(null);
+
+  const groupedMessages = useMemo(() => {
+    if (!messages.length) return [];
+
+    const groups = [];
+    let currentGroup = {
+      authorId: messages[0].authorId,
+      authorInfo: messages[0].authorInfo,
+      messages: [messages[0]]
+    };
+
+    for (let i = 1; i < messages.length; i++) {
+      const msg = messages[i];
+      const timeDiff = new Date(msg.createdAt) - new Date(currentGroup.messages[currentGroup.messages.length - 1].createdAt);
+
+      if (msg.authorId === currentGroup.authorId && timeDiff < 120000) {
+        currentGroup.messages.push(msg);
+      } else {
+        groups.push(currentGroup);
+        currentGroup = {
+          authorId: msg.authorId,
+          authorInfo: msg.authorInfo,
+          messages: [msg]
+        };
+      }
+    }
+    groups.push(currentGroup);
+
+    return groups;
+  }, [messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -130,29 +183,39 @@ const MessageList = ({ messages, currentUserUid }) => {
     >
       {messages.length > 0 ? (
         <>
-          {messages.map(msg => (
-            <MessageItem
-              key={msg.id}
-              msg={msg}
-              currentUserUid={currentUserUid}
-            />
-          ))}
+          {groupedMessages.map((group, idx) => {
+            const showAvatar = idx === groupedMessages.length - 1 ||
+              groupedMessages[idx + 1]?.authorId !== group.authorId;
+            const isSender = group.authorId === currentUserUid;
+
+            return (
+              <MessageGroup
+                key={`${group.authorId}-${group.messages[0].id}`}
+                messages={group.messages}
+                currentUserUid={currentUserUid}
+                showAvatar={showAvatar}
+                authorInfo={group.authorInfo}
+                isSender={isSender}
+              />
+            );
+          })}
           <div ref={messagesEndRef} />
         </>
       ) : (
-          <div className="flex-1 flex flex-col items-center justify-center h-full p-6 text-center">
-            <EmptyStateIcon 
-              className="w-16 h-16 text-gray-300" 
-            />
-            <h3 className="mt-4 text-xl font-semibold text-gray-800 dark:text-gray-200">
-              Aún no hay mensajes
-            </h3>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              ¡Sé el primero en enviar un saludo! 👋
-            </p>
-          </div>
+        <div className="flex-1 flex flex-col items-center justify-center h-full p-6 text-center">
+          <EmptyStateIcon
+            className="w-16 h-16 text-gray-300"
+          />
+          <h3 className="mt-4 text-xl font-semibold text-gray-800 dark:text-gray-200">
+            Aún no hay mensajes
+          </h3>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            ¡Sé el primero en enviar un saludo! 👋
+          </p>
+        </div>
       )}
     </div>
   );
 };
+
 export default MessageList;
