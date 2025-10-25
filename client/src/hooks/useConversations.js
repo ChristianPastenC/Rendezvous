@@ -12,7 +12,6 @@ export const useConversations = (currentUser, socket, messagesCache) => {
 
   const initialFetchDone = useRef(false);
 
-  // loadAllData (sin cambios)
   const loadAllData = useCallback(async () => {
     if (!currentUser) return;
 
@@ -159,7 +158,7 @@ export const useConversations = (currentUser, socket, messagesCache) => {
       setConversations(prevConvs =>
         prevConvs.map(conv => {
           const isUserInConv = (conv.type === 'dm' && conv.userData?.uid === uid) ||
-                               (conv.type === 'group' && conv.groupData?.members?.includes(uid));
+            (conv.type === 'group' && conv.groupData?.members?.includes(uid));
 
           if (!isUserInConv) return conv;
 
@@ -224,13 +223,13 @@ export const useConversations = (currentUser, socket, messagesCache) => {
                     headers: { Authorization: `Bearer ${token}` },
                   });
                   if (res.ok) {
-                    const userData = await res.json();
+                    const authorInfo = newMessage.authorInfo;
                     const newConv = {
-                      id: `dm_${userData.uid}`,
+                      id: `dm_${authorInfo.uid}`,
                       type: 'dm',
-                      name: userData.displayName,
-                      photoURL: userData.photoURL,
-                      userData: { ...userData, status: userData.status || 'offline' },
+                      name: authorInfo.displayName,
+                      photoURL: authorInfo.photoURL,
+                      userData: authorInfo,
                       lastMessage: newMessage,
                     };
                     setConversations(prev => [newConv, ...prev.filter(c => c.id !== newConv.id)]);

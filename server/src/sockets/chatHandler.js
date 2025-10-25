@@ -51,12 +51,18 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
       }
 
       const authorDoc = await db.collection('users').doc(author.uid).get();
-      const authorData = authorDoc.exists ? authorDoc.data() : {};
+      const authorData = authorDoc.exists ? authorDoc.data() : {
+        displayName: author.name || 'Usuario',
+        photoURL: author.picture || null,
+        status: 'offline',
+        lastSeen: null
+      };
 
       const messageData = {
         encryptedPayload,
         authorId: author.uid,
         authorInfo: {
+          uid: author.uid,
           displayName: authorData.displayName || author.name || 'Usuario',
           photoURL: authorData.photoURL || author.picture || null
         },
