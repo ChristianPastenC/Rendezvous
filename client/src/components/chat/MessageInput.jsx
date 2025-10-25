@@ -105,13 +105,18 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     try {
       let memberKeys;
       if (isDirectMessage) {
-        // Para DMs, solo necesitamos la clave del otro usuario y la propia.
-        const otherUserId = members[0]?.uid;
+        // Para DMs, obtenemos el ID del otro usuario desde el conversationId
+        const participants = conversationId.replace('dm_', '').split('_');
+        const otherUserId = participants.find(id => id !== currentUser.uid);
+
         const selfKey = cryptoService.getPublicKey();
         memberKeys = [{ uid: currentUser.uid, publicKey: selfKey }];
+
         if (otherUserId) {
           const otherUserKey = await cryptoService.fetchPublicKey(otherUserId);
-          if (otherUserKey) memberKeys.push({ uid: otherUserId, publicKey: otherUserKey });
+          if (otherUserKey) {
+            memberKeys.push({ uid: otherUserId, publicKey: otherUserKey });
+          }
         }
       } else {
         // Para grupos, obtenemos todas las claves de los miembros del grupo.

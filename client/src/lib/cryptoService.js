@@ -108,43 +108,42 @@ class CryptoService {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('[Crypto] Recuperando claves existentes...');
+        const passphrase = await this.getOrPromptPassphrase(false);
 
-        if (data.publicKey && data.wrappedPrivateKey) {
-          console.log('[Crypto] Recuperando claves existentes...');
-          const passphrase = await this.getOrPromptPassphrase(false);
-
-          if (!passphrase) {
-            throw new Error('Se requiere la frase de seguridad para continuar');
-          }
-
-          const privateKey = this.decryptPrivateKey(data.wrappedPrivateKey, passphrase);
-
-          if (!privateKey) {
-            sessionStorage.removeItem(SESSION_KEY_PASSPHRASE);
-            alert('Frase de seguridad incorrecta.\n\nPor favor, inténtalo de nuevo.');
-            return this.generateAndStoreKeys();
-          }
-
-          this.privateKey = privateKey;
-          this.publicKey = data.publicKey;
-          this.jsEncrypt.setPrivateKey(this.privateKey);
-
-          sessionStorage.setItem(SESSION_KEY_PRIVATE, this.privateKey);
-          localStorage.setItem(STORAGE_KEY_PUBLIC, this.publicKey);
-
-          console.log('[Crypto] Claves recuperadas exitosamente');
-          return { publicKey: this.publicKey, privateKey: this.privateKey };
+        if (!passphrase) {
+          throw new Error('Se requiere la frase de seguridad para continuar');
         }
+
+        const privateKey = this.decryptPrivateKey(data.wrappedPrivateKey, passphrase);
+
+        if (!privateKey) {
+          sessionStorage.removeItem(SESSION_KEY_PASSPHRASE);
+          alert('Frase de seguridad incorrecta.\n\nPor favor, inténtalo de nuevo.');
+          return this.generateAndStoreKeys();
+        }
+
+        this.privateKey = privateKey;
+        this.publicKey = data.publicKey;
+        this.jsEncrypt.setPrivateKey(this.privateKey);
+
+        sessionStorage.setItem(SESSION_KEY_PRIVATE, this.privateKey);
+        localStorage.setItem(STORAGE_KEY_PUBLIC, this.publicKey);
+
+        console.log('[Crypto] Claves recuperadas exitosamente');
+        return { publicKey: this.publicKey, privateKey: this.privateKey };
+      } else if (response.status === 404) {
+        console.log('[Crypto] No se encontraron claves existentes. Generando nuevas...');
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error del servidor: ${response.status}`);
       }
     } catch (error) {
-      if (!error.message || !error.message.includes('404')) {
-        console.error('[Crypto] Error al verificar claves existentes:', error);
-      }
+      console.error('[Crypto] Error al verificar/recuperar claves existentes:', error);
+      throw error;
     }
 
-    console.log('[Crypto] Generando nuevas claves...');
     const passphrase = await this.getOrPromptPassphrase(true);
-
     if (!passphrase) {
       throw new Error('Se requiere la frase de seguridad para continuar');
     }
@@ -152,7 +151,6 @@ class CryptoService {
     this.jsEncrypt.getKey();
     this.privateKey = this.jsEncrypt.getPrivateKey();
     this.publicKey = this.jsEncrypt.getPublicKey();
-
     const wrappedPrivateKey = this.encryptPrivateKey(this.privateKey, passphrase);
 
     try {
