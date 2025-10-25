@@ -30,19 +30,22 @@ const MainLayout = () => {
   const navigate = useNavigate();
 
   const socket = useSocketManager(currentUser);
+
+  const messagesCache = useRef({});
+  const membersCache = useRef({});
+
   const { conversations, setConversations, loadAllData, isLoading } = useConversations(
     currentUser,
-    socket
+    socket,
+    messagesCache // <-- [IMPORTANTE] Asegúrate de que esto se está pasando
   );
-  
+
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserSearchModalOpen, setIsUserSearchModalOpen] = useState(false);
 
-  const messagesCache = useRef({});
-  const membersCache = useRef({});
-
+  // ... (toda la lógica de handle... no cambia)
   const handleSignOut = useCallback(async () => {
     try {
       await signOut(auth);
@@ -71,6 +74,7 @@ const MainLayout = () => {
           name: user.displayName,
           photoURL: user.photoURL,
           userData: user,
+          lastMessage: null
         };
         setConversations((prev) => [newConv, ...prev]);
         setSelectedConversation(newConv);
@@ -159,7 +163,8 @@ const MainLayout = () => {
     loadAllData,
     onClearSelectedConversation: handleClearSelectedConversation,
     messagesCache,
-    membersCache
+    membersCache,
+    setConversations
   };
 
   return (

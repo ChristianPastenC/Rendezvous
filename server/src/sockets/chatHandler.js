@@ -72,11 +72,25 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
         ...messageData,
         id: messageRef.id,
         createdAt: new Date().toISOString(),
-        conversationId: conversationId
+        conversationId: conversationId,
+        groupId: isDirectMessage ? null : groupId
       };
 
       io.to(conversationId).emit('encryptedMessage', savedMessage);
+      console.log(`[Socket] Emitiendo 'encryptedMessage' a la sala: ${conversationId}`);
 
+      members.forEach(memberId => {
+        const memberSocketId = userSocketMap[memberId];
+
+        if (memberSocketId) {
+          const memberSocket = io.sockets.sockets.get(memberSocketId);
+
+          if (memberSocket && memberSocket.id !== socket.id && !memberSocket.rooms.has(conversationId)) {
+            console.log(`[Socket] Emitiendo 'encryptedMessage' (fuera de sala) a ${memberId} via socket ${memberSocketId}`);
+            io.to(memberSocketId).emit('encryptedMessage', savedMessage);
+          }
+        }
+      });
     } catch (error) {
       console.error(`[Error] en sendMessage para ${socket.id}:`, error);
     }
