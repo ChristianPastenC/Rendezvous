@@ -104,20 +104,20 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     setSending(true);
     try {
       let memberKeys;
+      let backendConversationId = conversationId; // Para grupos, es el channelId
+
       if (isDirectMessage) {
-        // Para DMs, obtenemos el ID del otro usuario desde el conversationId
-        const participants = conversationId.replace('dm_', '').split('_');
-        const otherUserId = participants.find(id => id !== currentUser.uid);
+        const otherUser = members.find(m => m.uid !== currentUser.uid);
+        if (!otherUser) throw new Error("No se pudo encontrar al otro usuario en el DM.");
+
+        // [FIX] Construir el ID de conversación correcto para el backend
+        backendConversationId = [currentUser.uid, otherUser.uid].sort().join('_');
 
         const selfKey = cryptoService.getPublicKey();
         memberKeys = [{ uid: currentUser.uid, publicKey: selfKey }];
 
-        if (otherUserId) {
-          const otherUserKey = await cryptoService.fetchPublicKey(otherUserId);
-          if (otherUserKey) {
-            memberKeys.push({ uid: otherUserId, publicKey: otherUserKey });
-          }
-        }
+        const otherUserKey = await cryptoService.fetchPublicKey(otherUser.uid);
+        if (otherUserKey) memberKeys.push({ uid: otherUser.uid, publicKey: otherUserKey });
       } else {
         // Para grupos, obtenemos todas las claves de los miembros del grupo.
         memberKeys = await cryptoService.fetchPublicKeysForGroup(groupId);
@@ -129,7 +129,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
         if (encrypted) encryptedPayload[member.uid] = encrypted;
       }
       if (Object.keys(encryptedPayload).length > 0) {
-        socket.emit('sendMessage', { conversationId, isDirectMessage, groupId, encryptedPayload });
+        socket.emit('sendMessage', { conversationId: backendConversationId, isDirectMessage, groupId, encryptedPayload });
       } else {
         throw new Error("El payload cifrado está vacío.");
       }

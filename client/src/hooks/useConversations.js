@@ -94,7 +94,6 @@ export const useConversations = (currentUser, socket, messagesCache) => {
   }, [loadAllData]);
 
 
-  // useEffect de carga inicial de previsualizaciones (sin cambios)
   useEffect(() => {
     if (!currentUser || conversations.length === 0 || !messagesCache || isLoading) {
       return;
@@ -154,25 +153,27 @@ export const useConversations = (currentUser, socket, messagesCache) => {
   }, [conversations, currentUser, messagesCache, isLoading]);
 
 
-  // useEffect para statusUpdate (sin cambios)
   useEffect(() => {
     if (!socket) return;
     const handleStatusUpdate = ({ uid, status, lastSeen, photoURL, displayName }) => {
       setConversations(prevConvs =>
         prevConvs.map(conv => {
-          if (conv.type === 'dm' && conv.userData.uid === uid) {
-            const updatedUserData = { ...conv.userData };
-            // ... (actualizar userData)
+          const isUserInConv = (conv.type === 'dm' && conv.userData?.uid === uid) ||
+                               (conv.type === 'group' && conv.groupData?.members?.includes(uid));
+
+          if (!isUserInConv) return conv;
+
+          if (conv.type === 'dm') {
+            const updatedConv = { ...conv };
+            const updatedUserData = { ...updatedConv.userData };
+
             if (status !== undefined) updatedUserData.status = status;
             if (lastSeen !== undefined) updatedUserData.lastSeen = lastSeen;
-            if (photoURL !== undefined) updatedUserData.photoURL = photoURL;
-            if (displayName !== undefined) updatedUserData.displayName = displayName;
-            return {
-              ...conv,
-              name: updatedUserData.displayName,
-              photoURL: updatedUserData.photoURL,
-              userData: updatedUserData,
-            };
+            if (photoURL !== undefined) { updatedUserData.photoURL = photoURL; updatedConv.photoURL = photoURL; }
+            if (displayName !== undefined) { updatedUserData.displayName = displayName; updatedConv.name = displayName; }
+
+            updatedConv.userData = updatedUserData;
+            return updatedConv;
           }
           return conv;
         })
@@ -184,11 +185,82 @@ export const useConversations = (currentUser, socket, messagesCache) => {
     };
   }, [socket]);
 
-  // [LÓGICA CORRECTA] Este useEffect interpreta el mensaje
   useEffect(() => {
     if (!socket || !currentUser) return;
 
-    // handleNewConversation (sin cambios)
+    const handleNewMessage = (newMessage) => {
+      const { conversationId, groupId } = newMessage;
+      if (!conversationId) {
+        console.error('[useConversations] Mensaje recibido sin conversationId:', newMessage);
+        return;
+      }
+
+      let targetConvId = null;
+      if (groupId) {
+        targetConvId = `group_${groupId}`;
+      } else {
+        const participants = conversationId.split('_');
+        const otherUserId = participants.find(uid => uid !== currentUser.uid);
+        if (otherUserId) {
+          targetConvId = `dm_${otherUserId}`;
+        }
+      }
+
+      if (!targetConvId) return;
+
+      setConversations(prevConvs => {
+        const convIndex = prevConvs.findIndex(c => c.id === targetConvId);
+
+        if (convIndex === -1) {
+          if (!groupId) {
+            const participants = conversationId.split('_');
+            const otherUserId = participants.find(uid => uid !== currentUser.uid);
+
+            if (otherUserId) {
+              (async () => {
+                try {
+                  const token = await currentUser.getIdToken();
+                  const res = await fetch(`http://localhost:3000/api/users/${otherUserId}/profile`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  if (res.ok) {
+                    const userData = await res.json();
+                    const newConv = {
+                      id: `dm_${userData.uid}`,
+                      type: 'dm',
+                      name: userData.displayName,
+                      photoURL: userData.photoURL,
+                      userData: { ...userData, status: userData.status || 'offline' },
+                      lastMessage: newMessage,
+                    };
+                    setConversations(prev => [newConv, ...prev.filter(c => c.id !== newConv.id)]);
+                  }
+                } catch (error) {
+                  console.error("Error creando nueva conversación de DM al recibir mensaje:", error);
+                }
+              })();
+            }
+          }
+          return prevConvs;
+        }
+
+        const convToUpdate = { ...prevConvs[convIndex], lastMessage: newMessage };
+        const otherConvs = prevConvs.filter(c => c.id !== targetConvId);
+
+        return [convToUpdate, ...otherConvs];
+      });
+    };
+
+    socket.on('encryptedMessage', handleNewMessage);
+
+    return () => {
+      socket.off('encryptedMessage', handleNewMessage);
+    };
+  }, [socket, currentUser]);
+
+  useEffect(() => {
+    if (!socket || !currentUser) return;
+
     const handleNewConversation = (newConv) => {
       const convExists = conversationsRef.current.some(c => c.id === newConv.id);
       if (!convExists) {
@@ -197,104 +269,14 @@ export const useConversations = (currentUser, socket, messagesCache) => {
       }
     };
 
-    // handleNewMessage (lógica robusta que soluciona el bug de "primer mensaje")
-    const handleNewMessage = async (newMessage) => {
-      const { conversationId, groupId } = newMessage;
-
-      console.log('[useConversations] Mensaje recibido:', { conversationId, groupId });
-
-      if (!conversationId) {
-        console.error('[useConversations] Mensaje sin conversationId!');
-        return;
-      }
-
-      let targetConvId = null; // ID de la lista (ej: "group_xyz" o "dm_user123")
-      let isDM = false;
-      let otherUserId = null;
-
-      if (groupId) {
-        targetConvId = `group_${groupId}`;
-      } else {
-        isDM = conversationId.includes('_');
-        if (isDM) {
-          const participants = conversationId.split('_');
-          otherUserId = participants.find(uid => uid !== currentUser.uid);
-          if (otherUserId) {
-            targetConvId = `dm_${otherUserId}`;
-          }
-        }
-      }
-
-      if (!targetConvId) {
-        console.warn('[useConversations] No se pudo determinar targetConvId. Mensaje ignorado.', newMessage);
-        return;
-      }
-
-      console.log(`[useConversations] Mapeado a targetConvId: ${targetConvId}`);
-
-      const conversationExists = conversationsRef.current.some(
-        c => c.id === targetConvId
-      );
-
-      if (conversationExists) {
-        // Conversación existente: actualizar y mover al inicio
-        console.log(`[useConversations] Actualizando conversación existente: ${targetConvId}`);
-        setConversations(prevConvs => {
-          // De-duplicación: no actualizar si el mensaje ya es el último
-          const currentConv = prevConvs.find(c => c.id === targetConvId);
-          if (currentConv?.lastMessage?.id === newMessage.id) {
-            return prevConvs;
-          }
-
-          const convToMove = currentConv || prevConvs.find(c => c.id === targetConvId);
-          if (!convToMove) return prevConvs;
-
-          const updatedConv = { ...convToMove, lastMessage: newMessage };
-          const otherConvs = prevConvs.filter(c => c.id !== targetConvId);
-
-          return [updatedConv, ...otherConvs];
-        });
-      } else if (isDM && otherUserId) {
-        // Conversación NO existente y ES un DM: crearla
-        console.log(`[useConversations] Es un DM nuevo. Buscando perfil de: ${otherUserId}`);
-        try {
-          const token = await currentUser.getIdToken();
-          const res = await fetch(`http://localhost:3000/api/users/${otherUserId}/profile`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const userData = await res.json();
-            const newConv = {
-              id: `dm_${userData.uid}`,
-              type: 'dm',
-              name: userData.displayName,
-              photoURL: userData.photoURL,
-              userData: userData,
-              lastMessage: newMessage
-            };
-            setConversations(prevConvs => [newConv, ...prevConvs]);
-          } else {
-            console.error(`[useConversations] Error al cargar perfil de ${otherUserId}:`, res.status);
-          }
-        } catch (error) {
-          console.error("Error al cargar perfil de nuevo DM:", error);
-        }
-      } else {
-        console.log(`[useConversations] Mensaje ignorado (es de grupo pero no existe en la lista): ${targetConvId}`);
-      }
-    };
-
     socket.on('newConversation', handleNewConversation);
-    socket.on('encryptedMessage', handleNewMessage);
 
     return () => {
       socket.off('newConversation', handleNewConversation);
-      socket.off('encryptedMessage', handleNewMessage);
     };
 
-  }, [socket, currentUser]); // Dependencias correctas
+  }, [socket, currentUser]);
 
-  // useEffect para subscribeToStatus (sin cambios)
   useEffect(() => {
     if (!socket || conversations.length === 0) return;
     const userIdsToWatch = conversations

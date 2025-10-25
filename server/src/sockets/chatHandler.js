@@ -50,10 +50,16 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
         members = groupDoc.data().members;
       }
 
+      const authorDoc = await db.collection('users').doc(author.uid).get();
+      const authorData = authorDoc.exists ? authorDoc.data() : {};
+
       const messageData = {
         encryptedPayload,
         authorId: author.uid,
-        authorInfo: { displayName: author.name || 'Usuario', photoURL: author.picture || null },
+        authorInfo: {
+          displayName: authorData.displayName || author.name || 'Usuario',
+          photoURL: authorData.photoURL || author.picture || null
+        },
         createdAt: FieldValue.serverTimestamp(),
       };
 
