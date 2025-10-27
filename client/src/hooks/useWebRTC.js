@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import WebRTCService from '../lib/webrtcService';
+import { playSound, stopSound } from '../lib/soundService';
 
 export const useWebRTC = (socket, currentUser) => {
   const [inCall, setInCall] = useState(false);
@@ -22,7 +23,7 @@ export const useWebRTC = (socket, currentUser) => {
   useEffect(() => {
     callStateRef.current = callState;
   }, [callState]);
- 
+
   const resetCallState = useCallback(() => {
     setInCall(false);
     setCallState('idle');
@@ -47,17 +48,25 @@ export const useWebRTC = (socket, currentUser) => {
         webrtcService.rejectCall(from);
         return;
       }
+
+      playSound('incomingCall');
+
       setCallState('incoming');
       setIncomingCallData({ from, offer, callType, callerName });
     };
 
     webrtcService.onCallRinging = (from) => {
       if (remoteUserIdRef.current === from) {
+
+        playSound('outgoingCall');
+      
         setCallState('ringing');
       }
     };
 
     webrtcService.onRemoteStream = (stream) => {
+      stopSound('outgoingCall');
+      
       setRemoteStream(stream);
       setCallState('connected');
       setInCall(true);
@@ -65,6 +74,17 @@ export const useWebRTC = (socket, currentUser) => {
 
     webrtcService.onCallEnded = () => {
       console.log('Llamada terminada, mostrando mensaje...');
+
+      if (callStateRef.current === 'connected' ||
+        callStateRef.current === 'calling' ||
+        callStateRef.current === 'ringing' ||
+        callStateRef.current === 'incoming') {
+
+        stopSound('incomingCall');
+        stopSound('outgoingCall');
+        playSound('callEnded');
+      }
+      
       setCallState('ended');
       setLocalStream(null);
       setRemoteStream(null);
@@ -113,6 +133,9 @@ export const useWebRTC = (socket, currentUser) => {
 
   const acceptCall = useCallback(async () => {
     if (!webrtcRef.current || !incomingCallData) return;
+
+    stopSound('incomingCall');
+  
     try {
       const { from, offer, callType } = incomingCallData;
 
@@ -138,32 +161,31 @@ export const useWebRTC = (socket, currentUser) => {
   const rejectCall = useCallback(() => {
     if (!webrtcRef.current || !incomingCallData) return;
 
+    stopSound('incomingCall');
+  
     webrtcRef.current.rejectCall(incomingCallData.from);
     setIncomingCallData(null);
     setCallState('idle');
   }, [incomingCallData]);
 
   const hangUp = useCallback(() => {
-    if (callStateRef.current === 'calling' || callStateRef.current === 'ringing') {
-      if (remoteUserIdRef.current) {
-        webrtcRef.current.rejectCall(remoteUserIdRef.current);
-      }
-      resetCallState();
-      return;
-    }
-
-    const remoteId = remoteUserIdRef.current;
-    if (!webrtcRef.current || !remoteId) {
-      resetCallState();
-      return;
-    }
+    stopSound('outgoingCall');
+    stopSound('incomingCall');
 
     if (callEndedTimerRef.current) {
       clearTimeout(callEndedTimerRef.current);
       callEndedTimerRef.current = null;
     }
 
+    const remoteId = remoteUserIdRef.current;
+
+    if (!webrtcRef.current || !remoteId) {
+      resetCallState();
+      return;
+    }
+
     webrtcRef.current.hangUp(remoteId);
+
   }, [resetCallState]);
 
   return {

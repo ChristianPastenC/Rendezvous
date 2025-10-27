@@ -1,5 +1,6 @@
 // src/hooks/useConversations.js
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { playSound } from '../lib/soundService';
 
 export const useConversations = (currentUser, socket, messagesCache) => {
   const [conversations, setConversations] = useState([]);
@@ -188,7 +189,46 @@ export const useConversations = (currentUser, socket, messagesCache) => {
     if (!socket || !currentUser) return;
 
     const handleNewMessage = (newMessage) => {
-      const { conversationId, groupId } = newMessage;
+      const { conversationId, groupId, authorInfo, content, type } = newMessage;
+
+      if (authorInfo?.uid !== currentUser.uid) {
+
+        playSound('messageReceived');
+
+        if (!("Notification" in window)) {
+          console.warn("Este navegador no soporta notificaciones de escritorio.");
+
+        } else if (Notification.permission === "granted") {
+
+          if (document.hidden) {
+            const title = authorInfo.displayName || "Nuevo Mensaje";
+
+            let body;
+            if (type === 'text') {
+              body = content;
+            } else if (type === 'image') {
+              body = "Te enviaron una imagen";
+            } else if (type === 'file') {
+              body = "Te enviaron un archivo";
+            } else {
+              body = "Nuevo mensaje";
+            }
+
+            const options = {
+              body: body,
+              icon: authorInfo.photoURL || '/default-avatar.png',
+              tag: conversationId || groupId,
+            };
+
+            new Notification(title, options);
+          }
+
+        } else if (Notification.permission === "default") {
+          console.warn(`Notificación recibida, pero el permiso es "default". 
+          Debes añadir un botón en tu UI para que el usuario haga clic y llame a Notification.requestPermission()`);
+        }
+      }
+
       if (!conversationId) {
         console.error('[useConversations] Mensaje recibido sin conversationId:', newMessage);
         return;

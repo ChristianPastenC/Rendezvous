@@ -6,28 +6,12 @@ class WebRTCService {
     this.onRemoteStream = null;
     this.onCallEnded = null;
     this.onIncomingCall = null;
-    this.onCallRinging = null; // <-- Añadir
+    this.onCallRinging = null;
 
     this.iceServers = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-
-        // --- AÑADIR SERVIDORES TURN AQUÍ ---
-        // DEBES CONTRATAR UN SERVICIO TURN (ej. Twilio, Xirsys)
-        // Y PONER TUS CREDENCIALES PARA QUE FUNCIONE EN PRODUCCIÓN
-        /*
-        {
-          urls: 'turn:tu-servidor-turn.com:3478',
-          username: 'tu-usuario-turn',
-          credential: 'tu-password-turn'
-        },
-        {
-          urls: 'turns:tu-servidor-turn.com:443?transport=tcp',
-          username: 'tu-usuario-turn',
-          credential: 'tu-password-turn'
-        }
-        */
       ]
     };
 
@@ -38,7 +22,6 @@ class WebRTCService {
     this.socket.on('webrtc:offer', ({ from, offer, callType, callerName }) => {
       console.log('[WebRTC] Oferta recibida de:', from);
 
-      // Notificar al que llama que estamos "sonando" (ringing)
       this.socket.emit('webrtc:ringing', { recipientUid: from });
 
       if (this.onIncomingCall) {
@@ -66,7 +49,6 @@ class WebRTCService {
       }
     });
 
-    // Añadir este nuevo listener
     this.socket.on('webrtc:ringing', ({ from }) => {
       console.log('[WebRTC] Tono de llamada de:', from);
       if (this.onCallRinging) {
@@ -106,7 +88,7 @@ class WebRTCService {
 
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-        this.endCall(recipientUid); // <-- Esto maneja el cierre de pestaña
+        this.endCall(recipientUid);
       }
     };
 
@@ -120,7 +102,7 @@ class WebRTCService {
         audio: true,
         video: callType === 'video' ? { width: 1280, height: 720 } : false
       };
-      // Detener cualquier stream previo
+      
       if (this.localStream) {
         this.localStream.getTracks().forEach(track => track.stop());
       }
@@ -132,7 +114,6 @@ class WebRTCService {
     }
   }
 
-  // Método auxiliar para añadir el stream local a una conexión
   addLocalStreamToPC(pc) {
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => {
