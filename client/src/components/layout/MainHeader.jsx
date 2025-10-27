@@ -62,7 +62,7 @@ const MainHeader = ({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {selectedConversation && callTarget && (
+        {selectedConversation?.type !== 'group' && callTarget && (
           <button
             onClick={onCallClick}
             disabled={inCall}

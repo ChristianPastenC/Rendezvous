@@ -27,6 +27,11 @@ export const useSocketManager = (currentUser) => {
         }
       } catch (error) {
         console.error('Error al inicializar el socket o registrar la clave:', error);
+
+        if (error.message.includes('frase de seguridad')) {
+          alert('Error de Seguridad\n\n' + error.message +
+            '\n\nPor favor, recarga la página e intenta nuevamente.');
+        }
       }
     };
 

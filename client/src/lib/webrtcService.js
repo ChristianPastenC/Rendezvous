@@ -6,11 +6,12 @@ class WebRTCService {
     this.onRemoteStream = null;
     this.onCallEnded = null;
     this.onIncomingCall = null;
+    this.onCallRinging = null;
 
     this.iceServers = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
       ]
     };
 
@@ -20,6 +21,9 @@ class WebRTCService {
   registerSocketListeners() {
     this.socket.on('webrtc:offer', ({ from, offer, callType, callerName }) => {
       console.log('[WebRTC] Oferta recibida de:', from);
+
+      this.socket.emit('webrtc:ringing', { recipientUid: from });
+
       if (this.onIncomingCall) {
         this.onIncomingCall({ from, offer, callType, callerName });
       }
@@ -42,6 +46,13 @@ class WebRTCService {
         } catch (error) {
           console.error('[WebRTC] Error al agregar candidato ICE:', error);
         }
+      }
+    });
+
+    this.socket.on('webrtc:ringing', ({ from }) => {
+      console.log('[WebRTC] Tono de llamada de:', from);
+      if (this.onCallRinging) {
+        this.onCallRinging(from);
       }
     });
 
@@ -91,7 +102,7 @@ class WebRTCService {
         audio: true,
         video: callType === 'video' ? { width: 1280, height: 720 } : false
       };
-      // Detener cualquier stream previo
+      
       if (this.localStream) {
         this.localStream.getTracks().forEach(track => track.stop());
       }
@@ -103,7 +114,6 @@ class WebRTCService {
     }
   }
 
-  // Método auxiliar para añadir el stream local a una conexión
   addLocalStreamToPC(pc) {
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => {

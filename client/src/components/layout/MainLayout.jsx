@@ -15,6 +15,11 @@ import MobileNav from './MobileNav';
 import UserSearchModal from '../dms/UserSearchModal';
 import { useSocketManager } from '../../hooks/useSocketManager';
 import { useConversations } from '../../hooks/useConversations';
+import { useWebRTC } from '../../hooks/useWebRTC';
+import VideoCallModal from '../chat/VideoCallModal';
+import IncomingCallModal from '../chat/IncomingCallModal';
+import CallTypeModal from '../chat/CallTypeModal';
+import OutgoingCallModal from '../chat/OutgoingCallModal';
 
 const Loader = () => (
   <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -30,28 +35,70 @@ const MainLayout = () => {
   const navigate = useNavigate();
 
   const socket = useSocketManager(currentUser);
+
+  const messagesCache = useRef({});
+  const membersCache = useRef({});
+
   const { conversations, setConversations, loadAllData, isLoading } = useConversations(
     currentUser,
-    socket
+    socket,
+    messagesCache
   );
-  
+
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserSearchModalOpen, setIsUserSearchModalOpen] = useState(false);
 
-  const messagesCache = useRef({});
-  const membersCache = useRef({});
+  const {
+    inCall,
+    callState,
+    localStream,
+    remoteStream,
+    incomingCallData,
+    currentCallType,
+    startCall,
+    acceptCall,
+    rejectCall,
+    hangUp,
+  } = useWebRTC(socket, currentUser);
+
+  const [showCallTypeModal, setShowCallTypeModal] = useState(false);
+  const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
+
+  const startCallProcess = useCallback((member) => {
+    if (inCall || callState !== 'idle') return;
+    setSelectedMemberToCall(member);
+    setShowCallTypeModal(true);
+  }, [inCall, callState]);
+
+  const handleSelectCallType = useCallback((callType) => {
+    setShowCallTypeModal(false);
+    if (!selectedMemberToCall || !startCall) return;
+    startCall(selectedMemberToCall.uid, callType);
+  }, [selectedMemberToCall, startCall]);
+
+  const handleCancelCallType = useCallback(() => {
+    setShowCallTypeModal(false);
+    setSelectedMemberToCall(null);
+  }, []);
+
+  const getCallTargetName = () => {
+    return selectedMemberToCall?.displayName || 'Usuario';
+  };
 
   const handleSignOut = useCallback(async () => {
     try {
+      if (inCall) {
+        hangUp();
+      }
       await signOut(auth);
       console.log('Usuario cerró sesión exitosamente.');
       navigate('/auth');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
-  }, [navigate]);
+  }, [navigate, inCall, hangUp]);
 
   const handleSelectConversation = useCallback((conv) => {
     setSelectedConversation(conv);
@@ -71,6 +118,7 @@ const MainLayout = () => {
           name: user.displayName,
           photoURL: user.photoURL,
           userData: user,
+          lastMessage: null
         };
         setConversations((prev) => [newConv, ...prev]);
         setSelectedConversation(newConv);
@@ -123,6 +171,9 @@ const MainLayout = () => {
       return;
     }
     try {
+      if (inCall) {
+        hangUp();
+      }
       const token = await currentUser.getIdToken();
       const response = await fetch('http://localhost:3000/api/users/me', {
         method: 'DELETE',
@@ -144,7 +195,7 @@ const MainLayout = () => {
       console.error('Error en el proceso de eliminación:', error);
       alert('Ocurrió un error de red. Inténtalo de nuevo.');
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, inCall, hangUp]);
 
   const handleClearSelectedConversation = useCallback(() => {
     setSelectedConversation(null);
@@ -159,7 +210,10 @@ const MainLayout = () => {
     loadAllData,
     onClearSelectedConversation: handleClearSelectedConversation,
     messagesCache,
-    membersCache
+    membersCache,
+    setConversations,
+    startCallProcess,
+    inCall,
   };
 
   return (
@@ -229,6 +283,40 @@ const MainLayout = () => {
         onClose={() => setIsUserSearchModalOpen(false)}
         onSelectUser={handleStartConversationAndCloseModal}
       />
+
+      {showCallTypeModal && (
+        <CallTypeModal
+          onSelectType={handleSelectCallType}
+          onCancel={handleCancelCallType}
+        />
+      )}
+
+      {(callState === 'calling' || callState === 'ringing') && !inCall && (
+        <OutgoingCallModal
+          targetName={getCallTargetName()}
+          status={callState}
+          onCancel={hangUp}
+        />
+      )}
+
+      {callState === 'incoming' && incomingCallData && (
+        <IncomingCallModal
+          callerName={incomingCallData.callerName}
+          callType={incomingCallData.callType}
+          onAccept={acceptCall}
+          onReject={rejectCall}
+        />
+      )}
+
+      {inCall && (callState === 'connected' || callState === 'ended') && (
+        <VideoCallModal
+          localStream={localStream}
+          remoteStream={remoteStream}
+          onHangUp={hangUp}
+          callType={currentCallType}
+          callState={callState}
+        />
+      )}
     </div>
   );
 };

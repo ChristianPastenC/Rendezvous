@@ -1,12 +1,24 @@
 // src/hooks/useConversations.js
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { playSound } from '../lib/soundService';
 
-export const useConversations = (currentUser, socket) => {
+export const useConversations = (currentUser, socket, messagesCache) => {
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const conversationsRef = useRef(conversations);
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
+  const initialFetchDone = useRef(false);
+
   const loadAllData = useCallback(async () => {
     if (!currentUser) return;
+
+    initialFetchDone.current = false;
+    setIsLoading(true);
+
     try {
       const token = await currentUser.getIdToken();
       const [groupsRes, contactsRes] = await Promise.all([
@@ -25,6 +37,31 @@ export const useConversations = (currentUser, socket) => {
       const groupsData = await groupsRes.json();
       const contactsData = await contactsRes.json();
 
+      const groupsWithChannels = await Promise.all(
+        groupsData.map(async (group) => {
+          try {
+            const channelsRes = await fetch(`http://localhost:3000/api/groups/${group.id}/channels`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!channelsRes.ok) {
+              console.error(`No se pudieron cargar canales para el grupo ${group.id}`);
+              return { ...group, channelId: null };
+            }
+
+            const channels = await channelsRes.json();
+
+            return {
+              ...group,
+              channelId: channels.length > 0 ? channels[0].id : null
+            };
+          } catch (e) {
+            console.error(`Error cargando canales para ${group.id}:`, e);
+            return { ...group, channelId: null };
+          }
+        })
+      );
+
       const unifiedConversations = [
         ...contactsData.map((contact) => ({
           id: `dm_${contact.uid}`,
@@ -32,12 +69,14 @@ export const useConversations = (currentUser, socket) => {
           name: contact.displayName,
           photoURL: contact.photoURL,
           userData: contact,
+          lastMessage: null
         })),
-        ...groupsData.map((group) => ({
+        ...groupsWithChannels.map((group) => ({
           id: `group_${group.id}`,
           type: 'group',
           name: group.name,
           groupData: group,
+          lastMessage: null
         })),
       ];
 
@@ -51,57 +90,240 @@ export const useConversations = (currentUser, socket) => {
   }, [currentUser]);
 
   useEffect(() => {
-    setIsLoading(true);
     loadAllData();
   }, [loadAllData]);
 
+
+  useEffect(() => {
+    if (!currentUser || conversations.length === 0 || !messagesCache || isLoading) {
+      return;
+    }
+    if (initialFetchDone.current) {
+      return;
+    }
+    initialFetchDone.current = true;
+
+    const fetchLastMessage = async (conv) => {
+      let conversationId = null;
+      let endpoint = null;
+      let isDirectMessage = conv.type === 'dm';
+
+      if (isDirectMessage) {
+        conversationId = [currentUser.uid, conv.userData.uid].sort().join('_');
+        endpoint = `/api/dms/${conversationId}/messages`;
+      } else {
+        conversationId = conv.groupData?.channelId;
+        if (!conversationId) return null;
+        endpoint = `/api/groups/${conv.groupData.id}/channels/${conversationId}/messages`;
+      }
+
+      if (messagesCache.current[conversationId]) {
+        const cachedMessages = messagesCache.current[conversationId];
+        return cachedMessages.length > 0 ? cachedMessages[cachedMessages.length - 1] : null;
+      }
+
+      try {
+        const token = await currentUser.getIdToken();
+        const response = await fetch(`http://localhost:3000${endpoint}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const messagesData = response.ok ? await response.json() : [];
+        messagesCache.current[conversationId] = messagesData;
+        return messagesData.length > 0 ? messagesData[messagesData.length - 1] : null;
+      } catch (error) {
+        console.error(`Error cargando previsualización para ${conv.id}:`, error);
+        return null;
+      }
+    };
+
+    const promises = conversations.map(fetchLastMessage);
+
+    Promise.all(promises).then(allLastMessages => {
+      setConversations(prevConvs => {
+        return prevConvs.map((conv, index) => {
+          const fetchedLastMessage = allLastMessages[index];
+          if (fetchedLastMessage && conv.lastMessage === null) {
+            return { ...conv, lastMessage: fetchedLastMessage };
+          }
+          return conv;
+        });
+      });
+    });
+
+  }, [conversations, currentUser, messagesCache, isLoading]);
+
+
   useEffect(() => {
     if (!socket) return;
-
     const handleStatusUpdate = ({ uid, status, lastSeen, photoURL, displayName }) => {
       setConversations(prevConvs =>
         prevConvs.map(conv => {
-          if (conv.type === 'dm' && conv.userData.uid === uid) {
-            const updatedUserData = { ...conv.userData };
+          const isUserInConv = (conv.type === 'dm' && conv.userData?.uid === uid) ||
+            (conv.type === 'group' && conv.groupData?.members?.includes(uid));
+
+          if (!isUserInConv) return conv;
+
+          if (conv.type === 'dm') {
+            const updatedConv = { ...conv };
+            const updatedUserData = { ...updatedConv.userData };
 
             if (status !== undefined) updatedUserData.status = status;
             if (lastSeen !== undefined) updatedUserData.lastSeen = lastSeen;
+            if (photoURL !== undefined) { updatedUserData.photoURL = photoURL; updatedConv.photoURL = photoURL; }
+            if (displayName !== undefined) { updatedUserData.displayName = displayName; updatedConv.name = displayName; }
 
-            if (photoURL !== undefined) {
-              updatedUserData.photoURL = photoURL;
-            }
-
-            if (displayName !== undefined) {
-              updatedUserData.displayName = displayName;
-            }
-
-            return {
-              ...conv,
-              name: updatedUserData.displayName,
-              photoURL: updatedUserData.photoURL,
-              userData: updatedUserData,
-            };
+            updatedConv.userData = updatedUserData;
+            return updatedConv;
           }
           return conv;
         })
       );
     };
-
     socket.on('statusUpdate', handleStatusUpdate);
-
-    if (conversations.length > 0) {
-      const userIdsToWatch = conversations
-        .filter(c => c.type === 'dm')
-        .map(c => c.userData.uid);
-
-      if (userIdsToWatch.length > 0) {
-        socket.emit('subscribeToStatus', userIdsToWatch);
-      }
-    }
-
     return () => {
       socket.off('statusUpdate', handleStatusUpdate);
     };
+  }, [socket]);
+
+  useEffect(() => {
+    if (!socket || !currentUser) return;
+
+    const handleNewMessage = (newMessage) => {
+      const { conversationId, groupId, authorInfo, content, type } = newMessage;
+
+      if (authorInfo?.uid !== currentUser.uid) {
+
+        playSound('messageReceived');
+
+        if (!("Notification" in window)) {
+          console.warn("Este navegador no soporta notificaciones de escritorio.");
+
+        } else if (Notification.permission === "granted") {
+
+          if (document.hidden) {
+            const title = authorInfo.displayName || "Nuevo Mensaje";
+
+            let body;
+            if (type === 'text') {
+              body = content;
+            } else if (type === 'image') {
+              body = "Te enviaron una imagen";
+            } else if (type === 'file') {
+              body = "Te enviaron un archivo";
+            } else {
+              body = "Nuevo mensaje";
+            }
+
+            const options = {
+              body: body,
+              icon: authorInfo.photoURL || '/default-avatar.png',
+              tag: conversationId || groupId,
+            };
+
+            new Notification(title, options);
+          }
+
+        } else if (Notification.permission === "default") {
+          console.warn(`Notificación recibida, pero el permiso es "default". 
+          Debes añadir un botón en tu UI para que el usuario haga clic y llame a Notification.requestPermission()`);
+        }
+      }
+
+      if (!conversationId) {
+        console.error('[useConversations] Mensaje recibido sin conversationId:', newMessage);
+        return;
+      }
+
+      let targetConvId = null;
+      if (groupId) {
+        targetConvId = `group_${groupId}`;
+      } else {
+        const participants = conversationId.split('_');
+        const otherUserId = participants.find(uid => uid !== currentUser.uid);
+        if (otherUserId) {
+          targetConvId = `dm_${otherUserId}`;
+        }
+      }
+
+      if (!targetConvId) return;
+
+      setConversations(prevConvs => {
+        const convIndex = prevConvs.findIndex(c => c.id === targetConvId);
+
+        if (convIndex === -1) {
+          if (!groupId) {
+            const participants = conversationId.split('_');
+            const otherUserId = participants.find(uid => uid !== currentUser.uid);
+
+            if (otherUserId) {
+              (async () => {
+                try {
+                  const token = await currentUser.getIdToken();
+                  const res = await fetch(`http://localhost:3000/api/users/${otherUserId}/profile`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  if (res.ok) {
+                    const authorInfo = newMessage.authorInfo;
+                    const newConv = {
+                      id: `dm_${authorInfo.uid}`,
+                      type: 'dm',
+                      name: authorInfo.displayName,
+                      photoURL: authorInfo.photoURL,
+                      userData: authorInfo,
+                      lastMessage: newMessage,
+                    };
+                    setConversations(prev => [newConv, ...prev.filter(c => c.id !== newConv.id)]);
+                  }
+                } catch (error) {
+                  console.error("Error creando nueva conversación de DM al recibir mensaje:", error);
+                }
+              })();
+            }
+          }
+          return prevConvs;
+        }
+
+        const convToUpdate = { ...prevConvs[convIndex], lastMessage: newMessage };
+        const otherConvs = prevConvs.filter(c => c.id !== targetConvId);
+
+        return [convToUpdate, ...otherConvs];
+      });
+    };
+
+    socket.on('encryptedMessage', handleNewMessage);
+
+    return () => {
+      socket.off('encryptedMessage', handleNewMessage);
+    };
+  }, [socket, currentUser]);
+
+  useEffect(() => {
+    if (!socket || !currentUser) return;
+
+    const handleNewConversation = (newConv) => {
+      const convExists = conversationsRef.current.some(c => c.id === newConv.id);
+      if (!convExists) {
+        console.log('[useConversations] Recibida nueva conversación:', newConv.name);
+        setConversations(prevConvs => [{ ...newConv, lastMessage: null }, ...prevConvs]);
+      }
+    };
+
+    socket.on('newConversation', handleNewConversation);
+
+    return () => {
+      socket.off('newConversation', handleNewConversation);
+    };
+
+  }, [socket, currentUser]);
+
+  useEffect(() => {
+    if (!socket || conversations.length === 0) return;
+    const userIdsToWatch = conversations
+      .filter(c => c.type === 'dm')
+      .map(c => c.userData.uid);
+    if (userIdsToWatch.length > 0) {
+      socket.emit('subscribeToStatus', userIdsToWatch);
+    }
   }, [socket, conversations]);
 
   return { conversations, setConversations, loadAllData, isLoading };

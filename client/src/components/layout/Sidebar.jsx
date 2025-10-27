@@ -4,6 +4,8 @@ import UserSearch from '../dms/UserSearch';
 import { PlusIcon, SettingIcon } from '../../assets/Icons';
 import { formatLastSeen } from '../../utils/lastSeen';
 import UserAvatar from '../user/UserAvatar';
+import LastMessagePreview from '../chat/LastMessagePreview';
+import { formatMessageTimestamp } from '../../utils/formatMessageTimestamp';
 
 const Sidebar = ({
   currentUser,
@@ -22,10 +24,6 @@ const Sidebar = ({
     if (filter === 'groups') return conv.type === 'group';
     return true;
   });
-
-  // const N_REPETICIONES = 10;
-
-  // const conversationsParaTest = Array.from({ length: N_REPETICIONES }).flatMap(() => filteredConversations);
 
   return (
     <aside
@@ -70,8 +68,8 @@ const Sidebar = ({
             Grupos
           </button>
         </div>
-
         <UserSearch onSelectUser={onStartConversation} />
+
       </div>
 
       <div className="flex-1 p-2 space-y-1 overflow-y-auto">
@@ -80,8 +78,8 @@ const Sidebar = ({
             key={conv.id}
             onClick={() => onSelectConversation(conv)}
             className={`w-full text-left p-3 rounded-lg flex items-center space-x-3 transition-colors ${selectedId === conv.id
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-800 hover:bg-gray-100'
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-800 hover:bg-gray-100'
               }`}
           >
             <div className="relative flex-shrink-0">
@@ -109,10 +107,24 @@ const Sidebar = ({
             </div>
 
             <div className="flex-1 min-w-0">
-              <span className="font-semibold truncate block text-base">
-                {conv.name}
-              </span>
+
+              <div className="flex justify-between items-baseline">
+                <span className="font-semibold truncate block text-base">
+                  {conv.name}
+                </span>
+                <span className={`text-xs flex-shrink-0 ml-2 ${selectedId === conv.id ? 'text-blue-200' : 'text-gray-400'
+                  }`}>
+                  {conv.lastMessage ? formatMessageTimestamp(conv.lastMessage.createdAt) : ''}
+                </span>
+              </div>
+
+              <LastMessagePreview
+                lastMessage={conv.lastMessage}
+                currentUser={currentUser}
+                isSelected={selectedId === conv.id}
+              />
             </div>
+  
           </button>
         ))}
       </div>
@@ -136,7 +148,7 @@ const Sidebar = ({
           >
             <div className="flex-shrink-0">
               {currentUser.photoURL ? (
-                <UserAvatar 
+                <UserAvatar
                   photoURL={currentUser.photoURL}
                   displayName={currentUser.displayName}
                   size="lg"

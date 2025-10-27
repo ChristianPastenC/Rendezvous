@@ -3,26 +3,23 @@ const { FieldValue } = require('firebase-admin/firestore');
 
 const registerChatHandlers = (io, socket, userSocketMap) => {
   socket.on('joinChannel', ({ conversationId }) => {
-    // La seguridad se maneja en el envío, el join es solo para recibir broadcasts.
-    // En una app de producción, se podría re-verificar el permiso aquí.
     if (conversationId) {
       socket.join(conversationId);
-      console.log(`[Socket] Usuario ${socket.user.uid} se unió a la conversación: ${conversationId}`);
+      console.log(`[Socket] Usuario ${socket.user.uid} se unio a la conversación: ${conversationId}`);
     }
   });
 
   socket.on('leaveChannel', ({ conversationId }) => {
     if (conversationId) {
       socket.leave(conversationId);
-      console.log(`[Socket] Usuario ${socket.user.uid} salió de la conversación: ${conversationId}`);
+      console.log(`[Socket] Usuario ${socket.user.uid} salio de la conversación: ${conversationId}`);
     }
   });
 
-  // Lógica de sendMessage simplificada y corregida
   socket.on('sendMessage', async ({ conversationId, isDirectMessage, groupId, encryptedPayload }) => {
     try {
       if (!conversationId || !encryptedPayload) {
-        return socket.emit('messageError', { message: 'Datos del mensaje inválidos.' });
+        return socket.emit('messageError', { message: 'Datos del mensaje invalidos.' });
       }
 
       const author = socket.user;
@@ -31,7 +28,7 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
 
       if (isDirectMessage) {
         const participants = conversationId.split('_');
-        if (!participants.includes(author.uid)) return; // Chequeo de seguridad
+        if (!participants.includes(author.uid)) return;
 
         const dmRef = db.collection('directMessages').doc(conversationId);
         const dmDoc = await dmRef.get();
@@ -42,22 +39,33 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
         messageCollectionRef = dmRef.collection('messages');
         members = participants;
 
-      } else { // Es un canal de grupo
+      } else {
         if (!groupId) return socket.emit('messageError', { message: 'GroupID es requerido para mensajes de grupo.' });
 
         const groupRef = db.collection('groups').doc(groupId);
         const groupDoc = await groupRef.get();
-        if (!groupDoc.exists || !groupDoc.data().members.includes(author.uid)) return; // Seguridad
+        if (!groupDoc.exists || !groupDoc.data().members.includes(author.uid)) return;
 
-        // conversationId para grupos es el channelId
         messageCollectionRef = groupRef.collection('channels').doc(conversationId).collection('messages');
         members = groupDoc.data().members;
       }
 
+      const authorDoc = await db.collection('users').doc(author.uid).get();
+      const authorData = authorDoc.exists ? authorDoc.data() : {
+        displayName: author.name || 'Usuario',
+        photoURL: author.picture || null,
+        status: 'offline',
+        lastSeen: null
+      };
+
       const messageData = {
         encryptedPayload,
         authorId: author.uid,
-        authorInfo: { displayName: author.name || 'Usuario', photoURL: author.picture || null },
+        authorInfo: {
+          uid: author.uid,
+          displayName: authorData.displayName || author.name || 'Usuario',
+          photoURL: authorData.photoURL || author.picture || null
+        },
         createdAt: FieldValue.serverTimestamp(),
       };
 
@@ -72,9 +80,29 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
         }
       }
 
-      const savedMessage = { ...messageData, id: messageRef.id, createdAt: new Date().toISOString() };
-      io.to(conversationId).emit('encryptedMessage', savedMessage);
+      const savedMessage = {
+        ...messageData,
+        id: messageRef.id,
+        createdAt: new Date().toISOString(),
+        conversationId: conversationId,
+        groupId: isDirectMessage ? null : groupId
+      };
 
+      io.to(conversationId).emit('encryptedMessage', savedMessage);
+      console.log(`[Socket] Emitiendo 'encryptedMessage' a la sala: ${conversationId}`);
+
+      members.forEach(memberId => {
+        const memberSocketId = userSocketMap[memberId];
+
+        if (memberSocketId) {
+          const memberSocket = io.sockets.sockets.get(memberSocketId);
+
+          if (memberSocket && memberSocket.id !== socket.id && !memberSocket.rooms.has(conversationId)) {
+            console.log(`[Socket] Emitiendo 'encryptedMessage' (fuera de sala) a ${memberId} via socket ${memberSocketId}`);
+            io.to(memberSocketId).emit('encryptedMessage', savedMessage);
+          }
+        }
+      });
     } catch (error) {
       console.error(`[Error] en sendMessage para ${socket.id}:`, error);
     }
