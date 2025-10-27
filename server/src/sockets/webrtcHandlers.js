@@ -38,6 +38,16 @@ const registerWebRTCHandlers = (io, socket, userSocketMap) => {
     }
   });
 
+  // --- AÑADIR ESTE HANDLER ---
+  socket.on('webrtc:ringing', ({ recipientUid }) => {
+    const recipientSocketId = userSocketMap[recipientUid];
+    if (recipientSocketId) {
+      console.log(`[WebRTC] ${socket.user.uid} está sonando para ${recipientUid}`);
+      io.to(recipientSocketId).emit('webrtc:ringing', { from: socket.user.uid });
+    }
+  });
+  // --- FIN DE LA ADICIÓN ---
+
   socket.on('webrtc:hang-up', ({ recipientUid }) => {
     const recipientSocketId = userSocketMap[recipientUid];
     if (recipientSocketId) {

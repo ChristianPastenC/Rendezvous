@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router';
-import { useWebRTC } from '../hooks/useWebRTC';
 import MessageInput from '../components/chat/MessageInput';
-import VideoCallModal from '../components/chat/VideoCallModal';
-import IncomingCallModal from '../components/chat/IncomingCallModal';
-import CallTypeModal from '../components/chat/CallTypeModal';
 import AddMemberModal from '../components/groups/AddMemberModal';
 import MembersList from '../components/groups/MembersList';
 import MembersModal from '../components/groups/MembersModal';
@@ -21,7 +17,9 @@ const HomePage = () => {
     loadAllData,
     onClearSelectedConversation,
     messagesCache,
-    membersCache
+    membersCache,
+    startCallProcess,
+    inCall
   } = useOutletContext();
 
   const {
@@ -41,37 +39,9 @@ const HomePage = () => {
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
-  const {
-    inCall,
-    localStream,
-    remoteStream,
-    incomingCallData,
-    currentCallType,
-    startCall,
-    acceptCall,
-    rejectCall,
-    hangUp,
-  } = useWebRTC(socket, currentUser);
-
-  const [showCallTypeModal, setShowCallTypeModal] = useState(false);
-  const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
-
   const handleCallMember = (member) => {
     if (inCall) return;
-    setSelectedMemberToCall(member);
-    setShowCallTypeModal(true);
-  };
-
-  const handleSelectCallType = (callType) => {
-    setShowCallTypeModal(false);
-    if (!selectedMemberToCall || !startCall) return;
-    startCall(selectedMemberToCall.uid, callType);
-    setSelectedMemberToCall(null);
-  };
-
-  const handleCancelCallType = () => {
-    setShowCallTypeModal(false);
-    setSelectedMemberToCall(null);
+    startCallProcess(member);
   };
 
   const getMembersForMessage = () => {
@@ -183,30 +153,6 @@ const HomePage = () => {
           onClose={() => setIsAddMemberModalOpen(false)}
           onMemberAdded={handleMemberAdded}
           groupId={selectedConversation.groupData.id}
-        />
-      )}
-      {showCallTypeModal && (
-        <CallTypeModal
-          onSelectType={handleSelectCallType}
-          onCancel={handleCancelCallType}
-        />
-      )}
-
-      {incomingCallData && (
-        <IncomingCallModal
-          callerName={incomingCallData.callerName}
-          callType={incomingCallData.callType}
-          onAccept={acceptCall}
-          onReject={rejectCall}
-        />
-      )}
-
-      {inCall && (
-        <VideoCallModal
-          localStream={localStream}
-          remoteStream={remoteStream}
-          onHangUp={hangUp}
-          callType={currentCallType}
         />
       )}
     </>
