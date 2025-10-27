@@ -5,21 +5,21 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
   socket.on('joinChannel', ({ conversationId }) => {
     if (conversationId) {
       socket.join(conversationId);
-      console.log(`[Socket] Usuario ${socket.user.uid} se unió a la conversación: ${conversationId}`);
+      console.log(`[Socket] Usuario ${socket.user.uid} se unio a la conversación: ${conversationId}`);
     }
   });
 
   socket.on('leaveChannel', ({ conversationId }) => {
     if (conversationId) {
       socket.leave(conversationId);
-      console.log(`[Socket] Usuario ${socket.user.uid} salió de la conversación: ${conversationId}`);
+      console.log(`[Socket] Usuario ${socket.user.uid} salio de la conversación: ${conversationId}`);
     }
   });
 
   socket.on('sendMessage', async ({ conversationId, isDirectMessage, groupId, encryptedPayload }) => {
     try {
       if (!conversationId || !encryptedPayload) {
-        return socket.emit('messageError', { message: 'Datos del mensaje inválidos.' });
+        return socket.emit('messageError', { message: 'Datos del mensaje invalidos.' });
       }
 
       const author = socket.user;

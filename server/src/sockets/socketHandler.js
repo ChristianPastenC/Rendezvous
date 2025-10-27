@@ -6,14 +6,14 @@ const registerWebRTCHandlers = require('./webrtcHandlers');
 const socketAuthMiddleware = async (socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) {
-    return next(new Error('Autenticación fallida: Token no proporcionado.'));
+    return next(new Error('Autenticacion fallida: Token no proporcionado.'));
   }
   try {
     const decodedToken = await auth.verifyIdToken(token);
     socket.user = decodedToken;
     next();
   } catch (error) {
-    return next(new Error('Autenticación fallida: Token inválido.'));
+    return next(new Error('Autenticacion fallida: Token inválido.'));
   }
 };
 
@@ -35,7 +35,7 @@ const registerSocketHandlers = (io, userSocketMap) => {
         photoURL: socket.user.photoURL,
         displayName: socket.user.displayName
       });
-      console.log(`[Status] Usuario ${socket.user.uid} está online.`);
+      console.log(`[Status] Usuario ${socket.user.uid} esta online.`);
     } catch (error) {
       console.error(`Error al actualizar estado a online para ${socket.user.uid}:`, error);
     }
@@ -43,9 +43,9 @@ const registerSocketHandlers = (io, userSocketMap) => {
     socket.on('security:register-public-key', async ({ publicKey }) => {
       try {
         await db.collection('users').doc(socket.user.uid).set({ publicKey }, { merge: true });
-        console.log(`[Seguridad] Clave pública registrada para ${socket.user.uid}`);
+        console.log(`[Seguridad] Clave publica registrada para ${socket.user.uid}`);
       } catch (error) {
-        console.error("Error al registrar la clave pública:", error);
+        console.error("Error al registrar la clave publica:", error);
       }
     });
 
@@ -79,7 +79,7 @@ const registerSocketHandlers = (io, userSocketMap) => {
           photoURL: socket.user.photoURL,
           displayName: socket.user.displayName
         });
-        console.log(`[Status] Usuario ${socket.user.uid} está offline.`);
+        console.log(`[Status] Usuario ${socket.user.uid} esta offline.`);
       } catch (error) {
         console.error(`Error al actualizar estado a offline para ${socket.user.uid}:`, error);
       }

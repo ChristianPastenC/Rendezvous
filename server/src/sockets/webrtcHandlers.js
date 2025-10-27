@@ -13,7 +13,7 @@ const registerWebRTCHandlers = (io, socket, userSocketMap) => {
       });
     } else {
       console.warn(`[WebRTC] Usuario no conectado: ${recipientUid}`);
-      socket.emit('webrtc:error', { message: 'El usuario no está conectado.' });
+      socket.emit('webrtc:error', { message: 'El usuario no esta conectado.' });
     }
   });
 
@@ -38,20 +38,18 @@ const registerWebRTCHandlers = (io, socket, userSocketMap) => {
     }
   });
 
-  // --- AÑADIR ESTE HANDLER ---
   socket.on('webrtc:ringing', ({ recipientUid }) => {
     const recipientSocketId = userSocketMap[recipientUid];
     if (recipientSocketId) {
-      console.log(`[WebRTC] ${socket.user.uid} está sonando para ${recipientUid}`);
+      console.log(`[WebRTC] ${socket.user.uid} esta sonando para ${recipientUid}`);
       io.to(recipientSocketId).emit('webrtc:ringing', { from: socket.user.uid });
     }
   });
-  // --- FIN DE LA ADICIÓN ---
 
   socket.on('webrtc:hang-up', ({ recipientUid }) => {
     const recipientSocketId = userSocketMap[recipientUid];
     if (recipientSocketId) {
-      console.log(`[WebRTC] ${socket.user.uid} colgó con ${recipientUid}`);
+      console.log(`[WebRTC] ${socket.user.uid} colgo con ${recipientUid}`);
       io.to(recipientSocketId).emit('webrtc:hang-up', { from: socket.user.uid });
     }
   });
@@ -59,7 +57,7 @@ const registerWebRTCHandlers = (io, socket, userSocketMap) => {
   socket.on('webrtc:call-rejected', ({ recipientUid }) => {
     const recipientSocketId = userSocketMap[recipientUid];
     if (recipientSocketId) {
-      console.log(`[WebRTC] ${socket.user.uid} rechazó llamada de ${recipientUid}`);
+      console.log(`[WebRTC] ${socket.user.uid} rechazo llamada de ${recipientUid}`);
       io.to(recipientSocketId).emit('webrtc:call-rejected', { from: socket.user.uid });
     }
   });
