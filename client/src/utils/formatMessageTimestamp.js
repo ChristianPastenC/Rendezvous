@@ -1,4 +1,8 @@
-export const formatMessageTimestamp = (isoString) => {
+import i18n from '../i18n';
+
+export const formatMessageTimestamp = (isoString, t) => {
+  const tr = t || i18n.t;
+
   if (!isoString) return '';
 
   const date = new Date(isoString);
@@ -20,7 +24,7 @@ export const formatMessageTimestamp = (isoString) => {
     date.getFullYear() === yesterday.getFullYear();
 
   if (isYesterday) {
-    return 'Ayer';
+    return tr('time.timestampYesterday');
   }
 
   return date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: '2-digit' });

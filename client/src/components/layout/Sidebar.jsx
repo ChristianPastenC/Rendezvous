@@ -1,7 +1,7 @@
 // src/components/layout/Sidebar.jsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import UserSearch from '../dms/UserSearch';
+import UserSearch from '../user/UserSearch';
 import { PlusIcon, SettingIcon } from '../../assets/Icons';
 import { formatLastSeen } from '../../utils/lastSeen';
 import UserAvatar from '../user/UserAvatar';

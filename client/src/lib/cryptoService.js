@@ -1,3 +1,4 @@
+// client/src/lib/cryptoService.js
 import JSEncrypt from 'jsencrypt';
 import CryptoJS from 'crypto-js';
 import { auth } from './firebase';
@@ -8,6 +9,10 @@ const STORAGE_KEY_PUBLIC = 'crypto_public_key';
 const SESSION_KEY_PRIVATE = 'crypto_private_key_decrypted';
 const SESSION_KEY_PASSPHRASE = 'crypto_user_passphrase';
 
+/**
+ * A service class to handle all cryptographic operations, including key generation,
+ * storage, encryption, and decryption for end-to-end encrypted messaging.
+ */
 class CryptoService {
   constructor() {
     this.jsEncrypt = new JSEncrypt({ default_key_size: KEY_SIZE });
@@ -20,11 +25,22 @@ class CryptoService {
     }
   }
 
+  /**
+   * Checks if the user authenticated using Google as a provider.
+   * @param {object} user - The Firebase user object.
+   * @returns {boolean} True if the user is a Google auth user, false otherwise.
+   */
   isGoogleAuthUser(user) {
     if (!user || !user.providerData) return false;
     return user.providerData.some(provider => provider.providerId === 'google.com');
   }
 
+  /**
+   * Derives a key from a passphrase using PBKDF2.
+   * @param {string} passphrase - The user's security passphrase.
+   * @param {string} salt - The salt for the key derivation.
+   * @returns {string} The derived key as a hex string.
+   */
   deriveKeyFromPassphrase(passphrase, salt) {
     return CryptoJS.PBKDF2(passphrase, salt, {
       keySize: 256 / 32,
@@ -32,6 +48,12 @@ class CryptoService {
     }).toString();
   }
 
+  /**
+   * Encrypts a private key using AES with a key derived from a passphrase.
+   * @param {string} privateKey - The RSA private key to encrypt.
+   * @param {string} passphrase - The user's security passphrase.
+   * @returns {string} A JSON string containing the encrypted key and the salt used.
+   */
   encryptPrivateKey(privateKey, passphrase) {
     const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
     const derivedKey = this.deriveKeyFromPassphrase(passphrase, salt);
@@ -39,6 +61,12 @@ class CryptoService {
     return JSON.stringify({ encrypted, salt });
   }
 
+  /**
+   * Decrypts a wrapped private key using a passphrase.
+   * @param {string} wrappedKey - A JSON string containing the encrypted key and salt.
+   * @param {string} passphrase - The user's security passphrase.
+   * @returns {string|null} The decrypted private key, or null on failure.
+   */
   decryptPrivateKey(wrappedKey, passphrase) {
     try {
       const { encrypted, salt } = JSON.parse(wrappedKey);
@@ -46,11 +74,17 @@ class CryptoService {
       const decrypted = CryptoJS.AES.decrypt(encrypted, derivedKey);
       return decrypted.toString(CryptoJS.enc.Utf8);
     } catch (error) {
-      console.error('[Crypto] Error al descifrar clave privada:', error);
       return null;
     }
   }
 
+  /**
+   * Retrieves the security passphrase from session storage or prompts the user for it.
+   * For non-Google auth users, it defaults to their email.
+   * For Google auth users, it shows a prompt.
+   * @param {boolean} [isNewUser=false] - If true, shows a setup message in the prompt.
+   * @returns {Promise<string|null>} A promise that resolves with the passphrase or null if canceled.
+   */
   async getOrPromptPassphrase(isNewUser = false) {
     const cachedPassphrase = sessionStorage.getItem(SESSION_KEY_PASSPHRASE);
     if (cachedPassphrase) {
@@ -95,6 +129,13 @@ class CryptoService {
     });
   }
 
+  /**
+   * Manages the user's cryptographic keys. It tries to fetch existing keys from the server
+   * and decrypt them. If no keys are found, it generates a new key pair, encrypts the
+   * private key, and stores both on the server.
+   * @returns {Promise<{publicKey: string, privateKey: string}>} A promise that resolves with the user's key pair.
+   * @throws Will throw an error if the user is not authenticated or cancels the passphrase prompt.
+   */
   async generateAndStoreKeys() {
     if (!auth.currentUser) {
       throw new Error('Usuario no autenticado');
@@ -109,7 +150,6 @@ class CryptoService {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('[Crypto] Recuperando claves existentes...');
         const passphrase = await this.getOrPromptPassphrase(false);
 
         if (!passphrase) {
@@ -131,16 +171,14 @@ class CryptoService {
         sessionStorage.setItem(SESSION_KEY_PRIVATE, this.privateKey);
         localStorage.setItem(STORAGE_KEY_PUBLIC, this.publicKey);
 
-        console.log('[Crypto] Claves recuperadas exitosamente');
         return { publicKey: this.publicKey, privateKey: this.privateKey };
       } else if (response.status === 404) {
-        console.log('[Crypto] No se encontraron claves existentes. Generando nuevas...');
+        alert('[Crypto] No se encontraron claves existentes. Generando nuevas...');
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error del servidor: ${response.status}`);
       }
     } catch (error) {
-      console.error('[Crypto] Error al verificar/recuperar claves existentes:', error);
       throw error;
     }
 
@@ -171,10 +209,7 @@ class CryptoService {
         const errorData = await saveResponse.json();
         throw new Error(errorData.error || 'Error al guardar las claves en el servidor');
       }
-
-      console.log('[Crypto] Nuevas claves guardadas exitosamente');
     } catch (error) {
-      console.error('[Crypto] Error al guardar claves:', error);
       throw error;
     }
 
@@ -184,10 +219,20 @@ class CryptoService {
     return { publicKey: this.publicKey, privateKey: this.privateKey };
   }
 
+  /**
+   * Returns the current user's public key.
+   * @returns {string|null} The public key.
+   */
   getPublicKey() {
     return this.publicKey;
   }
 
+  /**
+   * Fetches the public key for a given user ID from the API or a local cache.
+   * @param {string} userId - The UID of the user whose public key is needed.
+   * @returns {Promise<string|null>} A promise that resolves with the public key or null if not found.
+   * @async
+   */
   async fetchPublicKey(userId) {
     try {
       if (this.publicKeyCache.has(userId)) {
@@ -207,11 +252,16 @@ class CryptoService {
       this.publicKeyCache.set(userId, data.publicKey);
       return data.publicKey;
     } catch (error) {
-      console.error(`[Crypto] Error al obtener clave pública de ${userId}:`, error);
       return null;
     }
   }
 
+  /**
+   * Fetches the public keys for all members of a given group.
+   * @param {string} groupId - The ID of the group.
+   * @returns {Promise<Array<{uid: string, publicKey: string}>>} A promise that resolves with an array of member UIDs and their public keys.
+   * @async
+   */
   async fetchPublicKeysForGroup(groupId) {
     try {
       if (!auth.currentUser) throw new Error('Usuario no autenticado para obtener token.');
@@ -222,7 +272,6 @@ class CryptoService {
       });
 
       if (!response.ok) {
-        console.error(`[Crypto] Error al obtener miembros del grupo ${groupId}`);
         return [];
       }
 
@@ -240,11 +289,17 @@ class CryptoService {
       }
       return keys;
     } catch (error) {
-      console.error(`[Crypto] Error al obtener claves para el grupo ${groupId}:`, error);
       return [];
     }
   }
 
+  /**
+   * Encrypts text using a hybrid encryption scheme (AES + RSA).
+   * The text is encrypted with a new random AES key, and the AES key itself is encrypted with the recipient's RSA public key.
+   * @param {string} text - The plaintext to encrypt.
+   * @param {string} recipientPublicKey - The RSA public key of the recipient.
+   * @returns {string|null} A JSON string containing the encrypted AES key and the encrypted data, or null on failure.
+   */
   encrypt(text, recipientPublicKey) {
     try {
       const aesKey = CryptoJS.lib.WordArray.random(32).toString(CryptoJS.enc.Hex);
@@ -255,11 +310,16 @@ class CryptoService {
       if (!encryptedAesKey) throw new Error("RSA encryption of AES key failed.");
       return JSON.stringify({ key: encryptedAesKey, data: encryptedData });
     } catch (error) {
-      console.error("[Crypto] Hybrid encryption failed:", error);
       return null;
     }
   }
 
+  /**
+   * Decrypts a hybrid-encrypted payload.
+   * It first decrypts the AES key using the user's private RSA key, then uses the decrypted AES key to decrypt the actual message data.
+   * @param {string} encryptedPayload - The JSON string payload from the `encrypt` method.
+   * @returns {string} The decrypted plaintext. Returns an error message string on failure.
+   */
   decrypt(encryptedPayload) {
     try {
       const { key: encryptedAesKey, data: encryptedData } = JSON.parse(encryptedPayload);
@@ -272,13 +332,18 @@ class CryptoService {
     }
   }
 
+  /**
+   * Clears all cryptographic keys and passphrases from the current session.
+   */
   clearSession() {
     sessionStorage.removeItem(SESSION_KEY_PRIVATE);
     sessionStorage.removeItem(SESSION_KEY_PASSPHRASE);
     this.privateKey = null;
     this.publicKeyCache.clear();
-    console.log('[Crypto] Sesión limpiada');
   }
 }
 
+/**
+ * A singleton instance of the CryptoService.
+ */
 export const cryptoService = new CryptoService();

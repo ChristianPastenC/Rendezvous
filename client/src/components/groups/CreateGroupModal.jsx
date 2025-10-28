@@ -1,3 +1,4 @@
+// client/src/components/groups/CreateGroupModal.jsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloseIcon } from '../../assets/Icons';

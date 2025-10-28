@@ -1,7 +1,8 @@
+// client/src/components/groups/AddMemberModal.jsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
-import UserSearch from '../dms/UserSearch';
+import UserSearch from '../user/UserSearch';
 import { CloseIcon } from '../../assets/Icons';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
@@ -15,11 +16,19 @@ const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
 
   if (!isOpen) return null;
 
+  /**
+   * Sets the selected user from the search results and clears any existing errors.
+   * @param {object} user - The user object selected from the UserSearch component.
+   */
   const handleSelectUser = (user) => {
     setSelectedUser(user);
     setError('');
   };
 
+  /**
+   * Handles the logic for adding a selected user to the group.
+   * Makes an API call to the backend and handles success or error states.
+   */
   const handleAddClick = async () => {
     if (!selectedUser) return;
     setIsAdding(true);
@@ -50,6 +59,9 @@ const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
     }
   };
 
+  /**
+   * Resets the modal's internal state and calls the parent's onClose handler.
+   */
   const handleClose = () => {
     setSelectedUser(null);
     setError('');

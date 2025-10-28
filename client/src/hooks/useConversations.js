@@ -4,6 +4,18 @@ import { playSound } from '../lib/soundService';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
+/**
+ * Custom hook to manage conversations, including fetching, real-time updates, and last message previews.
+ * @param {object | null} currentUser - The authenticated Firebase user object.
+ * @param {import('socket.io-client').Socket | null} socket - The Socket.IO client instance.
+ * @param {React.RefObject<Object<string, any[]>>} messagesCache - A ref object used to cache message lists for each conversation.
+ * @returns {{
+ *  conversations: any[], 
+ *  setConversations: React.Dispatch<React.SetStateAction<any[]>>, 
+ *  loadAllData: () => Promise<void>, 
+ *  isLoading: boolean
+ * }} An object containing the conversations state and management functions.
+ */
 export const useConversations = (currentUser, socket, messagesCache) => {
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -15,6 +27,10 @@ export const useConversations = (currentUser, socket, messagesCache) => {
 
   const initialFetchDone = useRef(false);
 
+  /**
+   * Fetches all initial data, including groups and contacts (DMs),
+   * and unifies them into a single conversations list.
+   */
   const loadAllData = useCallback(async () => {
     if (!currentUser) return;
 
@@ -47,7 +63,6 @@ export const useConversations = (currentUser, socket, messagesCache) => {
             });
 
             if (!channelsRes.ok) {
-              console.error(`No se pudieron cargar canales para el grupo ${group.id}`);
               return { ...group, channelId: null };
             }
 
@@ -58,7 +73,6 @@ export const useConversations = (currentUser, socket, messagesCache) => {
               channelId: channels.length > 0 ? channels[0].id : null
             };
           } catch (e) {
-            console.error(`Error cargando canales para ${group.id}:`, e);
             return { ...group, channelId: null };
           }
         })
@@ -85,7 +99,7 @@ export const useConversations = (currentUser, socket, messagesCache) => {
       setConversations(unifiedConversations);
 
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      throw new Error('Error al cargar datos:', error);
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +109,10 @@ export const useConversations = (currentUser, socket, messagesCache) => {
     loadAllData();
   }, [loadAllData]);
 
-
+  /**
+   * Effect to fetch the last message for each conversation to display a preview.
+   * It runs once after the initial conversation list is loaded.
+   */
   useEffect(() => {
     if (!currentUser || conversations.length === 0 || !messagesCache || isLoading) {
       return;
@@ -105,6 +122,12 @@ export const useConversations = (currentUser, socket, messagesCache) => {
     }
     initialFetchDone.current = true;
 
+    /**
+     * Fetches the last message for a given conversation, utilizing a cache to prevent redundant requests.
+     * @param {object} conv - The conversation object.
+     * @returns {Promise<object|null>} A promise that resolves to the last message object or null.
+     * @async
+     */
     const fetchLastMessage = async (conv) => {
       let conversationId = null;
       let endpoint = null;
@@ -133,7 +156,6 @@ export const useConversations = (currentUser, socket, messagesCache) => {
         messagesCache.current[conversationId] = messagesData;
         return messagesData.length > 0 ? messagesData[messagesData.length - 1] : null;
       } catch (error) {
-        console.error(`Error cargando previsualización para ${conv.id}:`, error);
         return null;
       }
     };
@@ -154,9 +176,15 @@ export const useConversations = (currentUser, socket, messagesCache) => {
 
   }, [conversations, currentUser, messagesCache, isLoading]);
 
-
+  /**
+   * Effect to handle real-time user status updates via sockets.
+   * Updates the status of users in DM conversations.
+   */
   useEffect(() => {
     if (!socket) return;
+    /**
+     * Handles the 'statusUpdate' socket event to update user presence information.
+     */
     const handleStatusUpdate = ({ uid, status, lastSeen, photoURL, displayName }) => {
       setConversations(prevConvs =>
         prevConvs.map(conv => {
@@ -187,9 +215,18 @@ export const useConversations = (currentUser, socket, messagesCache) => {
     };
   }, [socket]);
 
+  /**
+   * Effect to handle incoming new messages via sockets.
+   * It updates the relevant conversation's last message, plays a sound, and shows a desktop notification.
+   */
   useEffect(() => {
     if (!socket || !currentUser) return;
 
+    /**
+     * Handles the 'encryptedMessage' socket event. This function processes the new message,
+     * triggers notifications, and updates the conversations list to show the new message preview.
+     * @param {object} newMessage - The new message object received from the server.
+     */
     const handleNewMessage = (newMessage) => {
       const { conversationId, groupId, authorInfo, content, type } = newMessage;
 
@@ -198,7 +235,7 @@ export const useConversations = (currentUser, socket, messagesCache) => {
         playSound('messageReceived');
 
         if (!("Notification" in window)) {
-          console.warn("Este navegador no soporta notificaciones de escritorio.");
+          alert("Este navegador no soporta notificaciones de escritorio.");
 
         } else if (Notification.permission === "granted") {
 
@@ -226,13 +263,11 @@ export const useConversations = (currentUser, socket, messagesCache) => {
           }
 
         } else if (Notification.permission === "default") {
-          console.warn(`Notificación recibida, pero el permiso es "default". 
-          Debes añadir un botón en tu UI para que el usuario haga clic y llame a Notification.requestPermission()`);
+          return; 
         }
       }
 
       if (!conversationId) {
-        console.error('[useConversations] Mensaje recibido sin conversationId:', newMessage);
         return;
       }
 
@@ -277,7 +312,7 @@ export const useConversations = (currentUser, socket, messagesCache) => {
                     setConversations(prev => [newConv, ...prev.filter(c => c.id !== newConv.id)]);
                   }
                 } catch (error) {
-                  console.error("Error creando nueva conversación de DM al recibir mensaje:", error);
+                  throw new Error("Error creando nueva conversación de DM al recibir mensaje:", error);
                 }
               })();
             }
@@ -299,13 +334,19 @@ export const useConversations = (currentUser, socket, messagesCache) => {
     };
   }, [socket, currentUser]);
 
+  /**
+   * Effect to handle the creation of new conversations (e.g., being added to a new group).
+   */
   useEffect(() => {
     if (!socket || !currentUser) return;
 
+    /**
+     * Handles the 'newConversation' socket event, adding the new conversation to the list
+     * if it doesn't already exist.
+     */
     const handleNewConversation = (newConv) => {
       const convExists = conversationsRef.current.some(c => c.id === newConv.id);
       if (!convExists) {
-        console.log('[useConversations] Recibida nueva conversación:', newConv.name);
         setConversations(prevConvs => [{ ...newConv, lastMessage: null }, ...prevConvs]);
       }
     };
@@ -318,6 +359,10 @@ export const useConversations = (currentUser, socket, messagesCache) => {
 
   }, [socket, currentUser]);
 
+  /**
+   * Effect to subscribe to the status updates of users in the current DM conversations.
+   * This tells the server which users' presence to monitor.
+   */
   useEffect(() => {
     if (!socket || conversations.length === 0) return;
     const userIdsToWatch = conversations

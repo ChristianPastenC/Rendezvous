@@ -1,3 +1,4 @@
+// client/src/lib/soundService.js
 const sounds = {
   incomingCall: new Audio('/sounds/incoming-call.mp3'),
   outgoingCall: new Audio('/sounds/outgoing-call.mp3'),
@@ -13,10 +14,10 @@ export const playSound = (soundName) => {
   if (sound) {
     sound.currentTime = 0;
     sound.play().catch(error => {
-      console.warn(`[SoundService] No se pudo reproducir el sonido "${soundName}":`, error);
+      throw error;
     });
   } else {
-    console.warn(`[SoundService] Sonido no encontrado: ${soundName}`);
+    return;
   }
 };
 

@@ -27,6 +27,12 @@ const ProfileEditModal = ({
 
   if (!isOpen) return null;
 
+  /**
+   * Handles the file input change event for the avatar.
+   * Validates the file size and sets the state for the new photo file and its preview URL.
+   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
+   * @returns {void}
+   */
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -40,6 +46,11 @@ const ProfileEditModal = ({
     }
   };
 
+  /**
+   * Handles the profile save logic.
+   * It uploads a new avatar to Firebase Storage if one was selected,
+   * then sends the updated profile data (displayName, photoURL) to the backend API.
+   */
   const handleSave = async () => {
     setIsSaving(true);
     setError('');
@@ -88,7 +99,6 @@ const ProfileEditModal = ({
       onClose();
 
     } catch (err) {
-      console.error("Error al guardar perfil:", err);
       setError(err.message);
     } finally {
       setIsSaving(false);
@@ -96,6 +106,10 @@ const ProfileEditModal = ({
     }
   };
 
+  /**
+   * Determines the text for the save button based on the current saving/uploading state.
+   * @returns {string} The localized text for the save button.
+   */
   const getButtonText = () => {
     if (isUploading) return t('profileModal.saveButton.uploading');
     if (isSaving) return t('profileModal.saveButton.saving');

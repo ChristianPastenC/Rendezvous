@@ -1,3 +1,4 @@
+// client/src/components/chat/MessageList.jsx
 import {
   useRef,
   useEffect,
@@ -9,6 +10,16 @@ import { cryptoService } from "../../lib/cryptoService";
 import { EmptyStateIcon, FileIcon } from "../../assets/Icons";
 import UserAvatar from "../user/UserAvatar";
 
+/**
+ * Renders the decrypted content of a single message.
+ * It handles different message types like text, image, and file.
+ * @param {object} props - The component props.
+ * @param {object} props.msg - The message object.
+ * @param {string} props.currentUserUid - The UID of the current user.
+ * @param {boolean} props.isSender - True if the current user is the sender of the message.
+ * @param {function} props.t - The translation function.
+ * @returns {JSX.Element} The rendered message content.
+ */
 const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
   return useMemo(() => {
     const encryptedDataForUser = msg.encryptedPayload?.[currentUserUid];
@@ -85,6 +96,17 @@ const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
   }, [msg.encryptedPayload, currentUserUid, isSender, t]);
 });
 
+/**
+ * Renders a group of consecutive messages from the same author.
+ * @param {object} props - The component props.
+ * @param {Array<object>} props.messages - An array of message objects in the group.
+ * @param {string} props.currentUserUid - The UID of the current user.
+ * @param {boolean} props.showAvatar - True if the author's avatar should be displayed.
+ * @param {object} props.authorInfo - Information about the message author (displayName, photoURL).
+ * @param {boolean} props.isSender - True if the current user is the author of the messages in the group.
+ * @param {function} props.t - The translation function.
+ * @returns {JSX.Element} The rendered message group.
+ */
 const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, isSender, t }) => {
   const displayName = isSender ? t('messages.you') : (authorInfo?.displayName || t('messages.user'));
 

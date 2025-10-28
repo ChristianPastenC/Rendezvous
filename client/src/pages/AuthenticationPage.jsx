@@ -1,3 +1,4 @@
+// client/src/pages/AuthenticationPage.jsx
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -36,7 +37,6 @@ const AuthenticationPage = () => {
           setCurrentUser(user);
           navigate('/');
         } catch (error) {
-          console.error('Error sincronizando usuario:', error);
           setError(t('pages.auth.errors.syncFailed'));
         }
       } else {
@@ -48,6 +48,13 @@ const AuthenticationPage = () => {
     return () => unsubscribe();
   }, [navigate, t]);
 
+  /**
+   * Handles form submission for both login and registration with email and password.
+   * It performs validation, calls the appropriate Firebase authentication method,
+   * and syncs the user data with the backend.
+   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
+   * @async
+   */
   const handleEmailPasswordSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -78,8 +85,6 @@ const AuthenticationPage = () => {
         await syncUserWithBackend(userCredential.user, true);
       }
     } catch (firebaseError) {
-      console.error(`Error durante ${isLoginView ? 'el inicio de sesión' : 'el registro'}:`, firebaseError);
-
       const errorKeyMap = {
         'auth/user-not-found': 'pages.auth.errors.userNotFound',
         'auth/wrong-password': 'pages.auth.errors.wrongPassword',
@@ -95,6 +100,11 @@ const AuthenticationPage = () => {
     }
   };
 
+  /**
+   * Handles the Google Sign-In process using a popup.
+   * On success, it syncs the user data with the backend.
+   * @async
+   */
   const handleGoogleLogin = async () => {
     setError('');
     try {
@@ -106,8 +116,6 @@ const AuthenticationPage = () => {
       await syncUserWithBackend(result.user, isNewUser);
 
     } catch (error) {
-      console.error('Error durante el inicio de sesión con Google:', error);
-
       const errorKeyMap = {
         'auth/popup-closed-by-user': 'pages.auth.errors.popupClosed',
         'auth/cancelled-popup-request': 'pages.auth.errors.popupCancelled',
@@ -120,6 +128,10 @@ const AuthenticationPage = () => {
     }
   };
 
+  /**
+   * Toggles the view between the login and registration forms.
+   * It also resets all form fields and error messages.
+   */
   const toggleView = () => {
     setIsLoginView(!isLoginView);
     setError('');

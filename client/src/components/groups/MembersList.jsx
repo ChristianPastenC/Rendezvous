@@ -1,3 +1,4 @@
+// client/src/components/groups/MembersList.jsx
 import MembersListContent from "./MembersListContent";
 
 const MembersList = (props) => (

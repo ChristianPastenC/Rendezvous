@@ -1,3 +1,4 @@
+// client/src/pages/HomePage.jsx
 import { useState } from 'react';
 import { useOutletContext } from 'react-router';
 import MessageInput from '../components/chat/MessageInput';
@@ -42,11 +43,20 @@ const HomePage = () => {
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
+  /**
+   * Initiates the call process for a specific member, if not already in a call.
+   * @param {object} member - The member object to call.
+   */
   const handleCallMember = (member) => {
     if (inCall) return;
     startCallProcess(member);
   };
 
+  /**
+   * Gets the list of members required for encrypting and sending a message.
+   * For a DM, it returns the two participants. For a group, it returns all members.
+   * @returns {Array<object>} An array of member objects.
+   */
   const getMembersForMessage = () => {
     if (selectedConversation?.type === 'dm')
       return [
@@ -56,6 +66,11 @@ const HomePage = () => {
     return members;
   };
 
+  /**
+   * Determines the target user for initiating a call from the main header.
+   * In a DM, it's the other user. In a group, it's the first other member found.
+   * @returns {object | null} The user object to call, or null if no suitable target is found.
+   */
   const getCallTarget = () => {
     if (selectedConversation?.type === 'dm')
       return selectedConversation.userData;
@@ -63,6 +78,11 @@ const HomePage = () => {
     return null;
   };
 
+  /**
+   * Callback function executed after a new member has been successfully added to a group.
+   * It triggers a full data reload for the conversations list and a refetch for the
+   * current conversation's data to reflect the changes.
+   */
   const handleMemberAdded = () => {
     loadAllData();
     refetchData();

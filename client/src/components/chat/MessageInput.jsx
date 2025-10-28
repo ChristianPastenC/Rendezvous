@@ -1,3 +1,4 @@
+// client/src/components/chat/MessageInput.jsx
 import { useState, useRef, useEffect, useCallback } from 'react';
 import EmojiPicker from 'emoji-picker-react';
 import { EmojiIcon, PlusIcon, SendIcon, ImageIcon, DocumentIcon, CodeIcon} from '../../assets/Icons';
@@ -9,6 +10,14 @@ import { useTranslation } from 'react-i18next';
 
 const MAX_FILE_SIZE_MB = 5;
 
+/**
+ * A menu component for selecting the type of file to attach.
+ * @param {object} props - The component props.
+ * @param {function} props.t - The translation function.
+ * @param {function(string): void} props.onAttachClick - Callback executed when a menu item is clicked.
+ * @param {React.RefObject<HTMLDivElement>} props.attachMenuRef - Ref for the menu's root element.
+ * @returns {JSX.Element} The rendered attachment menu.
+ */
 const AttachMenu = ({ t, onAttachClick, attachMenuRef }) => (
   <div 
     ref={attachMenuRef} 
@@ -86,6 +95,12 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [closeEmojiPicker]);
 
+  /**
+   * Handles the file input change event. Validates the selected file's size and type,
+   * then creates a preview URL and sets the state to show the FilePreviewModal.
+   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
+   * @returns {void}
+   */
   const handleFileChange = useCallback((e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -107,16 +122,28 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     e.target.value = '';
   }, [t]);
 
+  /**
+   * Handles the confirmation of a file upload from the preview modal.
+   * Hides the modal and triggers the sendFileMessage function.
+   * @param {File} file - The file object to be sent.
+   * @returns {Promise<void>}
+   */
   const handleConfirmUpload = useCallback(async (file) => {
     setPreviewData(null);
 
     try {
       await sendFileMessage(file);
     } catch (error) {
-      console.error("Error en handleConfirmUpload:", error);
+      throw new Error("Error en handleConfirmUpload:", error);
     }
   }, [sendFileMessage]);
 
+  /**
+   * Handles clicks on the attachment menu options. It sets the appropriate 'accept'
+   * attribute on the file input and programmatically triggers a click to open the file dialog.
+   * @param {'image' | 'document' | 'code'} type - The type of file to attach.
+   * @returns {void}
+   */
   const handleAttachClick = useCallback((type) => {
     if (fileInputRef.current) {
       if (type === 'image') {

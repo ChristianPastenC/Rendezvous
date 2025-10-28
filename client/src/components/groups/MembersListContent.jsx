@@ -1,6 +1,7 @@
+// client/src/components/groups/MembersListContent.jsx
 import { useTranslation } from 'react-i18next'; // 1. Importar
 import { CallIcon } from "../../assets/Icons";
-import { formatLastSeen } from "../../utils/lastSeen"; // Asumimos que esta función ya usa `t` o devuelve un formato no textual
+import { formatLastSeen } from "../../utils/lastSeen";
 import UserAvatar from "../user/UserAvatar";
 
 const MembersListContent = ({

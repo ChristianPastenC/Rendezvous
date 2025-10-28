@@ -1,3 +1,4 @@
+// client/src/components/calls/OutgoingCallModal.jsx
 import { useTranslation } from 'react-i18next';
 import { HangUpIcon, PhoneRingIcon } from "../../assets/Icons";
 
@@ -12,7 +13,9 @@ const OutgoingCallModal = ({ targetName, status, onCancel }) => {
     <div className="fixed inset-0 bg-white/30 backdrop-blur-md z-50 flex items-center justify-center p-4">
       <div className="flex flex-col items-center text-center">
         <div
-          className={`w-28 h-28 mb-6 rounded-full bg-gray-100 flex items-center justify-center ${status === 'ringing' ? 'animate-pulse' : ''}`}
+          className={`w-28 h-28 mb-6 rounded-full bg-gray-100 flex items-center justify-center 
+            ${status === 'ringing' ? 'animate-pulse' : ''}
+            `}
         >
           <PhoneRingIcon className="w-12 h-12 text-blue-600" />
         </div>

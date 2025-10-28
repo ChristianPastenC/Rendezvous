@@ -13,6 +13,13 @@ const UserSearch = ({ onSelectUser }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  /**
+   * Handles the user search form submission.
+   * It prevents the default form action, validates the query length,
+   * and fetches user search results from the API.
+   * Updates state for loading, results, and errors.
+   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
+   */
   const handleSearch = async (e) => {
     e.preventDefault();
     if (query.length < 3) {
@@ -35,13 +42,18 @@ const UserSearch = ({ onSelectUser }) => {
         setError(t('userSearch.error.noResults'));
       }
     } catch (err) {
-      console.error("Error buscando usuarios:", err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Handles the selection of a user from the search results.
+   * It resets the search input and results, then calls the onSelectUser callback
+   * with the chosen user.
+   * @param {object} user - The selected user object.
+   */
   const handleSelect = (user) => {
     setQuery('');
     setResults([]);
@@ -59,7 +71,10 @@ const UserSearch = ({ onSelectUser }) => {
           placeholder={t('userSearch.placeholder')}
           className="w-full bg-white text-gray-900 h-10 px-5 pr-12 rounded-lg text-sm border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
-        <button type="submit" className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-600">
+        <button 
+          type="submit"
+          className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-600"
+        >
           <SearchIcon
             className="h-4 w-4 fill-current"
           />
@@ -75,8 +90,12 @@ const UserSearch = ({ onSelectUser }) => {
             onClick={() => handleSelect(user)}
             className="w-full text-left p-2 rounded-md hover:bg-gray-100 flex items-center space-x-2"
           >
-            <span className="text-gray-900">{user.displayName}</span>
-            <span className="text-gray-500 text-xs">({user.email})</span>
+            <span className="text-gray-900">
+              {user.displayName}
+            </span>
+            <span className="text-gray-500 text-xs">
+              ({user.email})
+            </span>
           </button>
         ))}
       </div>

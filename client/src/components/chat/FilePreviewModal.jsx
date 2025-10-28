@@ -1,3 +1,4 @@
+// client/src/components/chat/FilePreviewModal.jsx
 import { useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,6 +10,11 @@ import {
   XLSIcon
 } from '../../assets/Icons';
 
+/**
+ * Determines the general type of a file based on its MIME type or name.
+ * @param {File} file - The file object to analyze.
+ * @returns {string} A string representing the file type (e.g., 'image', 'pdf', 'document', 'code').
+ */
 const getFileType = (file) => {
   const type = file.type;
   const name = file.name.toLowerCase();
@@ -46,6 +52,11 @@ const getFileType = (file) => {
   return 'file';
 };
 
+/**
+ * Returns an icon component based on the file type.
+ * @param {string} fileType - The file type string returned by getFileType.
+ * @returns {JSX.Element} The corresponding icon component.
+ */
 const getFileIcon = (fileType) => {
   switch (fileType) {
     case 'pdf':
@@ -69,6 +80,11 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
 
   const { file, url } = previewData || {};
 
+  /**
+   * Formats a file size in bytes into a human-readable string (Bytes, KB, MB, GB).
+   * @param {number} bytes - The file size in bytes.
+   * @returns {string} A formatted string with the appropriate unit.
+   */
   const formatFileSize = useCallback((bytes) => {
     if (!bytes) return `0 ${t('filePreview.size.bytes', 'Bytes')}`;
     const k = 1024;
@@ -94,10 +110,20 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
 
   const fileType = getFileType(file);
 
+  /**
+   * Extracts the file extension from a filename.
+   * @param {string} filename - The name of the file.
+   * @returns {string} The uppercase file extension without the dot.
+   */
   const getFileExtension = (filename) => {
     return filename.slice(filename.lastIndexOf('.')).toUpperCase().slice(1);
   };
 
+  /**
+   * Gets the translated string for a given file type.
+   * @param {string} type - The file type string.
+   * @returns {string} The translated file type string.
+   */
   const getTranslatedFileType = (type) => {
     switch (type) {
       case 'code':

@@ -1,3 +1,4 @@
+// client/src/components/chat/LastMessagePreview.jsx
 import { cryptoService } from "../../lib/cryptoService";
 import { FileIcon, ImageIcon } from "../../assets/Icons";
 import { useTranslation } from 'react-i18next';

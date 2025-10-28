@@ -1,7 +1,26 @@
+// client/src/hooks/useWebRTC.js
 import { useState, useEffect, useRef, useCallback } from 'react';
 import WebRTCService from '../lib/webrtcService';
 import { playSound, stopSound } from '../lib/soundService';
 
+/**
+ * Custom hook to manage the WebRTC call lifecycle.
+ * It uses a WebRTCService class to abstract the complexities of RTCPeerConnection and signaling.
+ * @param {import('socket.io-client').Socket | null} socket - The Socket.IO client instance for signaling.
+ * @param {object | null} currentUser - The authenticated Firebase user object.
+ * @returns {{
+ *  inCall: boolean,
+ *  callState: 'idle' | 'calling' | 'ringing' | 'incoming' | 'connected' | 'ended',
+ *  localStream: MediaStream | null,
+ *  remoteStream: MediaStream | null,
+ *  incomingCallData: object | null,
+ *  currentCallType: 'video' | 'audio',
+ *  startCall: (targetUserId: string, callType: 'video' | 'audio') => Promise<void>,
+ *  acceptCall: () => Promise<void>,
+ *  rejectCall: () => void,
+ *  hangUp: () => void
+ * }} An object containing the call state and functions to manage the call.
+ */
 export const useWebRTC = (socket, currentUser) => {
   const [inCall, setInCall] = useState(false);
   const [callState, setCallState] = useState('idle'); // 'idle', 'calling', 'ringing', 'incoming', 'connected', 'ended'
@@ -14,16 +33,24 @@ export const useWebRTC = (socket, currentUser) => {
   const remoteUserIdRef = useRef(null);
   const callEndedTimerRef = useRef(null);
 
+  // Refs to hold the latest state values to avoid stale closures in callbacks.
   const inCallRef = useRef(inCall);
   useEffect(() => {
     inCallRef.current = inCall;
   }, [inCall]);
 
+  // Refs to hold the latest state values to avoid stale closures in callbacks.
   const callStateRef = useRef(callState);
   useEffect(() => {
     callStateRef.current = callState;
   }, [callState]);
 
+  /**
+   * Resets all call-related state to its initial values.
+   * This function is used to clean up after a call has ended or been rejected.
+   * It also clears any pending timers for the 'ended' state message.
+   * @memberof useWebRTC
+   */
   const resetCallState = useCallback(() => {
     setInCall(false);
     setCallState('idle');
@@ -37,6 +64,11 @@ export const useWebRTC = (socket, currentUser) => {
     }
   }, []);
 
+  /**
+   * Main effect to initialize and manage the WebRTC service and its event listeners.
+   * It sets up handlers for all signaling events received from the WebRTCService,
+   * such as incoming calls, remote streams, and call termination.
+   */
   useEffect(() => {
     if (!socket || !currentUser) return;
 
@@ -113,6 +145,13 @@ export const useWebRTC = (socket, currentUser) => {
   }, [socket, currentUser, resetCallState]);
 
 
+  /**
+   * Initiates an outgoing call to a specified user.
+   * It starts the local media stream and tells the WebRTC service to create and send an offer.
+   * @param {string} targetUserId - The UID of the user to call.
+   * @param {'video' | 'audio'} callType - The type of call to initiate.
+   * @memberof useWebRTC
+   */
   const startCall = useCallback(async (targetUserId, callType) => {
     if (!webrtcRef.current || inCallRef.current || callStateRef.current !== 'idle') return;
     try {
@@ -131,6 +170,12 @@ export const useWebRTC = (socket, currentUser) => {
     }
   }, [currentUser, resetCallState]);
 
+  /**
+   * Accepts an incoming call.
+   * It stops the incoming call sound, starts the local media stream,
+   * and tells the WebRTC service to create and send an answer.
+   * @memberof useWebRTC
+   */
   const acceptCall = useCallback(async () => {
     if (!webrtcRef.current || !incomingCallData) return;
 
@@ -158,6 +203,11 @@ export const useWebRTC = (socket, currentUser) => {
     }
   }, [incomingCallData, resetCallState]);
 
+  /**
+   * Rejects an incoming call.
+   * It stops the incoming call sound and notifies the WebRTC service to send a rejection signal.
+   * @memberof useWebRTC
+   */
   const rejectCall = useCallback(() => {
     if (!webrtcRef.current || !incomingCallData) return;
 
@@ -168,6 +218,11 @@ export const useWebRTC = (socket, currentUser) => {
     setCallState('idle');
   }, [incomingCallData]);
 
+  /**
+   * Hangs up the current call, whether it's outgoing, incoming, or connected.
+   * It stops any call-related sounds and tells the WebRTC service to terminate the connection.
+   * @memberof useWebRTC
+   */
   const hangUp = useCallback(() => {
     stopSound('outgoingCall');
     stopSound('incomingCall');

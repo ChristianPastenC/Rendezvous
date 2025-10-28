@@ -1,8 +1,15 @@
+// client/src/components/calls/VideoCallModal.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HangUpIcon, MicOffIcon, MicOnIcon, SpinnerIcon, UserIcon, VideoOnIcon, VideoOffIcon } from '../../assets/Icons';
 
-const VideoCallModal = ({ localStream, remoteStream, onHangUp, callType = 'video', callState }) => {
+const VideoCallModal = ({ 
+  localStream, 
+  remoteStream, 
+  onHangUp, 
+  callType = 'video', 
+  callState 
+}) => {
   const { t } = useTranslation();
 
   const localVideoRef = useRef(null);
@@ -49,13 +56,21 @@ const VideoCallModal = ({ localStream, remoteStream, onHangUp, callType = 'video
     }
   }, [remoteStream, callType, isRemoteVideoOff]);
 
+  /**
+   * Toggles the enabled state of the local audio stream's tracks.
+   * Updates the isMuted state.
+   */
   const toggleMute = () => {
     if (localStream) {
       localStream.getAudioTracks().forEach(track => { track.enabled = !track.enabled; });
       setIsMuted(!isMuted);
     }
   };
-
+  
+  /**
+   * Toggles the enabled state of the local video stream's tracks if the call is a video call.
+   * Updates the isVideoOff state.
+   */
   const toggleVideo = () => {
     if (localStream && callType === 'video') {
       localStream.getVideoTracks().forEach(track => { track.enabled = !track.enabled; });

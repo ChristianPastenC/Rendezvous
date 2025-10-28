@@ -56,21 +56,31 @@ const UserAvatar = ({
     setImgSrc(processedUrl);
   }, [photoURL, size]);
 
+  /**
+   * Handles the image loading error event.
+   * Logs a warning and sets the component state to show the fallback avatar.
+   * @param {React.SyntheticEvent<HTMLImageElement, Event>} e - The error event object.
+   */
   const handleError = (e) => {
-    console.warn('Avatar load failed:', {
-      url: imgSrc,
-      displayName,
-      error: e
-    });
     setImgError(true);
   };
 
+  /**
+   * Handles the successful image loading event.
+   * Logs a success message in development environments.
+   */
   const handleLoad = () => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('Avatar loaded:', displayName, imgSrc);
+      return ('Avatar loaded:', displayName, imgSrc);
     }
   };
 
+  /**
+   * Generates initials from a display name.
+   * It returns the first letter of the first two words, or just the first letter if only one word.
+   * @param {string | undefined} name - The user's display name.
+   * @returns {string} The calculated initials in uppercase.
+   */
   const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.trim().split(' ');

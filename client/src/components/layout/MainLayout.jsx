@@ -13,17 +13,23 @@ import Sidebar from './Sidebar';
 import CreateGroupModal from '../groups/CreateGroupModal';
 import ProfileEditModal from '../user/UserPerfilModal';
 import MobileNav from './MobileNav';
-import UserSearchModal from '../dms/UserSearchModal';
+import UserSearchModal from '../user/UserSearchModal';
 import { useSocketManager } from '../../hooks/useSocketManager';
 import { useConversations } from '../../hooks/useConversations';
 import { useWebRTC } from '../../hooks/useWebRTC';
-import VideoCallModal from '../chat/VideoCallModal';
-import IncomingCallModal from '../chat/IncomingCallModal';
-import CallTypeModal from '../chat/CallTypeModal';
-import OutgoingCallModal from '../chat/OutgoingCallModal';
+import VideoCallModal from '../calls/VideoCallModal';
+import IncomingCallModal from '../calls/IncomingCallModal'
+import CallTypeModal from '../calls/CallTypeModal';
+import OutgoingCallModal from '../calls/OutgoingCallModal';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
+/**
+ * A simple loader component displayed while data is being fetched.
+ * @param {object} props - The component props.
+ * @param {function} props.t - The translation function.
+ * @returns {JSX.Element} The rendered loader.
+ */
 const Loader = ({ t }) => (
   <div className="flex items-center justify-center h-screen bg-gray-100">
     <div className="text-center">
@@ -70,44 +76,71 @@ const MainLayout = () => {
   const [showCallTypeModal, setShowCallTypeModal] = useState(false);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
 
+  /**
+   * Initiates the call process by showing the call type selection modal.
+   * @param {object} member - The user object of the member to call.
+   */
   const startCallProcess = useCallback((member) => {
     if (inCall || callState !== 'idle') return;
     setSelectedMemberToCall(member);
     setShowCallTypeModal(true);
   }, [inCall, callState]);
 
+  /**
+   * Handles the selection of a call type ('video' or 'audio') and starts the call.
+   * @param {'video' | 'audio'} callType - The type of call to start.
+   */
   const handleSelectCallType = useCallback((callType) => {
     setShowCallTypeModal(false);
     if (!selectedMemberToCall || !startCall) return;
     startCall(selectedMemberToCall.uid, callType);
   }, [selectedMemberToCall, startCall]);
 
+  /**
+   * Cancels the call type selection process and closes the modal.
+   */
   const handleCancelCallType = useCallback(() => {
     setShowCallTypeModal(false);
     setSelectedMemberToCall(null);
   }, []);
 
+  /**
+   * Gets the display name of the user being called for the outgoing call modal.
+   * @returns {string} The display name of the call target.
+   */
   const getCallTargetName = () => {
     return selectedMemberToCall?.displayName || t('calls.defaultTargetName');
   };
 
+  /**
+   * Handles the user sign-out process. It hangs up any active call,
+   * signs the user out from Firebase, and navigates to the authentication page.
+   */
   const handleSignOut = useCallback(async () => {
     try {
       if (inCall) {
         hangUp();
       }
       await signOut(auth);
-      console.log(t('layout.main.signOutSuccess'));
       navigate('/auth');
     } catch (error) {
-      console.error(t('layout.main.signOutError'), error);
+      throw new Error("Error during sign-out:", error);
     }
   }, [navigate, inCall, hangUp, t]);
 
+  /**
+   * Sets the currently selected conversation in the state.
+   * @param {object} conv - The conversation object to select.
+   */
   const handleSelectConversation = useCallback((conv) => {
     setSelectedConversation(conv);
   }, []);
 
+  /**
+   * Starts a new direct message conversation or selects an existing one.
+   * If the conversation doesn't exist, it's created locally and added to the list.
+   * @param {object} user - The user object to start a conversation with.
+   */
   const handleStartConversation = useCallback(
     (user) => {
       const existingConv = conversations.find(
@@ -131,6 +164,10 @@ const MainLayout = () => {
     [conversations, setConversations]
   );
 
+  /**
+   * A wrapper function to start a conversation and then close the user search modal.
+   * @param {object} user - The user object selected from the search modal.
+   */
   const handleStartConversationAndCloseModal = useCallback(
     (user) => {
       handleStartConversation(user);
@@ -139,6 +176,12 @@ const MainLayout = () => {
     [handleStartConversation]
   );
 
+  /**
+   * Handles the creation of a new group.
+   * Makes an API call and reloads all data on success.
+   * @param {string} name - The name of the new group.
+   * @param {string[]} memberIds - An array of user UIDs to add to the group.
+   */
   const handleCreateGroup = useCallback(
     async (name, memberIds) => {
       const token = await currentUser.getIdToken();
@@ -162,10 +205,18 @@ const MainLayout = () => {
     [currentUser, loadAllData, t]
   );
 
+  /**
+   * Callback executed after a user's profile has been updated.
+   * Triggers a full data reload to reflect changes.
+   */
   const handleProfileUpdate = useCallback(() => {
     loadAllData();
   }, [loadAllData]);
 
+  /**
+   * Handles the account deletion process. It shows a confirmation dialog,
+   * makes an API call to delete the user data, and signs the user out.
+   */
   const handleDeleteAccount = useCallback(async () => {
     if (
       !window.confirm(
@@ -196,11 +247,13 @@ const MainLayout = () => {
         alert(`${t('layout.main.deleteError')} ${error}`);
       }
     } catch (error) {
-      console.error('Error en el proceso de eliminación:', error);
       alert(t('layout.main.deleteNetworkError'));
     }
   }, [currentUser, navigate, inCall, hangUp, t]);
 
+  /**
+   * Clears the currently selected conversation, returning to the default view on mobile.
+   */
   const handleClearSelectedConversation = useCallback(() => {
     setSelectedConversation(null);
   }, []);

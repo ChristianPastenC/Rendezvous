@@ -1,3 +1,4 @@
+// client/src/router/index.jsx
 import { Routes, Route } from 'react-router';
 import HomePage from '../pages/HomePage';
 import AuthenticationPage from '../pages/AuthenticationPage';
