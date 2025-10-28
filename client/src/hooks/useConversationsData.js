@@ -1,6 +1,8 @@
 // src/hooks/useConversationsData.js
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+
 export const useConversationsData = (
   socket,
   currentUser,
@@ -65,7 +67,7 @@ export const useConversationsData = (
           } else {
             const token = await currentUser.getIdToken();
             const membersRes = await fetch(
-              `http://localhost:3000/api/groups/${groupId}/members`,
+              `${API_URL}/api/groups/${groupId}/members`,
               {
                 headers: { Authorization: `Bearer ${token}` },
               }
@@ -90,7 +92,7 @@ export const useConversationsData = (
             ? `/api/dms/${backendConversationId}/messages`
             : `/api/groups/${selectedConversation.groupData.id}/channels/${backendConversationId}/messages`;
 
-          const response = await fetch(`http://localhost:3000${endpoint}`, {
+          const response = await fetch(`${API_URL}${endpoint}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 

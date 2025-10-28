@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { SearchIcon } from '../../assets/Icons';
 
 const UserSearch = ({ onSelectUser }) => {
+  const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
   const { currentUser } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -19,7 +20,7 @@ const UserSearch = ({ onSelectUser }) => {
     setLoading(true);
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`http://localhost:3000/api/users/search?query=${query}`, {
+      const response = await fetch(`${API_URL}/api/users/search?query=${query}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) {

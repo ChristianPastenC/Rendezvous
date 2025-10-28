@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { playSound } from '../lib/soundService';
 
+const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+
 export const useConversations = (currentUser, socket, messagesCache) => {
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,10 +24,10 @@ export const useConversations = (currentUser, socket, messagesCache) => {
     try {
       const token = await currentUser.getIdToken();
       const [groupsRes, contactsRes] = await Promise.all([
-        fetch('http://localhost:3000/api/groups', {
+        fetch(`${API_URL}/api/groups`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('http://localhost:3000/api/contacts', {
+        fetch(`${API_URL}/api/contacts`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -40,7 +42,7 @@ export const useConversations = (currentUser, socket, messagesCache) => {
       const groupsWithChannels = await Promise.all(
         groupsData.map(async (group) => {
           try {
-            const channelsRes = await fetch(`http://localhost:3000/api/groups/${group.id}/channels`, {
+            const channelsRes = await fetch(`${API_URL}/api/groups/${group.id}/channels`, {
               headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -124,7 +126,7 @@ export const useConversations = (currentUser, socket, messagesCache) => {
 
       try {
         const token = await currentUser.getIdToken();
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
+        const response = await fetch(`${API_URL}${endpoint}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const messagesData = response.ok ? await response.json() : [];
@@ -259,7 +261,7 @@ export const useConversations = (currentUser, socket, messagesCache) => {
               (async () => {
                 try {
                   const token = await currentUser.getIdToken();
-                  const res = await fetch(`http://localhost:3000/api/users/${otherUserId}/profile`, {
+                  const res = await fetch(`${API_URL}/api/users/${otherUserId}/profile`, {
                     headers: { Authorization: `Bearer ${token}` },
                   });
                   if (res.ok) {

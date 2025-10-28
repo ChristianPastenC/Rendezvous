@@ -5,6 +5,8 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import UserAvatar from './UserAvatar';
 import { CameraIcon, CloseIcon } from '../../assets/Icons';
 
+const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+
 const ProfileEditModal = ({
   isOpen,
   onClose,
@@ -62,7 +64,7 @@ const ProfileEditModal = ({
       }
 
       const token = await currentUser.getIdToken();
-      const response = await fetch('http://localhost:3000/api/users/profile', {
+      const response = await fetch(`${API_URL}/api/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

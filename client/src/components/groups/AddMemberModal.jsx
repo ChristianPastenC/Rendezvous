@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import UserSearch from '../dms/UserSearch';
 import { CloseIcon } from '../../assets/Icons';
 
+const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+
 const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
   const { currentUser } = useAuth();
   const [selectedUser, setSelectedUser] = useState(null);
@@ -22,7 +24,7 @@ const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
     setError('');
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`http://localhost:3000/api/groups/${groupId}/members`, {
+      const response = await fetch(`${API_URL}/api/groups/${groupId}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 // src/lib/authService.js
-
-const API_BASE_URL = 'http://localhost:3000/api/auth';
+const VITE_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const API_BASE_URL = `${VITE_SERVER_URL}/api/auth`;
 
 /**
  * Sync user firebase with backend

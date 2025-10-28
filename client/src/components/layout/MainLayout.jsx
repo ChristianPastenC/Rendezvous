@@ -21,6 +21,8 @@ import IncomingCallModal from '../chat/IncomingCallModal';
 import CallTypeModal from '../chat/CallTypeModal';
 import OutgoingCallModal from '../chat/OutgoingCallModal';
 
+const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+
 const Loader = () => (
   <div className="flex items-center justify-center h-screen bg-gray-100">
     <div className="text-center">
@@ -138,7 +140,7 @@ const MainLayout = () => {
   const handleCreateGroup = useCallback(
     async (name, memberIds) => {
       const token = await currentUser.getIdToken();
-      const response = await fetch('http://localhost:3000/api/groups', {
+      const response = await fetch(`${API_URL}/api/groups`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -175,7 +177,7 @@ const MainLayout = () => {
         hangUp();
       }
       const token = await currentUser.getIdToken();
-      const response = await fetch('http://localhost:3000/api/users/me', {
+      const response = await fetch(`${API_URL}/api/users/me`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

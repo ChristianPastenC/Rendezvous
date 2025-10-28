@@ -3,6 +3,7 @@ import CryptoJS from 'crypto-js';
 import { auth } from './firebase';
 
 const KEY_SIZE = 2048;
+const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 const STORAGE_KEY_PUBLIC = 'crypto_public_key';
 const SESSION_KEY_PRIVATE = 'crypto_private_key_decrypted';
 const SESSION_KEY_PASSPHRASE = 'crypto_user_passphrase';
@@ -102,7 +103,7 @@ class CryptoService {
     const token = await auth.currentUser.getIdToken();
 
     try {
-      const response = await fetch(`http://localhost:3000/api/users/me/keys`, {
+      const response = await fetch(`${API_URL}/api/users/me/keys`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -154,7 +155,7 @@ class CryptoService {
     const wrappedPrivateKey = this.encryptPrivateKey(this.privateKey, passphrase);
 
     try {
-      const saveResponse = await fetch(`http://localhost:3000/api/users/me/keys`, {
+      const saveResponse = await fetch(`${API_URL}/api/users/me/keys`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +197,7 @@ class CryptoService {
       if (!auth.currentUser) throw new Error('Usuario no autenticado para obtener token.');
       const token = await auth.currentUser.getIdToken();
 
-      const response = await fetch(`http://localhost:3000/api/users/${userId}/key`, {
+      const response = await fetch(`${API_URL}/api/users/${userId}/key`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -216,7 +217,7 @@ class CryptoService {
       if (!auth.currentUser) throw new Error('Usuario no autenticado para obtener token.');
       const token = await auth.currentUser.getIdToken();
 
-      const response = await fetch(`http://localhost:3000/api/groups/${groupId}/members`, {
+      const response = await fetch(`${API_URL}/api/groups/${groupId}/members`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
