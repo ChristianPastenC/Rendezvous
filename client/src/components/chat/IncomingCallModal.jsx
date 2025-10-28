@@ -1,6 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import { AcceptCallIcon, DeclineCallIcon, IncomingCallIcon } from "../../assets/Icons";
 
 const IncomingCallModal = ({ callerName, callType, onAccept, onReject }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="fixed inset-0 bg-white/30 backdrop-blur-md z-50 flex items-center justify-center p-4">
 
@@ -10,10 +13,16 @@ const IncomingCallModal = ({ callerName, callType, onAccept, onReject }) => {
           <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-gray-100 flex items-center justify-center">
             <IncomingCallIcon className="w-10 h-10 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Llamada entrante</h2>
-          <p className="text-lg font-medium text-gray-800">{callerName}</p>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            {t('calls.incoming.title')}
+          </h2>
+          <p className="text-lg font-medium text-gray-800">
+            {callerName}
+          </p>
           <p className="text-gray-500 text-sm mt-1">
-            {callType === 'video' ? 'Videollamada' : 'Llamada de voz'}
+            {callType === 'video'
+              ? t('calls.incoming.video')
+              : t('calls.incoming.audio')}
           </p>
         </div>
 
@@ -24,7 +33,9 @@ const IncomingCallModal = ({ callerName, callType, onAccept, onReject }) => {
             className="flex items-center justify-center gap-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-red-600 font-semibold py-3 px-4 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             <DeclineCallIcon className="w-6 h-6" />
-            <span>Rechazar</span>
+            <span>
+              {t('calls.incoming.reject')}
+            </span>
           </button>
 
           <button
@@ -32,7 +43,9 @@ const IncomingCallModal = ({ callerName, callType, onAccept, onReject }) => {
             className="flex items-center justify-center gap-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-400"
           >
             <AcceptCallIcon className="w-6 h-6" />
-            <span>Aceptar</span>
+            <span>
+              {t('calls.incoming.accept')}
+            </span>
           </button>
         </div>
 

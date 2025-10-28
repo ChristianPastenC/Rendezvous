@@ -5,6 +5,7 @@ import {
   useRef
 } from 'react';
 import { Outlet, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -23,16 +24,17 @@ import OutgoingCallModal from '../chat/OutgoingCallModal';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
-const Loader = () => (
+const Loader = ({ t }) => (
   <div className="flex items-center justify-center h-screen bg-gray-100">
     <div className="text-center">
       <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#3B82F6] mb-4"></div>
-      <p className="text-gray-800 text-lg">Cargando...</p>
+      <p className="text-gray-800 text-lg">{t('common.loading')}</p>
     </div>
   </div>
 );
 
 const MainLayout = () => {
+  const { t } = useTranslation();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -86,7 +88,7 @@ const MainLayout = () => {
   }, []);
 
   const getCallTargetName = () => {
-    return selectedMemberToCall?.displayName || 'Usuario';
+    return selectedMemberToCall?.displayName || t('calls.defaultTargetName');
   };
 
   const handleSignOut = useCallback(async () => {
@@ -95,12 +97,12 @@ const MainLayout = () => {
         hangUp();
       }
       await signOut(auth);
-      console.log('Usuario cerró sesión exitosamente.');
+      console.log(t('layout.main.signOutSuccess'));
       navigate('/auth');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error(t('layout.main.signOutError'), error);
     }
-  }, [navigate, inCall, hangUp]);
+  }, [navigate, inCall, hangUp, t]);
 
   const handleSelectConversation = useCallback((conv) => {
     setSelectedConversation(conv);
@@ -154,10 +156,10 @@ const MainLayout = () => {
         membersCache.current = {};
         await loadAllData();
       } else {
-        alert('Error al crear el grupo.');
+        alert(t('layout.main.createGroupError'));
       }
     },
-    [currentUser, loadAllData]
+    [currentUser, loadAllData, t]
   );
 
   const handleProfileUpdate = useCallback(() => {
@@ -167,7 +169,7 @@ const MainLayout = () => {
   const handleDeleteAccount = useCallback(async () => {
     if (
       !window.confirm(
-        '¿Estás seguro de que quieres eliminar tu cuenta permanentemente? Esta acción no se puede deshacer.'
+        t('layout.main.deleteConfirm')
       )
     ) {
       return;
@@ -185,25 +187,25 @@ const MainLayout = () => {
       });
 
       if (response.ok) {
-        alert('Tu cuenta ha sido eliminada exitosamente.');
+        alert(t('layout.main.deleteSuccess'));
         await signOut(auth);
         navigate('/auth');
         window.location.reload();
       } else {
         const { error } = await response.json();
-        alert(`Error al eliminar la cuenta: ${error}`);
+        alert(`${t('layout.main.deleteError')} ${error}`);
       }
     } catch (error) {
       console.error('Error en el proceso de eliminación:', error);
-      alert('Ocurrió un error de red. Inténtalo de nuevo.');
+      alert(t('layout.main.deleteNetworkError'));
     }
-  }, [currentUser, navigate, inCall, hangUp]);
+  }, [currentUser, navigate, inCall, hangUp, t]);
 
   const handleClearSelectedConversation = useCallback(() => {
     setSelectedConversation(null);
   }, []);
 
-  if (isLoading) return <Loader />;
+  if (isLoading) return <Loader t={t} />;
 
   const outletContext = {
     socket,

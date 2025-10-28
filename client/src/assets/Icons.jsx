@@ -513,3 +513,73 @@ export const SpinnerIcon = (props) => (
     />
   </svg>
 );
+
+export const PDFIcon = (props) => (
+  <svg
+    {...props}
+    fill="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+    <path d="M14 2v6h6M9 13h6M9 17h6m-6-8h4" />
+  </svg>
+);
+
+export const DocIcon = (props) => (
+  <svg
+    {...props}
+    fill="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+    <path d="M14 2v6h6M9 13h6M9 17h6" />
+  </svg>
+);
+
+export const XLSIcon = () => (
+  <svg
+    {...props}
+    fill="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+    <path d="M14 2v6h6M9 9h6v3H9zM9 15h6v3H9z" />
+  </svg>
+);
+
+export const PPTIcon = () => (
+  <svg
+    {...props}
+    fill="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+    <path d="M14 2v6h6M10 12l4 3-4 3v-6z" />
+  </svg>
+);
+
+export const CodePreviewIcon = (props) => (
+  <svg
+    {...props}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+    />
+  </svg>
+);
+
+export const DefaultFileIcon = (props) => (
+  <svg
+    {...props}
+    fill="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+    <path d="M14 2v6h6" />
+  </svg>
+);

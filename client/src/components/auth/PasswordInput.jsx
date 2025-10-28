@@ -1,9 +1,16 @@
 // src/components/auth/PasswordInput.jsx
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { EyeClosedIcon, EyeOpenIcon } from '../../assets/Icons';
+import { useTranslation } from 'react-i18next';
 
-const PasswordInput = ({ value, onChange, placeholder, id, label }) => {
+const PasswordInput = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  id, 
+  label 
+}) => {
+  const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -25,7 +32,7 @@ const PasswordInput = ({ value, onChange, placeholder, id, label }) => {
           type='button'
           onClick={() => setShowPassword(!showPassword)}
           className='absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 text-gray-500 hover:text-gray-700 focus:outline-none'
-          aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          aria-label={showPassword ? t('common.password.ariaHide') : t('common.password.ariaShow')}
         >
           {showPassword ? (
             <EyeClosedIcon className='h-5 w-5' />

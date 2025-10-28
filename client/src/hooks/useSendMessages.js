@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { cryptoService } from '../lib/cryptoService';
 import { storage } from '../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 export const useSendMessage = (socket, isDirectMessage, conversationId, groupId, members) => {
+  const { t } = useTranslation();
   const { currentUser } = useAuth();
   const [sending, setSending] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -49,12 +51,12 @@ export const useSendMessage = (socket, isDirectMessage, conversationId, groupId,
       }
     } catch (error) {
       console.error("Error al cifrar o enviar el mensaje:", error);
-      alert("Error: No se pudo enviar el mensaje cifrado.");
+      alert(t('hooks.useSendMessages.sendEncryptedError'));
       return false;
     } finally {
       setSending(false);
     }
-  }, [socket, isDirectMessage, conversationId, groupId, members, currentUser.uid]);
+  }, [socket, isDirectMessage, conversationId, groupId, members, currentUser.uid, t]);
 
   const sendTextMessage = useCallback(async (content) => {
     if (!content.trim() || sending) return false;
@@ -83,7 +85,7 @@ export const useSendMessage = (socket, isDirectMessage, conversationId, groupId,
           console.error("Error al subir archivo:", error);
           setSending(false);
           setUploadProgress(0);
-          alert("Error al subir el archivo.");
+          alert(t('hooks.useSendMessages.uploadError'));
           reject(error);
         },
         async () => {
@@ -108,7 +110,7 @@ export const useSendMessage = (socket, isDirectMessage, conversationId, groupId,
         }
       );
     });
-  }, [currentUser.uid, encryptAndSendMessage]);
+  }, [currentUser.uid, encryptAndSendMessage, t]);
 
   const cancelSending = useCallback(() => {
     setSending(false);

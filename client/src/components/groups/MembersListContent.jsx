@@ -1,5 +1,6 @@
+import { useTranslation } from 'react-i18next'; // 1. Importar
 import { CallIcon } from "../../assets/Icons";
-import { formatLastSeen } from "../../utils/lastSeen";
+import { formatLastSeen } from "../../utils/lastSeen"; // Asumimos que esta función ya usa `t` o devuelve un formato no textual
 import UserAvatar from "../user/UserAvatar";
 
 const MembersListContent = ({
@@ -9,9 +10,11 @@ const MembersListContent = ({
   onAddMemberClick,
   isOwner,
 }) => {
+  const { t } = useTranslation();
+
   return <>
     <h2 className="font-bold text-lg text-gray-800 mb-4">
-      Miembros ({members.length})
+      {t('members.title')} ({members.length})
     </h2>
     <div className="space-y-2 flex-1 overflow-y-auto">
       {members.map((member) => (
@@ -33,8 +36,8 @@ const MembersListContent = ({
                   }`
                 }
                 title={member.status === 'online'
-                  ? 'Conectado'
-                  : `Últ. vez: ${formatLastSeen(member.lastSeen)}`
+                  ? t('status.online')
+                  : `${t('status.offlinePrefix')}: ${formatLastSeen(member.lastSeen, t)}`
                 }
               />
             </div>
@@ -46,7 +49,7 @@ const MembersListContent = ({
             <button
               onClick={() => onCallMember(member)}
               className="p-2 hover:bg-gray-300 rounded-full transition-colors"
-              title="Llamar"
+              title={t('common.call')}
             >
               <CallIcon className="w-5 h-5 text-green-400" />
             </button>
@@ -59,7 +62,7 @@ const MembersListContent = ({
         onClick={onAddMemberClick}
         className="mt-4 p-2 bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg font-semibold w-full transition-colors text-gray-100"
       >
-        Añadir Miembro
+        {t('members.addMember')}
       </button>
     )}
   </>;

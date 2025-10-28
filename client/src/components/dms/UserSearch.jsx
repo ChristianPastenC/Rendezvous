@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { SearchIcon } from '../../assets/Icons';
 
 const UserSearch = ({ onSelectUser }) => {
+  const { t } = useTranslation();
+
   const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
   const { currentUser } = useAuth();
   const [query, setQuery] = useState('');
@@ -13,7 +16,7 @@ const UserSearch = ({ onSelectUser }) => {
   const handleSearch = async (e) => {
     e.preventDefault();
     if (query.length < 3) {
-      setError('La búsqueda requiere al menos 3 caracteres.');
+      setError(t('userSearch.error.minLength'));
       return;
     }
     setError('');
@@ -24,12 +27,12 @@ const UserSearch = ({ onSelectUser }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) {
-        throw new Error('Error al buscar usuarios.');
+        throw new Error(t('userSearch.error.fetchFailed'));
       }
       const data = await response.json();
       setResults(data);
       if (data.length === 0) {
-        setError('No se encontraron usuarios.');
+        setError(t('userSearch.error.noResults'));
       }
     } catch (err) {
       console.error("Error buscando usuarios:", err);
@@ -53,17 +56,17 @@ const UserSearch = ({ onSelectUser }) => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar usuarios por email..."
+          placeholder={t('userSearch.placeholder')}
           className="w-full bg-white text-gray-900 h-10 px-5 pr-12 rounded-lg text-sm border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
         <button type="submit" className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-600">
-          <SearchIcon 
+          <SearchIcon
             className="h-4 w-4 fill-current"
           />
         </button>
       </form>
 
-      {loading && <p className="text-sm text-gray-500 p-2">Buscando...</p>}
+      {loading && <p className="text-sm text-gray-500 p-2">{t('userSearch.loading')}</p>}
       {error && <p className="text-sm text-red-600 p-2">{error}</p>}
       <div className="mt-2 max-h-48 overflow-y-auto">
         {results.map(user => (

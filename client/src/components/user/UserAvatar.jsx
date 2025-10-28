@@ -1,5 +1,6 @@
 // src/components/common/UserAvatar.jsx
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 const UserAvatar = ({
   photoURL,
@@ -8,6 +9,8 @@ const UserAvatar = ({
   className = "",
   fallbackColor = "blue"
 }) => {
+  const { t } = useTranslation();
+
   const [imgError, setImgError] = useState(false);
   const [imgSrc, setImgSrc] = useState(null);
 
@@ -81,11 +84,14 @@ const UserAvatar = ({
   const sizeClass = sizeClasses[size] || sizeClasses.md;
   const colorClass = colorClasses[fallbackColor] || colorClasses.blue;
 
+  const defaultTitle = t('common.avatar.defaultTitle', 'Usuario');
+  const defaultAlt = t('common.avatar.defaultAlt', 'Avatar');
+
   if (showFallback) {
     return (
       <div
         className={`${sizeClass} rounded-full flex items-center justify-center font-bold text-white ${colorClass} ${className}`}
-        title={displayName || 'Usuario'}
+        title={displayName || defaultTitle}
       >
         {getInitials(displayName)}
       </div>
@@ -95,14 +101,14 @@ const UserAvatar = ({
   return (
     <img
       src={imgSrc}
-      alt={displayName || 'Avatar'}
+      alt={displayName || defaultAlt}
       className={`${sizeClass} rounded-full object-cover ${className}`}
       loading="lazy"
       onError={handleError}
       onLoad={handleLoad}
       crossOrigin="anonymous"
       referrerPolicy="no-referrer"
-      title={displayName || 'Usuario'}
+      title={displayName || defaultTitle}
     />
   );
 };

@@ -1,9 +1,8 @@
 // src/components/auth/AuthForm.jsx
-
-import React from 'react';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import { GoogleIcon } from '../../assets/Icons';
+import { useTranslation } from 'react-i18next';
 
 const AuthForm = ({
   isLoginView,
@@ -16,6 +15,8 @@ const AuthForm = ({
   handleGoogleLogin,
   toggleView,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <>
       <form onSubmit={handleEmailPasswordSubmit} noValidate>
@@ -43,7 +44,7 @@ const AuthForm = ({
       </form>
       <div className="relative flex justify-center text-xs uppercase my-6">
         <span className="bg-white px-2 text-gray-500">
-          O
+          {t('auth.divider')}
         </span>
         <div className="absolute inset-x-0 top-1/2 h-px bg-gray-300 -z-10"></div>
       </div>
@@ -54,13 +55,13 @@ const AuthForm = ({
         <GoogleIcon 
           className='h-5 w-5 mr-3'
         />
-        Continuar con Google
+        {t('auth.googleLogin')}
       </button>
 
       <p className='text-sm text-center text-gray-600 mt-6'>
         {isLoginView ? '¿No tienes una cuenta?' : '¿Ya tienes una cuenta?'}
         <button onClick={toggleView} className='ml-1 font-semibold text-[#3B82F6] hover:underline '>
-          {isLoginView ? 'Regístrate' : 'Inicia sesión'}
+          {isLoginView ? t('auth.registerLink') : t('auth.loginLink')}
         </button>
       </p>
     </>

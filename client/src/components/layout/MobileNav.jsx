@@ -1,7 +1,10 @@
 // src/components/layout/MobileNav.jsx
+import { useTranslation } from 'react-i18next';
 import { PlusIcon, SettingIcon, ChatIcon, SearchIcon } from '../../assets/Icons';
 
 const MobileNav = ({ onShowSearch, onCreateGroup, onEditProfile }) => {
+  const { t } = useTranslation();
+
   const ICONS = {
     Chat:
       (({ className }) => (
@@ -21,37 +24,45 @@ const MobileNav = ({ onShowSearch, onCreateGroup, onEditProfile }) => {
     >
       <button
         className="flex flex-col items-center justify-center text-blue-600 p-2"
-        title="Chats"
+        title={t('layout.mobileNav.chats')}
       >
         <ICONS.Chat className="w-6 h-6" />
-        <span className="text-xs font-medium">Chats</span>
+        <span className="text-xs font-medium">
+          {t('layout.mobileNav.chats')}
+        </span>
       </button>
 
       <button
         onClick={onShowSearch}
         className="flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 p-2 transition-colors"
-        title="Buscar"
+        title={t('layout.mobileNav.search')}
       >
         <ICONS.Search className="w-6 h-6" />
-        <span className="text-xs font-medium">Buscar</span>
+        <span className="text-xs font-medium">
+          {t('layout.mobileNav.search')}
+        </span>
       </button>
 
       <button
         onClick={onCreateGroup}
         className="flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 p-2 transition-colors"
-        title="Crear Grupo"
+        title={t('layout.mobileNav.createGroupTitle')}
       >
         <ICONS.Plus className="w-6 h-6" />
-        <span className="text-xs font-medium">Grupo</span>
+        <span className="text-xs font-medium">
+          {t('layout.mobileNav.createGroup')}
+        </span>
       </button>
 
       <button
         onClick={onEditProfile}
         className="flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 p-2 transition-colors"
-        title="Perfil"
+        title={t('layout.mobileNav.profile')}
       >
         <ICONS.Settings className="w-6 h-6" />
-        <span className="text-xs font-medium">Perfil</span>
+        <span className="text-xs font-medium">
+          {t('layout.mobileNav.profile')}
+        </span>
       </button>
     </nav>
   );

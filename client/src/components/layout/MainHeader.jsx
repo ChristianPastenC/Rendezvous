@@ -1,4 +1,5 @@
 // src/components/layout/MainHeader.jsx
+import { useTranslation } from 'react-i18next';
 import { formatLastSeen } from '../../utils/lastSeen';
 import { BackIcon, CallIcon, MembersIcon } from '../../assets/Icons';
 import UserAvatar from '../user/UserAvatar';
@@ -11,13 +12,15 @@ const MainHeader = ({
   onCallClick,
   onMembersClick,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <header className="p-4 bg-white border-b border-gray-200 flex justify-between items-center">
       <div className="flex items-center space-x-3 min-w-0">
         <button
           onClick={onClearSelectedConversation}
           className="md:hidden p-2 rounded-full text-gray-600 hover:bg-gray-100"
-          title="Atrás"
+          title={t('common.back')}
         >
           <BackIcon className="w-6 h-6" />
         </button>
@@ -46,9 +49,9 @@ const MainHeader = ({
                 <p className="text-xs text-gray-500">
                   {selectedConversation.userData.status === 'online' ? (
                     <span className="text-green-600 font-medium">
-                      Conectado
+                      {t('status.online')}
                     </span>)
-                    : (`Últ. vez ${formatLastSeen(selectedConversation.userData.lastSeen)}`)
+                    : (`${t('status.offlinePrefix')} ${formatLastSeen(selectedConversation.userData.lastSeen, t)}`)
                   }
                 </p>
               )}
@@ -56,7 +59,7 @@ const MainHeader = ({
           </>
         ) : (
           <h2 className="font-bold text-lg text-gray-500">
-            Selecciona una conversación
+            {t('header.prompt')}
           </h2>
         )}
       </div>
@@ -67,7 +70,7 @@ const MainHeader = ({
             onClick={onCallClick}
             disabled={inCall}
             className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 transition-colors"
-            title="Llamar"
+            title={t('common.call')}
           >
             <CallIcon className="w-6 h-6 text-green-600" />
           </button>
@@ -77,7 +80,7 @@ const MainHeader = ({
           <button
             onClick={onMembersClick}
             className="md:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
-            title="Ver Miembros"
+            title={t('header.viewMembers')}
           >
             <MembersIcon className="w-5 h-5 text-blue-600" />
           </button>

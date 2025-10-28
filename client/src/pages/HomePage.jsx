@@ -8,8 +8,11 @@ import MessageList from '../components/chat/MessageList';
 import { EmptyStateIcon } from '../assets/Icons';
 import MainHeader from '../components/layout/MainHeader';
 import { useConversationsData } from '../hooks/useConversationsData';
+import { useTranslation } from 'react-i18next';
 
 const HomePage = () => {
+  const { t } = useTranslation();
+
   const {
     socket,
     currentUser,
@@ -85,7 +88,7 @@ const HomePage = () => {
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-[#3B82F6] mb-3">
                     </div>
                     <p className="text-gray-500">
-                      Cargando mensajes...
+                      {t('pages.home.loadingMessages')}
                     </p>
                   </div>
                 </div>)
@@ -114,7 +117,9 @@ const HomePage = () => {
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-gray-500">
                 <EmptyStateIcon className="w-24 h-24 mx-auto mb-4 text-gray-600" />
-                <p className="text-xl">Selecciona una conversación para empezar</p>
+                <p className="text-xl">
+                  {t('pages.home.emptyPrompt')}
+                </p>
               </div>
             </div>
           )}

@@ -4,18 +4,19 @@ import {
   memo,
   useMemo
 } from "react";
+import { useTranslation } from "react-i18next";
 import { cryptoService } from "../../lib/cryptoService";
 import { EmptyStateIcon, FileIcon } from "../../assets/Icons";
 import UserAvatar from "../user/UserAvatar";
 
-const MessageContent = memo(({ msg, currentUserUid, isSender }) => {
+const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
   return useMemo(() => {
     const encryptedDataForUser = msg.encryptedPayload?.[currentUserUid];
 
     if (!encryptedDataForUser) {
       return (
         <p className="text-sm font-normal text-gray-500 dark:text-gray-400 italic">
-          [No tienes permiso para ver este mensaje]
+          {t('messages.noPermission')}
         </p>
       );
     }
@@ -24,7 +25,7 @@ const MessageContent = memo(({ msg, currentUserUid, isSender }) => {
     if (!decryptedString) {
       return (
         <p className="text-sm font-normal text-red-500 dark:text-red-400 italic">
-          [Error al descifrar]
+          {t('messages.decryptionError')}
         </p>
       );
     }
@@ -42,7 +43,7 @@ const MessageContent = memo(({ msg, currentUserUid, isSender }) => {
             >
               <img
                 src={messageObject.fileUrl}
-                alt={messageObject.content || 'Imagen adjunta'}
+                alt={messageObject.content || t('messages.imageAlt')}
                 className="rounded-lg max-w-full max-h-64 object-cover"
               />
             </a>
@@ -77,15 +78,15 @@ const MessageContent = memo(({ msg, currentUserUid, isSender }) => {
     } catch (e) {
       return (
         <p className="text-sm font-normal text-red-500 dark:text-red-400 italic">
-          [Mensaje corrupto]
+          {t('messages.corrupt')}
         </p>
       );
     }
-  }, [msg.encryptedPayload, currentUserUid, isSender]);
+  }, [msg.encryptedPayload, currentUserUid, isSender, t]);
 });
 
-const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, isSender }) => {
-  const displayName = isSender ? 'Tú' : (authorInfo?.displayName || 'Usuario');
+const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, isSender, t }) => {
+  const displayName = isSender ? t('messages.you') : (authorInfo?.displayName || t('messages.user'));
 
   return (
     <div className={`flex items-start gap-2.5 ${isSender ? 'self-end flex-row-reverse' : 'self-start'}`}>
@@ -125,6 +126,7 @@ const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, i
               msg={msg}
               currentUserUid={currentUserUid}
               isSender={isSender}
+              t={t}
             />
             {idx > 0 && (
               <span className={`text-xs font-normal mt-1 
@@ -141,6 +143,7 @@ const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, i
 });
 
 const MessageList = ({ messages, currentUserUid }) => {
+  const { t } = useTranslation();
   const messagesEndRef = useRef(null);
 
   const groupedMessages = useMemo(() => {
@@ -196,6 +199,7 @@ const MessageList = ({ messages, currentUserUid }) => {
                 showAvatar={showAvatar}
                 authorInfo={group.authorInfo}
                 isSender={isSender}
+                t={t}
               />
             );
           })}
@@ -207,10 +211,10 @@ const MessageList = ({ messages, currentUserUid }) => {
             className="w-16 h-16 text-gray-300"
           />
           <h3 className="mt-4 text-xl font-semibold text-gray-800 dark:text-gray-200">
-            Aún no hay mensajes
+            {t('messages.empty.title')}
           </h3>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            ¡Sé el primero en enviar un saludo! 👋
+            {t('messages.empty.subtitle')}
           </p>
         </div>
       )}

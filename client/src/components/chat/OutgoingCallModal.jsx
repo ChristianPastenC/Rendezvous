@@ -1,7 +1,12 @@
+import { useTranslation } from 'react-i18next';
 import { HangUpIcon, PhoneRingIcon } from "../../assets/Icons";
 
 const OutgoingCallModal = ({ targetName, status, onCancel }) => {
-  const statusText = status === 'calling' ? 'Llamando...' : 'Tono...';
+  const { t } = useTranslation();
+
+  const statusText = status === 'calling' 
+    ? t('calls.outgoing.calling') 
+    : t('calls.outgoing.ringing');
 
   return (
     <div className="fixed inset-0 bg-white/30 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -12,13 +17,13 @@ const OutgoingCallModal = ({ targetName, status, onCancel }) => {
           <PhoneRingIcon className="w-12 h-12 text-blue-600" />
         </div>
         <h2 className="text-3xl font-semibold text-gray-900 mb-2">
-          {targetName || 'Usuario'}
+          {targetName || t('calls.outgoing.defaultName')}
         </h2>
         <p className="text-lg text-gray-600 mb-12">{statusText}</p>
         <button
           onClick={onCancel}
           className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2"
-          title="Cancelar"
+          title={t('calls.outgoing.cancel')}
         >
           <HangUpIcon className="w-8 h-8 text-white" />
         </button>

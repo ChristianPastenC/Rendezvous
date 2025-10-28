@@ -1,22 +1,42 @@
-import React, { useEffect } from 'react';
-
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+import { useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  CodePreviewIcon,
+  DefaultFileIcon,
+  DocIcon,
+  PDFIcon,
+  PPTIcon,
+  XLSIcon
+} from '../../assets/Icons';
 
 const getFileType = (file) => {
   const type = file.type;
   const name = file.name.toLowerCase();
 
-  if (type.startsWith('image/')) return 'image';
-  if (type === 'application/pdf') return 'pdf';
-  if (type.includes('word') || name.endsWith('.doc') || name.endsWith('.docx')) return 'document';
-  if (type.includes('excel') || type.includes('sheet') || name.endsWith('.xls') || name.endsWith('.xlsx')) return 'spreadsheet';
-  if (type.includes('powerpoint') || type.includes('presentation') || name.endsWith('.ppt') || name.endsWith('.pptx')) return 'presentation';
+  if (type.startsWith('image/'))
+    return 'image';
+  if (type === 'application/pdf')
+    return 'pdf';
+  if (
+    type.includes('word') ||
+    name.endsWith('.doc') ||
+    name.endsWith('.docx')
+  )
+    return 'document';
+  if (
+    type.includes('excel') ||
+    type.includes('sheet') ||
+    name.endsWith('.xls') ||
+    name.endsWith('.xlsx')
+  )
+    return 'spreadsheet';
+  if (
+    type.includes('powerpoint') ||
+    type.includes('presentation') ||
+    name.endsWith('.ppt') ||
+    name.endsWith('.pptx')
+  )
+    return 'presentation';
 
   const codeExtensions = ['.html', '.css', '.js', '.jsx', '.ts', '.tsx', '.json', '.xml',
     '.py', '.java', '.c', '.cpp', '.php', '.rb', '.go', '.rs',
@@ -29,54 +49,38 @@ const getFileType = (file) => {
 const getFileIcon = (fileType) => {
   switch (fileType) {
     case 'pdf':
-      return (
-        <svg className="w-20 h-20 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-          <path d="M14 2v6h6M9 13h6M9 17h6m-6-8h4" />
-        </svg>
-      );
+      return <PDFIcon className="w-20 h-20 text-red-500" />;
     case 'document':
-      return (
-        <svg className="w-20 h-20 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-          <path d="M14 2v6h6M9 13h6M9 17h6" />
-        </svg>
-      );
+      return <DocIcon className="w-20 h-20 text-blue-500" />;
     case 'spreadsheet':
-      return (
-        <svg className="w-20 h-20 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-          <path d="M14 2v6h6M9 9h6v3H9zM9 15h6v3H9z" />
-        </svg>
-      );
+      return <XLSIcon className="w-20 h-20 text-green-500" />;
     case 'presentation':
-      return (
-        <svg className="w-20 h-20 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-          <path d="M14 2v6h6M10 12l4 3-4 3v-6z" />
-        </svg>
-      );
+      return <PPTIcon className="w-20 h-20 text-orange-500" />;
     case 'code':
-      return (
-        <svg className="w-20 h-20 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-        </svg>
-      );
+      return <CodePreviewIcon className="w-20 h-20 text-purple-500" />;
     default:
-      return (
-        <svg className="w-20 h-20 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-          <path d="M14 2v6h6" />
-        </svg>
-      );
+      return <DefaultFileIcon className="w-20 h-20 text-gray-500" />;
   }
 };
 
-const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
-  if (!previewData) return null;
 
-  const { file, url } = previewData;
-  const fileType = getFileType(file);
+const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
+  const { t } = useTranslation();
+
+  const { file, url } = previewData || {};
+
+  const formatFileSize = useCallback((bytes) => {
+    if (!bytes) return `0 ${t('filePreview.size.bytes', 'Bytes')}`;
+    const k = 1024;
+    const sizes = [
+      t('filePreview.size.bytes', 'Bytes'),
+      t('filePreview.size.kb', 'KB'),
+      t('filePreview.size.mb', 'MB'),
+      t('filePreview.size.gb', 'GB')
+    ];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }, [t]);
 
   useEffect(() => {
     return () => {
@@ -84,15 +88,40 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
     };
   }, [url]);
 
+  if (!previewData) {
+    return null;
+  }
+
+  const fileType = getFileType(file);
+
   const getFileExtension = (filename) => {
     return filename.slice(filename.lastIndexOf('.')).toUpperCase().slice(1);
+  };
+
+  const getTranslatedFileType = (type) => {
+    switch (type) {
+      case 'code':
+        return t('filePreview.types.code');
+      case 'pdf':
+        return t('filePreview.types.pdf');
+      case 'document':
+        return t('filePreview.types.document');
+      case 'spreadsheet':
+        return t('filePreview.types.spreadsheet');
+      case 'presentation':
+        return t('filePreview.types.presentation');
+      case 'image':
+        return t('filePreview.types.image');
+      default:
+        return t('filePreview.types.file');
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg text-gray-900">
         <h2 className="text-2xl font-bold mb-4">
-          {fileType === 'image' ? 'Confirmar envío de imagen' : 'Confirmar envío de archivo'}
+          {fileType === 'image' ? t('filePreview.titleImage') : t('filePreview.titleFile')}
         </h2>
 
         <div className="flex justify-center items-center my-6 bg-gray-100 rounded-lg p-4 min-h-[200px]">
@@ -116,18 +145,26 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
 
         <div className="space-y-2 text-gray-700 bg-gray-100 rounded-lg p-4">
           <div className="flex justify-between">
-            <span className="font-semibold">Nombre:</span>
+            <span className="font-semibold">
+              {t('filePreview.fileName')}
+            </span>
             <span className="text-right truncate ml-2 max-w-[250px]" title={file.name}>
               {file.name}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="font-semibold">Tamaño:</span>
+            <span className="font-semibold">
+              {t('filePreview.fileSize')}
+            </span>
             <span>{formatFileSize(file.size)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="font-semibold">Tipo:</span>
-            <span className="capitalize">{fileType === 'code' ? 'Código' : fileType}</span>
+            <span className="font-semibold">
+              {t('filePreview.fileType')}
+            </span>
+            <span className="capitalize">
+              {getTranslatedFileType(fileType)}
+            </span>
           </div>
         </div>
 
@@ -137,14 +174,14 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
             onClick={onClose}
             className="px-6 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-lg font-semibold transition-colors"
           >
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button
             type="button"
             onClick={() => onConfirm(file)}
             className="px-6 py-2 bg-[#3B82F6] text-white hover:bg-blue-700 rounded-lg font-semibold transition-colors"
           >
-            Enviar
+            {t('filePreview.send')}
           </button>
         </div>
       </div>

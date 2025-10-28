@@ -1,6 +1,9 @@
 // src/components/auth/AuthLayout.jsx
+import { useTranslation } from 'react-i18next';
 
 const AuthLayout = ({ title, subtitle, children }) => {
+  const { t } = useTranslation();
+
   return (
     <div 
       className='flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4 sm:p-6'
@@ -8,7 +11,7 @@ const AuthLayout = ({ title, subtitle, children }) => {
       <div className="mb-8 text-center">
         <img 
           src="/rendezvous.svg"
-          alt="Logo" 
+          alt={t('common.logoAlt')}
           className="mx-auto h-16 w-auto mb-4" 
         />
 

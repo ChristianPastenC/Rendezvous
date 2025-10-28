@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -14,9 +15,9 @@ import AuthForm from '../components/auth/AuthForm';
 import { useNavigate } from 'react-router';
 
 const passwordRegex = /.{8,}/;
-const passwordRequirements = 'La contraseña debe tener al menos 8 caracteres.';
 
 const AuthenticationPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isLoginView, setIsLoginView] = useState(true);
   const [displayName, setDisplayName] = useState('');
@@ -36,7 +37,7 @@ const AuthenticationPage = () => {
           navigate('/');
         } catch (error) {
           console.error('Error sincronizando usuario:', error);
-          setError('Error al sincronizar datos del usuario');
+          setError(t('pages.auth.errors.syncFailed'));
         }
       } else {
         setCurrentUser(null);
@@ -45,7 +46,7 @@ const AuthenticationPage = () => {
     });
 
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate, t]);
 
   const handleEmailPasswordSubmit = async (e) => {
     e.preventDefault();
@@ -53,15 +54,15 @@ const AuthenticationPage = () => {
 
     if (!isLoginView) {
       if (!displayName.trim()) {
-        setError('Por favor, ingresa tu nombre.');
+        setError(t('pages.auth.errors.nameRequired'));
         return;
       }
       if (password !== confirmPassword) {
-        setError('Las contraseñas no coinciden.');
+        setError(t('pages.auth.errors.passwordMismatch'));
         return;
       }
       if (!passwordRegex.test(password)) {
-        setError(passwordRequirements);
+        setError(t('pages.auth.errors.passwordRequirements'));
         return;
       }
     }
@@ -79,17 +80,18 @@ const AuthenticationPage = () => {
     } catch (firebaseError) {
       console.error(`Error durante ${isLoginView ? 'el inicio de sesión' : 'el registro'}:`, firebaseError);
 
-      const errorMessages = {
-        'auth/user-not-found': 'Usuario no encontrado.',
-        'auth/wrong-password': 'Contraseña incorrecta.',
-        'auth/email-already-in-use': 'Este correo ya está registrado.',
-        'auth/weak-password': 'La contraseña es muy débil.',
-        'auth/invalid-email': 'Correo electrónico inválido.',
-        'auth/invalid-credential': 'Credenciales inválidas.',
-        'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde.'
+      const errorKeyMap = {
+        'auth/user-not-found': 'pages.auth.errors.userNotFound',
+        'auth/wrong-password': 'pages.auth.errors.wrongPassword',
+        'auth/email-already-in-use': 'pages.auth.errors.emailInUse',
+        'auth/weak-password': 'pages.auth.errors.weakPassword',
+        'auth/invalid-email': 'pages.auth.errors.invalidEmail',
+        'auth/invalid-credential': 'pages.auth.errors.invalidCredential',
+        'auth/too-many-requests': 'pages.auth.errors.tooManyRequests'
       };
 
-      setError(errorMessages[firebaseError.code] || firebaseError.message);
+      const errorKey = errorKeyMap[firebaseError.code];
+      setError(errorKey ? t(errorKey) : firebaseError.message);
     }
   };
 
@@ -106,14 +108,15 @@ const AuthenticationPage = () => {
     } catch (error) {
       console.error('Error durante el inicio de sesión con Google:', error);
 
-      const errorMessages = {
-        'auth/popup-closed-by-user': 'Inicio de sesión cancelado.',
-        'auth/cancelled-popup-request': 'Operación cancelada.',
-        'auth/popup-blocked': 'Popup bloqueado por el navegador. Permite popups para este sitio.',
-        'auth/account-exists-with-different-credential': 'Ya existe una cuenta con este correo.'
+      const errorKeyMap = {
+        'auth/popup-closed-by-user': 'pages.auth.errors.popupClosed',
+        'auth/cancelled-popup-request': 'pages.auth.errors.popupCancelled',
+        'auth/popup-blocked': 'pages.auth.errors.popupBlocked',
+        'auth/account-exists-with-different-credential': 'pages.auth.errors.accountExists'
       };
 
-      setError(errorMessages[error.code] || error.message);
+      const errorKey = errorKeyMap[error.code];
+      setError(errorKey ? t(errorKey) : error.message);
     }
   };
 
@@ -126,12 +129,17 @@ const AuthenticationPage = () => {
     setConfirmPassword('');
   };
 
-  const pageTitle = isLoginView ? 'Inicia sesión en tu cuenta' : 'Crea una nueva cuenta';
-  const pageSubtitle = isLoginView ? 'Bienvenido de nuevo' : 'Regístrate para empezar';
+  const pageTitle = isLoginView
+    ? t('pages.auth.titleLogin')
+    : t('pages.auth.titleRegister');
+
+  const pageSubtitle = isLoginView
+    ? t('pages.auth.subtitleLogin')
+    : t('pages.auth.subtitleRegister');
 
   if (loading) {
     return (
-      <AuthLayout title="Cargando...">
+      <AuthLayout title={t('pages.auth.loading')}>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>

@@ -1,0 +1,298 @@
+{
+  "auth": {
+    "divider": "O",
+    "googleLogin": "Continuar con Google",
+    "promptRegister": "¿No tienes una cuenta?",
+    "promptLogin": "¿Ya tienes una cuenta?",
+    "registerLink": "Regístrate",
+    "loginLink": "Inicia sesión",
+    "emailLabel": "Correo Electrónico",
+    "emailPlaceholder": "nombre@tu-email.com",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "Tu contraseña",
+    "login": {
+      "submitButton": "Iniciar Sesión"
+    },
+    "register": {
+      "displayNameLabel": "Nombre",
+      "displayNamePlaceholder": "Tu Nombre Completo",
+      "confirmPasswordLabel": "Confirmar Contraseña",
+      "confirmPasswordPlaceholder": "Confirma tu contraseña",
+      "submitButton": "Registrarse"
+    }
+  },
+  "profileModal": {
+    "title": "Editar Perfil",
+    "closeButtonTitle": "Cerrar",
+    "changeAvatarTitle": "Cambiar foto de perfil",
+    "displayNameLabel": "Nombre de usuario",
+    "displayNamePlaceholder": "Escribe tu nombre",
+    "cancelButton": "Cancelar",
+    "saveButton": {
+      "default": "Guardar Cambios",
+      "uploading": "Subiendo...",
+      "saving": "Guardando..."
+    },
+    "signOutButton": "Cerrar Sesión",
+    "dangerZone": {
+      "title": "Zona de Peligro",
+      "warning": "La eliminación de tu cuenta es una acción permanente y no se puede deshacer.",
+      "deleteButton": "Eliminar mi cuenta"
+    },
+    "error": {
+      "imageSize": "La imagen es muy grande (máx 2MB).",
+      "updateFailed": "No se pudo actualizar el perfil."
+    }
+  },
+  "searchModal": {
+    "title": "Iniciar nueva conversación",
+    "subtitle": "Busca un usuario para chatear.",
+    "closeButton": "Cerrar"
+  },
+  "userSearch": {
+    "placeholder": "Buscar usuarios por email...",
+    "loading": "Buscando...",
+    "error": {
+      "minLength": "La búsqueda requiere al menos 3 caracteres.",
+      "fetchFailed": "Error al buscar usuarios.",
+      "noResults": "No se encontraron usuarios."
+    }
+  },
+  "common": {
+    "password": {
+      "ariaShow": "Mostrar contraseña",
+      "ariaHide": "Ocultar contraseña"
+    },
+    "avatar": {
+      "defaultTitle": "Usuario",
+      "defaultAlt": "Avatar"
+    },
+    "logoAlt": "Logo",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "call": "Llamar",
+    "loading": "Cargando...",
+    "user": "Usuario",
+    "add": "Añadir",
+    "back": "Atrás"
+  },
+  "messages": {
+    "you": "Tú",
+    "user": "Usuario",
+    "noPermission": "[No tienes permiso para ver este mensaje]",
+    "decryptionError": "[Error al descifrar]",
+    "corrupt": "[Mensaje corrupto]",
+    "imageAlt": "Imagen adjunta",
+    "empty": {
+      "title": "Aún no hay mensajes",
+      "subtitle": "¡Sé el primero en enviar un saludo! 👋"
+    },
+    "preview": {
+      "youPrefix": "Tú: ",
+      "image": "Imagen",
+      "file": "Archivo",
+      "decryptionError": "[Error al descifrar]",
+      "corrupt": "[Mensaje corrupto]"
+    }
+  },
+  "calls": {
+    "typeModal": {
+      "title": "Selecciona el tipo de llamada",
+      "video": "Videollamada",
+      "audio": "Llamada de voz",
+      "cancel": "Cancelar",
+      "defaultTargetName": "Usuario"
+    },
+    "incoming": {
+      "title": "Llamada entrante",
+      "video": "Videollamada",
+      "audio": "Llamada de voz",
+      "reject": "Rechazar",
+      "accept": "Aceptar"
+    },
+    "outgoing": {
+      "calling": "Llamando...",
+      "ringing": "Tono...",
+      "defaultName": "Usuario",
+      "cancel": "Cancelar"
+    },
+    "video": {
+      "ended": "Llamada terminada",
+      "remoteCameraOff": "Cámara apagada",
+      "inAudioCall": "En llamada de voz",
+      "connecting": "Conectando...",
+      "unmute": "Activar micrófono",
+      "mute": "Silenciar",
+      "videoOn": "Activar cámara",
+      "videoOff": "Desactivar cámara",
+      "hangUp": "Colgar"
+    }
+  },
+  "fileInput": {
+    "placeholder": "Escribe un mensaje... (usa :) para emojis)",
+    "sendTitle": "Enviar mensaje",
+    "attachTitle": "Adjuntar archivo",
+    "emojiTitle": "Añadir emoji",
+    "attachMenu": {
+      "image": "Enviar Imagen",
+      "document": "Enviar Documento",
+      "code": "Enviar Código"
+    },
+    "emoji": {
+      "search": "Buscar emoji..."
+    },
+    "error": {
+      "fileSize": "El archivo es demasiado grande (Máx: {size} MB).",
+      "fileType": "Tipo de archivo no permitido. Se permiten imágenes, documentos y archivos de desarrollo."
+    },
+    "uploadProgress": "Subiendo archivo: {progress}%"
+  },
+  "filePreview": {
+    "titleImage": "Confirmar envío de imagen",
+    "titleFile": "Confirmar envío de archivo",
+    "fileName": "Nombre:",
+    "fileSize": "Tamaño:",
+    "fileType": "Tipo:",
+    "types": {
+      "code": "Código",
+      "image": "Imagen",
+      "pdf": "PDF",
+      "document": "Documento",
+      "spreadsheet": "Hoja de cálculo",
+      "presentation": "Presentación",
+      "file": "Archivo"
+    },
+    "size": {
+      "bytes": "Bytes",
+      "kb": "KB",
+      "mb": "MB",
+      "gb": "GB"
+    },
+    "cancel": "Cancelar",
+    "send": "Enviar"
+  },
+  "status": {
+    "online": "Conectado",
+    "offlinePrefix": "Últ. vez"
+  },
+  "layout": {
+    "main": {
+      "signOutSuccess": "Usuario cerró sesión exitosamente.",
+      "signOutError": "Error al cerrar sesión:",
+      "createGroupError": "Error al crear el grupo.",
+      "deleteConfirm": "¿Estás seguro de que quieres eliminar tu cuenta permanentemente? Esta acción no se puede deshacer.",
+      "deleteSuccess": "Tu cuenta ha sido eliminada exitosamente.",
+      "deleteError": "Error al eliminar la cuenta:",
+      "deleteNetworkError": "Ocurrió un error de red. Inténtalo de nuevo."
+    },
+    "mobileNav": {
+      "chats": "Chats",
+      "search": "Buscar",
+      "createGroupTitle": "Crear Grupo",
+      "createGroup": "Grupo",
+      "profile": "Perfil"
+    }
+  },
+  "sidebar": {
+    "title": "Conversaciones",
+    "filters": {
+      "all": "Todos",
+      "dms": "Directos",
+      "groups": "Grupos"
+    },
+    "createGroup": "Crear Grupo",
+    "editProfile": "Editar Perfil"
+  },
+  "header": {
+    "prompt": "Selecciona una conversación",
+    "viewMembers": "Ver Miembros"
+  },
+  "members": {
+    "title": "Miembros",
+    "addMember": "Añadir Miembro",
+    "modalTitle": "Miembros del Grupo"
+  },
+  "modals": {
+    "createGroup": {
+      "title": "Crear un Nuevo Grupo",
+      "label": "Nombre del Grupo",
+      "placeholder": "Ej: Nuevo Grupo",
+      "submit": "Crear Grupo"
+    },
+    "addMember": {
+      "title": "Añadir Miembro",
+      "subtitle": "Busca a un usuario para añadirlo al grupo.",
+      "confirmPrompt": {
+        "start": "¿Añadir a",
+        "end": "al grupo?"
+      },
+      "adding": "Añadiendo...",
+      "errorDefault": "No se pudo añadir al usuario."
+    }
+  },
+  "hooks": {
+    "useWebRTC": {
+      "fallbackUserName": "Usuario"
+    },
+    "useSocketManager": {
+      "securityAlert": {
+        "title": "Error de Seguridad",
+        "instruction": "Por favor, recarga la página e intenta nuevamente."
+      }
+    },
+    "useConversationsData": {
+      "loadMembersError": "Error al cargar miembros"
+    },
+    "useSendMessages": {
+      "sendEncryptedError": "Error: No se pudo enviar el mensaje cifrado.",
+      "uploadError": "Error al subir el archivo."
+    }
+  },
+  "notifications": {
+    "defaultTitle": "Nuevo Mensaje",
+    "imageBody": "Te enviaron una imagen",
+    "fileBody": "Te enviaron un archivo",
+    "defaultBody": "Nuevo mensaje"
+  },
+  "time": {
+    "longAgo": "hace mucho tiempo",
+    "justNow": "hace unos segundos",
+    "minuteAgo": "hace 1 minuto",
+    "minutesAgo": "hace {count} minutos",
+    "hourAgo": "hace 1 hora",
+    "hoursAgo": "hace {count} horas",
+    "daysAgo": "hace {count} días",
+    "lastSeenYesterday": "ayer",
+    "timestampYesterday": "Ayer"
+  },
+  "pages": {
+    "home": {
+      "loadingMessages": "Cargando mensajes...",
+      "emptyPrompt": "Selecciona una conversación para empezar"
+    },
+    "auth": {
+      "titleLogin": "Inicia sesión en tu cuenta",
+      "titleRegister": "Crea una nueva cuenta",
+      "subtitleLogin": "Bienvenido de nuevo",
+      "subtitleRegister": "Regístrate para empezar",
+      "loading": "Cargando...",
+      "errors": {
+        "syncFailed": "Error al sincronizar datos del usuario",
+        "nameRequired": "Por favor, ingresa tu nombre.",
+        "passwordMismatch": "Las contraseñas no coinciden.",
+        "passwordRequirements": "La contraseña debe tener al menos 8 caracteres.",
+        "userNotFound": "Usuario no encontrado.",
+        "wrongPassword": "Contraseña incorrecta.",
+        "emailInUse": "Este correo ya está registrado.",
+        "weakPassword": "La contraseña es muy débil.",
+        "invalidEmail": "Correo electrónico inválido.",
+        "invalidCredential": "Credenciales inválidas.",
+        "tooManyRequests": "Demasiados intentos. Intenta más tarde.",
+        "popupClosed": "Inicio de sesión cancelado.",
+        "popupCancelled": "Operación cancelada.",
+        "popupBlocked": "Popup bloqueado por el navegador. Permite popups para este sitio.",
+        "accountExists": "Ya existe una cuenta con este correo."
+      }
+    }
+  }
+}

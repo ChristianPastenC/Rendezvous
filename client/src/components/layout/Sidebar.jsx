@@ -1,5 +1,6 @@
 // src/components/layout/Sidebar.jsx
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import UserSearch from '../dms/UserSearch';
 import { PlusIcon, SettingIcon } from '../../assets/Icons';
 import { formatLastSeen } from '../../utils/lastSeen';
@@ -16,6 +17,7 @@ const Sidebar = ({
   onStartConversation,
   onEditProfile
 }) => {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
 
   const filteredConversations = conversations.filter(conv => {
@@ -31,12 +33,12 @@ const Sidebar = ({
     >
       <img
         src="/rendezvous.svg"
-        alt="Logo"
+        alt={t('common.logoAlt')}
         className="mx-auto h-12 w-auto my-2"
       />
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-bold text-2xl text-gray-900 mb-4">
-          Conversaciones
+          {t('sidebar.title')}
         </h2>
 
         <div className="flex gap-2 mb-4">
@@ -47,7 +49,7 @@ const Sidebar = ({
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
           >
-            Todos
+            {t('sidebar.filters.all')}
           </button>
           <button
             onClick={() => setFilter('dms')}
@@ -56,7 +58,7 @@ const Sidebar = ({
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
           >
-            Directos
+            {t('sidebar.filters.dms')}
           </button>
           <button
             onClick={() => setFilter('groups')}
@@ -65,7 +67,7 @@ const Sidebar = ({
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
           >
-            Grupos
+            {t('sidebar.filters.groups')}
           </button>
         </div>
         <UserSearch onSelectUser={onStartConversation} />
@@ -99,8 +101,8 @@ const Sidebar = ({
                     }`}
                   title={
                     conv.userData.status === 'online'
-                      ? 'Conectado'
-                      : `Últ. vez: ${formatLastSeen(conv.userData.lastSeen)}`
+                      ? t('status.online')
+                      : `${t('status.offlinePrefix')}: ${formatLastSeen(conv.userData.lastSeen, t)}`
                   }
                 />
               )}
@@ -114,7 +116,7 @@ const Sidebar = ({
                 </span>
                 <span className={`text-xs flex-shrink-0 ml-2 ${selectedId === conv.id ? 'text-blue-200' : 'text-gray-400'
                   }`}>
-                  {conv.lastMessage ? formatMessageTimestamp(conv.lastMessage.createdAt) : ''}
+                  {conv.lastMessage ? formatMessageTimestamp(conv.lastMessage.createdAt, t) : ''}
                 </span>
               </div>
 
@@ -135,7 +137,7 @@ const Sidebar = ({
           className="w-full p-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 font-semibold text-white text-base"
         >
           <PlusIcon className="w-5 h-5" />
-          <span>Crear Grupo</span>
+          <span>{t('sidebar.createGroup')}</span>
         </button>
       </div>
 
@@ -144,7 +146,7 @@ const Sidebar = ({
           <button
             onClick={onEditProfile}
             className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            title="Editar Perfil"
+            title={t('sidebar.editProfile')}
           >
             <div className="flex-shrink-0">
               {currentUser.photoURL ? (
@@ -164,7 +166,7 @@ const Sidebar = ({
 
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-semibold text-gray-800 truncate">
-                {currentUser.displayName || 'Usuario'}
+                {currentUser.displayName || t('common.user')}
               </p>
               <p
                 className="text-xs text-gray-500 truncate"

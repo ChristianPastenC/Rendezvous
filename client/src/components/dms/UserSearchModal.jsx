@@ -1,9 +1,10 @@
 // src/components/dms/UserSearchModal.jsx
-
-import React from 'react';
+import { useTranslation } from 'react-i18next';
 import UserSearch from './UserSearch';
 
 const UserSearchModal = ({ isOpen, onClose, onSelectUser }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
@@ -17,10 +18,10 @@ const UserSearchModal = ({ isOpen, onClose, onSelectUser }) => {
       >
         <div className="p-4 border-b">
           <h2 className="text-lg font-semibold text-gray-800">
-            Iniciar nueva conversación
+            {t('searchModal.title')}
           </h2>
           <p className="text-sm text-gray-600">
-            Busca un usuario para chatear.
+            {t('searchModal.subtitle')}
           </p>
         </div>
         <div className="p-4">
@@ -31,7 +32,7 @@ const UserSearchModal = ({ isOpen, onClose, onSelectUser }) => {
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
           >
-            Cerrar
+            {t('searchModal.closeButton')}
           </button>
         </div>
       </div>

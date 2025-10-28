@@ -1,7 +1,10 @@
 import MembersListContent from "./MembersListContent";
 import { BackArrowIcon } from "../../assets/Icons";
+import { useTranslation } from "react-i18next";
 
 const MembersModal = ({ isOpen, onClose, ...props }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
@@ -19,7 +22,7 @@ const MembersModal = ({ isOpen, onClose, ...props }) => {
           <BackArrowIcon className="w-6 h-6" />
         </button>
         <h2 className="font-semibold text-lg text-gray-900">
-          Miembros del Grupo
+          {t('members.modalTitle')}
         </h2>
       </header>
       <div className="flex-1 overflow-y-auto p-4

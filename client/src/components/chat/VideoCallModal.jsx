@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HangUpIcon, MicOffIcon, MicOnIcon, SpinnerIcon, UserIcon, VideoOnIcon, VideoOffIcon } from '../../assets/Icons';
 
 const VideoCallModal = ({ localStream, remoteStream, onHangUp, callType = 'video', callState }) => {
+  const { t } = useTranslation();
+
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
@@ -64,7 +67,7 @@ const VideoCallModal = ({ localStream, remoteStream, onHangUp, callType = 'video
     return (
       <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
         <div className="text-white text-2xl font-semibold p-8 rounded-lg">
-          Llamada terminada
+          {t('calls.video.ended')}
         </div>
       </div>
     );
@@ -87,19 +90,19 @@ const VideoCallModal = ({ localStream, remoteStream, onHangUp, callType = 'video
             <div className="w-32 h-32 mb-5 rounded-full bg-neutral-800 flex items-center justify-center">
               <UserIcon className="w-16 h-16 text-neutral-500" />
             </div>
-            <p className="text-xl font-medium">Cámara apagada</p>
+            <p className="text-xl font-medium">{t('calls.video.remoteCameraOff')}</p>
           </div>
         ) : callType === 'audio' ? (
           <div className="flex flex-col items-center text-white">
             <div className="w-32 h-32 mb-5 rounded-full bg-neutral-800 flex items-center justify-center">
               <UserIcon className="w-16 h-16 text-neutral-400" />
             </div>
-            <p className="text-xl font-medium">En llamada de voz</p>
+            <p className="text-xl font-medium">{t('calls.video.inAudioCall')}</p>
           </div>
         ) : (
           <div className="flex flex-col items-center text-neutral-400">
             <SpinnerIcon className="w-12 h-12 animate-spin text-neutral-300 mb-4" />
-            <p className="text-lg">Conectando...</p>
+            <p className="text-lg">{t('calls.video.connecting')}</p>
           </div>
         )}
       </div>
@@ -129,7 +132,7 @@ const VideoCallModal = ({ localStream, remoteStream, onHangUp, callType = 'video
             ? 'bg-red-600 hover:bg-red-700'
             : 'bg-neutral-700 hover:bg-neutral-600'
             }`}
-          title={isMuted ? 'Activar micrófono' : 'Silenciar'}
+          title={isMuted ? t('calls.video.unmute') : t('calls.video.mute')}
         >
           {isMuted ? (
             <MicOffIcon className="w-6 h-6 text-white" />
@@ -145,7 +148,7 @@ const VideoCallModal = ({ localStream, remoteStream, onHangUp, callType = 'video
               ? 'bg-red-600 hover:bg-red-700'
               : 'bg-neutral-700 hover:bg-neutral-600'
               }`}
-            title={isVideoOff ? 'Activar cámara' : 'Desactivar cámara'}
+            title={isVideoOff ? t('calls.video.videoOn') : t('calls.video.videoOff')}
           >
             {isVideoOff ? (
               <VideoOffIcon className="w-6 h-6 text-white" />
@@ -158,7 +161,7 @@ const VideoCallModal = ({ localStream, remoteStream, onHangUp, callType = 'video
         <button
           onClick={onHangUp}
           className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
-          title="Colgar"
+          title={t('calls.video.hangUp')}
         >
           <HangUpIcon className="w-6 h-6 text-white" />
         </button>

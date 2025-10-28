@@ -5,18 +5,22 @@ import { isFileTypeAllowed, ALLOWED_IMAGE_TYPES, ALLOWED_DOC_TYPES, ALLOWED_DEV_
 import { useSendMessage } from '../../hooks/useSendMessages';
 import { useEmojiInput } from '../../hooks/useEmojiInput';
 import FilePreviewModal from './FilePreviewModal';
+import { useTranslation } from 'react-i18next';
 
 const MAX_FILE_SIZE_MB = 5;
 
-const AttachMenu = ({ onAttachClick, attachMenuRef }) => (
-  <div ref={attachMenuRef} className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-300">
+const AttachMenu = ({ t, onAttachClick, attachMenuRef }) => (
+  <div 
+    ref={attachMenuRef} 
+    className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-300"
+  >
 
     <button
       onClick={() => onAttachClick('image')}
       className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3"
     >
       <ImageIcon className="w-5 h-5 text-gray-500" />
-      Enviar Imagen
+      {t('fileInput.attachMenu.image')}
     </button>
 
     <button
@@ -24,7 +28,7 @@ const AttachMenu = ({ onAttachClick, attachMenuRef }) => (
       className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3"
     >
       <DocumentIcon className="w-5 h-5 text-gray-500" />  
-      Enviar Documento
+      {t('fileInput.attachMenu.document')}
     </button>
 
     <button
@@ -32,12 +36,14 @@ const AttachMenu = ({ onAttachClick, attachMenuRef }) => (
       className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3"
     >
       <CodeIcon className="w-5 h-5 text-gray-500" />      
-      Enviar Código
+      {t('fileInput.attachMenu.code')}
     </button>
   </div>
 );
 
 const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, members }) => {
+  const { t } = useTranslation();
+
   const { sending, uploadProgress, sendTextMessage, sendFileMessage } = useSendMessage(
     socket,
     isDirectMessage,
@@ -85,13 +91,13 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     if (!file) return;
 
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      alert(`El archivo es demasiado grande (Máx: ${MAX_FILE_SIZE_MB} MB).`);
+      alert(t('fileInput.error.fileSize', { size: MAX_FILE_SIZE_MB }));
       e.target.value = '';
       return;
     }
 
     if (!isFileTypeAllowed(file)) {
-      alert('Tipo de archivo no permitido. Se permiten imágenes, documentos y archivos de desarrollo.');
+      alert(t('fileInput.error.fileType'));
       e.target.value = '';
       return;
     }
@@ -99,7 +105,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     const previewUrl = URL.createObjectURL(file);
     setPreviewData({ file, url: previewUrl });
     e.target.value = '';
-  }, []);
+  }, [t]);
 
   const handleConfirmUpload = useCallback(async (file) => {
     setPreviewData(null);
@@ -134,7 +140,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
               onEmojiClick={handleEmojiClick}
               theme="light"
               emojiStyle="native"
-              searchPlaceholder="Buscar emoji..."
+              searchPlaceholder={t('fileInput.emoji.search')}
               previewConfig={{ showPreview: false }}
             />
           </div>
@@ -142,6 +148,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
 
         {showAttachMenu && (
           <AttachMenu
+            t={t}
             onAttachClick={handleAttachClick}
             attachMenuRef={attachMenuRef}
           />
@@ -160,7 +167,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
             onClick={() => setShowAttachMenu(!showAttachMenu)}
             disabled={sending}
             className="p-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 transition-colors"
-            title="Adjuntar archivo"
+            title={t('fileInput.attachTitle')}
           >
             <PlusIcon className="w-6 h-6" />
           </button>
@@ -171,7 +178,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
               type="text"
               value={content}
               onChange={handleInputChange}
-              placeholder="Escribe un mensaje... (usa :) para emojis)"
+              placeholder={t('fileInput.placeholder')}
               className="w-full bg-gray-100 text-gray-900 p-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={sending}
             />
@@ -179,7 +186,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
               type="button"
               onClick={toggleEmojiPicker}
               className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-200 transition-colors"
-              title="Añadir emoji"
+              title={t('fileInput.emojiTitle')}
             >
               <EmojiIcon className="w-6 h-6 text-gray-600" />
             </button>
@@ -189,7 +196,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
             type="submit"
             disabled={!content.trim() || sending}
             className="p-3 rounded-lg bg-[#3B82F6] text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
-            title="Enviar mensaje"
+            title={t('fileInput.sendTitle')}
           >
             <SendIcon className="w-6 h-6" />
           </button>
@@ -203,7 +210,9 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">Subiendo archivo: {Math.round(uploadProgress)}%</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {t('fileInput.uploadProgress', { progress: Math.round(uploadProgress) })}
+            </p>
           </div>
         )}
       </div>
