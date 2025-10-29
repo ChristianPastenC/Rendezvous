@@ -32,6 +32,7 @@ export const useWebRTC = (socket, currentUser) => {
   const webrtcRef = useRef(null);
   const remoteUserIdRef = useRef(null);
   const callEndedTimerRef = useRef(null);
+  const pendingOfferRef = useRef(null);
 
   // Refs to hold the latest state values to avoid stale closures in callbacks.
   const inCallRef = useRef(inCall);
@@ -58,6 +59,7 @@ export const useWebRTC = (socket, currentUser) => {
     setRemoteStream(null);
     setIncomingCallData(null);
     remoteUserIdRef.current = null;
+    pendingOfferRef.current = null;
     if (callEndedTimerRef.current) {
       clearTimeout(callEndedTimerRef.current);
       callEndedTimerRef.current = null;
@@ -83,22 +85,22 @@ export const useWebRTC = (socket, currentUser) => {
 
       playSound('incomingCall');
 
+      // Store the offer data without requesting media permissions yet
       setCallState('incoming');
       setIncomingCallData({ from, offer, callType, callerName });
+      pendingOfferRef.current = { from, offer, callType };
     };
 
     webrtcService.onCallRinging = (from) => {
       if (remoteUserIdRef.current === from) {
-
         playSound('outgoingCall');
-      
         setCallState('ringing');
       }
     };
 
     webrtcService.onRemoteStream = (stream) => {
       stopSound('outgoingCall');
-      
+
       setRemoteStream(stream);
       setCallState('connected');
       setInCall(true);
@@ -114,11 +116,12 @@ export const useWebRTC = (socket, currentUser) => {
         stopSound('outgoingCall');
         playSound('callEnded');
       }
-      
+
       setCallState('ended');
       setLocalStream(null);
       setRemoteStream(null);
       setIncomingCallData(null);
+      pendingOfferRef.current = null;
 
       if (callEndedTimerRef.current) {
         clearTimeout(callEndedTimerRef.current);
@@ -145,57 +148,72 @@ export const useWebRTC = (socket, currentUser) => {
 
   /**
    * Initiates an outgoing call to a specified user.
-   * It starts the local media stream and tells the WebRTC service to create and send an offer.
+   * It requests media permissions first, then starts the local stream and creates the offer.
    * @param {string} targetUserId - The UID of the user to call.
    * @param {'video' | 'audio'} callType - The type of call to initiate.
    * @memberof useWebRTC
    */
   const startCall = useCallback(async (targetUserId, callType) => {
     if (!webrtcRef.current || inCallRef.current || callStateRef.current !== 'idle') return;
+
     try {
       setCurrentCallType(callType);
+      setCallState('calling');
+      remoteUserIdRef.current = targetUserId;
+
+      // Request media permissions
       const stream = await webrtcRef.current.startLocalStream(callType);
       setLocalStream(stream);
 
+      // After getting permissions, create and send the offer
       const callerName = currentUser?.displayName || 'Usuario';
       await webrtcRef.current.createOffer(targetUserId, callType, callerName);
 
-      setCallState('calling');
-      remoteUserIdRef.current = targetUserId;
-    } catch (e) {
+    } catch (error) {
+      console.error('Error starting call:', error);
+      // If permission denied or error, reset state
       resetCallState();
+      throw error;
     }
   }, [currentUser, resetCallState]);
 
   /**
    * Accepts an incoming call.
-   * It stops the incoming call sound, starts the local media stream,
-   * and tells the WebRTC service to create and send an answer.
+   * It stops the incoming call sound, requests media permissions,
+   * starts the local stream, and creates an answer to the pending offer.
    * @memberof useWebRTC
    */
   const acceptCall = useCallback(async () => {
-    if (!webrtcRef.current || !incomingCallData) return;
+    if (!webrtcRef.current || !incomingCallData || !pendingOfferRef.current) return;
 
     stopSound('incomingCall');
-  
+
     try {
-      const { from, offer, callType } = incomingCallData;
+      const { from, offer, callType } = pendingOfferRef.current;
 
       setCurrentCallType(callType);
+
+      // Request media permissions when user explicitly accepts the call
       const stream = await webrtcRef.current.startLocalStream(callType);
       setLocalStream(stream);
 
+      // After getting permissions, accept the call with the stored offer
       await webrtcRef.current.acceptCall(from, offer, callType);
 
       setInCall(true);
       setCallState('connected');
       remoteUserIdRef.current = from;
       setIncomingCallData(null);
-    } catch (e) {
-      if (incomingCallData) {
-        webrtcRef.current.rejectCall(incomingCallData.from);
+      pendingOfferRef.current = null;
+
+    } catch (error) {
+      console.error('Error accepting call:', error);
+      // If permission denied or error, reject the call
+      if (pendingOfferRef.current) {
+        webrtcRef.current.rejectCall(pendingOfferRef.current.from);
       }
       resetCallState();
+      throw error;
     }
   }, [incomingCallData, resetCallState]);
 
@@ -208,9 +226,13 @@ export const useWebRTC = (socket, currentUser) => {
     if (!webrtcRef.current || !incomingCallData) return;
 
     stopSound('incomingCall');
-  
-    webrtcRef.current.rejectCall(incomingCallData.from);
+
+    if (pendingOfferRef.current) {
+      webrtcRef.current.rejectCall(pendingOfferRef.current.from);
+    }
+
     setIncomingCallData(null);
+    pendingOfferRef.current = null;
     setCallState('idle');
   }, [incomingCallData]);
 

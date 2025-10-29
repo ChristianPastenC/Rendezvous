@@ -91,19 +91,22 @@ const HomePage = () => {
   return (
     <>
       <div className="flex h-full bg-gray-100">
-        <main className="flex flex-col flex-1 bg-white">
-          <MainHeader
-            selectedConversation={selectedConversation}
-            onClearSelectedConversation={onClearSelectedConversation}
-            inCall={inCall}
-            callTarget={getCallTarget()}
-            onCallClick={() => handleCallMember(getCallTarget())}
-            onMembersClick={() => setIsMembersModalOpen(true)}
-          />
+        <main className="flex flex-col flex-1 bg-white relative overflow-hidden">
+          <div className="sticky top-0 bg-white">
+            <MainHeader
+              selectedConversation={selectedConversation}
+              onClearSelectedConversation={onClearSelectedConversation}
+              inCall={inCall}
+              callTarget={getCallTarget()}
+              onCallClick={() => handleCallMember(getCallTarget())}
+              onMembersClick={() => setIsMembersModalOpen(true)}
+            />
+          </div>
+
           {selectedConversation ? (
             <>
               {isLoadingMessages ? (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="flex-1 flex items-center justify-center overflow-hidden">
                   <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-[#3B82F6] mb-3">
                     </div>
@@ -113,28 +116,32 @@ const HomePage = () => {
                   </div>
                 </div>)
                 : (<>
-                  <MessageList
-                    messages={messages}
-                    currentUserUid={currentUser?.uid}
-                  />
-                  {socket && (
-                    <MessageInput
-                      socket={socket}
-                      isDirectMessage={selectedConversation.type === 'dm'}
-                      conversationId={getCurrentConversationId()}
-                      groupId={
-                        selectedConversation.type === 'group'
-                          ? selectedConversation.groupData.id
-                          : null
-                      }
-                      members={getMembersForMessage()}
+                  <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <MessageList
+                      messages={messages}
+                      currentUserUid={currentUser?.uid}
                     />
+                  </div>
+                  {socket && (
+                    <div className="sticky bottom-0 bg-white">
+                      <MessageInput
+                        socket={socket}
+                        isDirectMessage={selectedConversation.type === 'dm'}
+                        conversationId={getCurrentConversationId()}
+                        groupId={
+                          selectedConversation.type === 'group'
+                            ? selectedConversation.groupData.id
+                            : null
+                        }
+                        members={getMembersForMessage()}
+                      />
+                    </div>
                   )}
                 </>
                 )}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center overflow-hidden">
               <div className="text-center text-gray-500">
                 <EmptyStateIcon className="w-24 h-24 mx-auto mb-4 text-gray-600" />
                 <p className="text-xl">

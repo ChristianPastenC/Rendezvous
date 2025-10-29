@@ -65,14 +65,14 @@ const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
               href={messageObject.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`mt-1.5 inline-flex items-center p-2 rounded-lg 
+              className={`mt-1 flex items-center p-2 rounded-lg justify-center 
                 ${isSender
                   ? 'bg-blue-700 hover:bg-blue-800 text-white'
-                  : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
                 }`}
             >
-              <FileIcon className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span className="truncate" title={messageObject.content}>
+              <FileIcon className="w-5 h-5 flex-shrink-0 m-1" />
+              <span className="truncate py-2" title={messageObject.content}>
                 {messageObject.content}
               </span>
             </a>
