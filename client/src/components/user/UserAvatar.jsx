@@ -40,6 +40,11 @@ const UserAvatar = ({
 
     let processedUrl = photoURL;
 
+    if (photoURL.startsWith('blob:')) {
+      setImgSrc(photoURL);
+      return;
+    }
+
     if (photoURL.includes('googleusercontent.com')) {
       processedUrl = photoURL.split('=')[0];
 
@@ -49,7 +54,7 @@ const UserAvatar = ({
       processedUrl = `${processedUrl}=s${pixelSize}-c`;
     }
 
-    if (!processedUrl.includes('?')) {
+    if (!processedUrl.includes('?') && !processedUrl.includes('firebasestorage.googleapis.com')) {
       processedUrl = `${processedUrl}?t=${Date.now()}`;
     }
 
@@ -71,7 +76,6 @@ const UserAvatar = ({
    */
   const handleLoad = () => {
     if (process.env.NODE_ENV === 'development') {
-      return ('Avatar loaded:', displayName, imgSrc);
     }
   };
 
@@ -97,6 +101,10 @@ const UserAvatar = ({
   const defaultTitle = t('common.avatar.defaultTitle', 'Usuario');
   const defaultAlt = t('common.avatar.defaultAlt', 'Avatar');
 
+  const isFirebaseStorage = imgSrc && imgSrc.includes('firebasestorage.googleapis.com');
+
+  const isGoogleUrl = imgSrc && imgSrc.includes('googleusercontent.com');
+
   if (showFallback) {
     return (
       <div
@@ -116,8 +124,10 @@ const UserAvatar = ({
       loading="lazy"
       onError={handleError}
       onLoad={handleLoad}
-      crossOrigin="anonymous"
-      referrerPolicy="no-referrer"
+      {...(isGoogleUrl && {
+        crossOrigin: "anonymous",
+        referrerPolicy: "no-referrer"
+      })}
       title={displayName || defaultTitle}
     />
   );

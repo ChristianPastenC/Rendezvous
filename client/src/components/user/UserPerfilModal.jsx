@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// client/src/components/user/UserPerfilModal.jsx
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../lib/firebase';
@@ -20,10 +21,26 @@ const ProfileEditModal = ({
 
   const [displayName, setDisplayName] = useState(currentUser.displayName || '');
   const [photoFile, setPhotoFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(currentUser.photoURL);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    if (!isOpen && previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+      setPhotoFile(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -40,8 +57,14 @@ const ProfileEditModal = ({
         setError(t('profileModal.error.imageSize'));
         return;
       }
+
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
       setPhotoFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      const blobUrl = URL.createObjectURL(file);
+      setPreviewUrl(blobUrl);
       setError('');
     }
   };
@@ -95,6 +118,10 @@ const ProfileEditModal = ({
         throw new Error(errData.error || t('profileModal.error.updateFailed'));
       }
 
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
       onProfileUpdate();
       onClose();
 
@@ -116,6 +143,8 @@ const ProfileEditModal = ({
     return t('profileModal.saveButton.default');
   };
 
+  const displayPhotoURL = previewUrl || currentUser.photoURL;
+
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -134,7 +163,7 @@ const ProfileEditModal = ({
           <div className="flex flex-col items-center space-y-6">
             <div className="relative">
               <UserAvatar
-                photoURL={previewUrl}
+                photoURL={displayPhotoURL}
                 displayName={displayName}
                 className="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
                 size="lg"
