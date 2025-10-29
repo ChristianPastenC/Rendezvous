@@ -25,7 +25,6 @@ export const syncUserWithBackend = async (user, forceRefresh = false) => {
     }
 
     const data = await response.json();
-    console.log('Usuario sincronizado con el backend:', data);
     return true;
   } catch (error) {
     return false; 

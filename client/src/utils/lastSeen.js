@@ -14,11 +14,11 @@ export const formatLastSeen = (isoString, t) => {
 
   if (diffSeconds < 60) return tr('time.justNow');
   if (diffMinutes === 1) return tr('time.minuteAgo');
-  if (diffMinutes < 60) return tr('time.minutesAgo', { count: diffMinutes });
+  if (diffMinutes < 60) return tr('time.minutesAgo').replace('{count}', diffMinutes);
   if (diffHours === 1) return tr('time.hourAgo');
-  if (diffHours < 24) return tr('time.hoursAgo', { count: diffHours });
+  if (diffHours < 24) return tr('time.hoursAgo').replace('{count}', diffHours);
   if (diffDays === 1) return tr('time.lastSeenYesterday');
-  if (diffDays < 7) return tr('time.daysAgo', { count: diffDays });
+  if (diffDays < 7) return tr('time.daysAgo').replace('{count}', diffDays);
 
   return lastSeenDate.toLocaleDateString();
 };

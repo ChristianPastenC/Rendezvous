@@ -105,8 +105,6 @@ export const useWebRTC = (socket, currentUser) => {
     };
 
     webrtcService.onCallEnded = () => {
-      console.log('Llamada terminada, mostrando mensaje...');
-
       if (callStateRef.current === 'connected' ||
         callStateRef.current === 'calling' ||
         callStateRef.current === 'ringing' ||
@@ -165,7 +163,6 @@ export const useWebRTC = (socket, currentUser) => {
       setCallState('calling');
       remoteUserIdRef.current = targetUserId;
     } catch (e) {
-      console.error("Fallo al iniciar la llamada:", e);
       resetCallState();
     }
   }, [currentUser, resetCallState]);
@@ -195,7 +192,6 @@ export const useWebRTC = (socket, currentUser) => {
       remoteUserIdRef.current = from;
       setIncomingCallData(null);
     } catch (e) {
-      console.error("Fallo al aceptar la llamada:", e);
       if (incomingCallData) {
         webrtcRef.current.rejectCall(incomingCallData.from);
       }
