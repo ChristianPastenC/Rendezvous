@@ -1,7 +1,7 @@
 // client/src/components/chat/MessageInput.jsx
 import { useState, useRef, useEffect, useCallback } from 'react';
 import EmojiPicker from 'emoji-picker-react';
-import { EmojiIcon, PlusIcon, SendIcon, ImageIcon, DocumentIcon, CodeIcon} from '../../assets/Icons';
+import { EmojiIcon, PlusIcon, SendIcon, ImageIcon, DocumentIcon, CodeIcon } from '../../assets/Icons';
 import { isFileTypeAllowed, ALLOWED_IMAGE_TYPES, ALLOWED_DOC_TYPES, ALLOWED_DEV_TYPES } from '../../utils/allowedFiles';
 import { useSendMessage } from '../../hooks/useSendMessages';
 import { useEmojiInput } from '../../hooks/useEmojiInput';
@@ -19,8 +19,8 @@ const MAX_FILE_SIZE_MB = 5;
  * @returns {JSX.Element} The rendered attachment menu.
  */
 const AttachMenu = ({ t, onAttachClick, attachMenuRef }) => (
-  <div 
-    ref={attachMenuRef} 
+  <div
+    ref={attachMenuRef}
     className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-300"
   >
 
@@ -36,7 +36,7 @@ const AttachMenu = ({ t, onAttachClick, attachMenuRef }) => (
       onClick={() => onAttachClick('document')}
       className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3"
     >
-      <DocumentIcon className="w-5 h-5 text-gray-500" />  
+      <DocumentIcon className="w-5 h-5 text-gray-500" />
       {t('fileInput.attachMenu.document')}
     </button>
 
@@ -44,7 +44,7 @@ const AttachMenu = ({ t, onAttachClick, attachMenuRef }) => (
       onClick={() => onAttachClick('code')}
       className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3"
     >
-      <CodeIcon className="w-5 h-5 text-gray-500" />      
+      <CodeIcon className="w-5 h-5 text-gray-500" />
       {t('fileInput.attachMenu.code')}
     </button>
   </div>
@@ -83,6 +83,14 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
   const attachMenuRef = useRef(null);
 
   useEffect(() => {
+    return () => {
+      if (previewData?.url && previewData.url.startsWith('blob:')) {
+        URL.revokeObjectURL(previewData.url);
+      }
+    };
+  }, [previewData]);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
         closeEmojiPicker();
@@ -117,10 +125,14 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
       return;
     }
 
+    if (previewData?.url && previewData.url.startsWith('blob:')) {
+      URL.revokeObjectURL(previewData.url);
+    }
+
     const previewUrl = URL.createObjectURL(file);
     setPreviewData({ file, url: previewUrl });
     e.target.value = '';
-  }, [t]);
+  }, [t, previewData]);
 
   /**
    * Handles the confirmation of a file upload from the preview modal.
@@ -129,14 +141,28 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
    * @returns {Promise<void>}
    */
   const handleConfirmUpload = useCallback(async (file) => {
-    setPreviewData(null);
-
     try {
       await sendFileMessage(file);
+
+      if (previewData?.url && previewData.url.startsWith('blob:')) {
+        URL.revokeObjectURL(previewData.url);
+      }
+      setPreviewData(null);
     } catch (error) {
-      throw new Error("Error en handleConfirmUpload:", error);
+      console.error("Error en handleConfirmUpload:", error);
+      alert(t('fileInput.error.uploadFailed', 'Error al subir el archivo. Por favor, intenta de nuevo.'));
     }
-  }, [sendFileMessage]);
+  }, [sendFileMessage, previewData, t]);
+
+  /**
+   * Handles closing the preview modal and cleaning up blob URLs
+   */
+  const handleClosePreview = useCallback(() => {
+    if (previewData?.url && previewData.url.startsWith('blob:')) {
+      URL.revokeObjectURL(previewData.url);
+    }
+    setPreviewData(null);
+  }, [previewData]);
 
   /**
    * Handles clicks on the attachment menu options. It sets the appropriate 'accept'
@@ -246,7 +272,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
 
       <FilePreviewModal
         previewData={previewData}
-        onClose={() => setPreviewData(null)}
+        onClose={handleClosePreview}
         onConfirm={handleConfirmUpload}
       />
     </>

@@ -1,5 +1,5 @@
 // client/src/components/chat/FilePreviewModal.jsx
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   CodePreviewIcon,
@@ -97,12 +97,6 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }, [t]);
-
-  useEffect(() => {
-    return () => {
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [url]);
 
   if (!previewData) {
     return null;
