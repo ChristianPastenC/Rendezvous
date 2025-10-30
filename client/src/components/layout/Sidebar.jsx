@@ -1,5 +1,5 @@
 // src/components/layout/Sidebar.jsx
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import UserSearch from '../user/UserSearch';
 import { PlusIcon, SettingIcon } from '../../assets/Icons';
@@ -20,12 +20,32 @@ const Sidebar = ({
   const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
 
-  const filteredConversations = conversations.filter(conv => {
-    if (filter === 'all') return true;
-    if (filter === 'dms') return conv.type === 'dm';
-    if (filter === 'groups') return conv.type === 'group';
-    return true;
-  });
+  const getLastMessageTimestamp = (conv) => {
+    if (!conv.lastMessage?.createdAt) return 0;
+
+    const createdAt = conv.lastMessage.createdAt;
+
+    if (createdAt._seconds) {
+      return createdAt._seconds * 1000;
+    }
+    if (createdAt.toDate) {
+      return createdAt.toDate().getTime();
+    }
+    return new Date(createdAt).getTime();
+  };
+
+  const filteredAndSortedConversations = useMemo(() => {
+    const filtered = conversations.filter(conv => {
+      if (filter === 'all') return true;
+      if (filter === 'dms') return conv.type === 'dm';
+      if (filter === 'groups') return conv.type === 'group';
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      return getLastMessageTimestamp(b) - getLastMessageTimestamp(a);
+    });
+  }, [conversations, filter]);
 
   return (
     <aside
@@ -75,7 +95,7 @@ const Sidebar = ({
       </div>
 
       <div className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {filteredConversations.map(conv => (
+        {filteredAndSortedConversations.map(conv => (
           <button
             key={conv.id}
             onClick={() => onSelectConversation(conv)}
@@ -126,7 +146,7 @@ const Sidebar = ({
                 isSelected={selectedId === conv.id}
               />
             </div>
-  
+
           </button>
         ))}
       </div>
