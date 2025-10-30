@@ -116,7 +116,7 @@ const HomePage = () => {
                   </div>
                 </div>)
                 : (<>
-                  <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <div className="flex-1 overflow-y-auto max-w-[100dvw]" style={{ WebkitOverflowScrolling: 'touch' }}>
                     <MessageList
                       messages={messages}
                       currentUserUid={currentUser?.uid}

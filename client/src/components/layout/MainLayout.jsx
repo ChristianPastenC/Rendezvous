@@ -21,6 +21,7 @@ import VideoCallModal from '../calls/VideoCallModal';
 import IncomingCallModal from '../calls/IncomingCallModal'
 import CallTypeModal from '../calls/CallTypeModal';
 import OutgoingCallModal from '../calls/OutgoingCallModal';
+import Footer from './Footer';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
@@ -313,7 +314,7 @@ const MainLayout = () => {
             />
           </div>
         </main>
-
+        <Footer />
         <MobileNav
           onCreateGroup={() => setIsCreateGroupModalOpen(true)}
           onEditProfile={() => setIsProfileModalOpen(true)}

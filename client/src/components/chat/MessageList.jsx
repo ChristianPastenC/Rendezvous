@@ -50,12 +50,12 @@ const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
               href={messageObject.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1"
+              className="mt-1 block"
             >
               <img
                 src={messageObject.fileUrl}
                 alt={messageObject.content || t('messages.imageAlt')}
-                className="rounded-lg max-w-full max-h-64 object-cover"
+                className="rounded-lg w-full max-w-[280px] sm:max-w-sm h-auto max-h-48 sm:max-h-64 object-cover"
               />
             </a>
           );
@@ -65,21 +65,21 @@ const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
               href={messageObject.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`mt-1 flex items-center p-2 rounded-lg justify-center 
+              className={`mt-1 flex items-center gap-2 p-2 sm:p-3 rounded-lg min-w-0
                 ${isSender
                   ? 'bg-blue-700 hover:bg-blue-800 text-white'
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
                 }`}
             >
-              <FileIcon className="w-5 h-5 flex-shrink-0 m-1" />
-              <span className="truncate py-2" title={messageObject.content}>
+              <FileIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+              <span className="truncate text-sm sm:text-base" title={messageObject.content}>
                 {messageObject.content}
               </span>
             </a>
           );
         default:
           return (
-            <p className={`text-sm font-normal leading-normal break-words
+            <p className={`text-sm sm:text-base font-normal leading-relaxed break-words
               ${isSender ? 'text-white' : 'text-gray-900 dark:text-white'}`
             }>
               {messageObject.content}
@@ -111,8 +111,8 @@ const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, i
   const displayName = isSender ? t('messages.you') : (authorInfo?.displayName || t('messages.user'));
 
   return (
-    <div className={`flex items-start gap-2.5 ${isSender ? 'self-end flex-row-reverse' : 'self-start'}`}>
-      <div className="flex-shrink-0" style={{ width: '40px' }}>
+    <div className={`flex items-start gap-2 sm:gap-2.5 ${isSender ? 'self-end flex-row-reverse' : 'self-start'}`}>
+      <div className="flex-shrink-0 w-8 sm:w-10">
         {showAvatar && (
           <UserAvatar
             photoURL={authorInfo?.photoURL}
@@ -120,24 +120,24 @@ const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, i
           />
         )}
       </div>
-      <div className="flex flex-col gap-1 w-full max-w-xs sm:max-w-sm md:max-w-md">
+      <div className={`flex flex-col gap-1 max-w-[calc(85vw-3rem)] sm:max-w-[calc(75vw-3.5rem)] lg:max-w-[calc(65vw-3.5rem)] ${isSender ? 'items-end' : 'items-start'}`}>
         {messages.map((msg, idx) => (
           <div
             key={msg.id}
-            className={`flex flex-col leading-1.5 p-4
+            className={`flex flex-col leading-1.5 p-3 sm:p-4 min-w-0 w-fit max-w-full
               ${isSender
                 ? 'bg-blue-600 rounded-s-xl rounded-ee-xl'
                 : 'bg-gray-100 dark:bg-gray-700 rounded-e-xl rounded-es-xl'
               }`}
           >
             {idx === 0 && (
-              <div className="flex items-center space-x-2 rtl:space-x-reverse mb-1">
-                <span className={`text-sm font-semibold 
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className={`text-xs sm:text-sm font-semibold truncate
                   ${isSender ? 'text-white' : 'text-gray-900 dark:text-white'}`
                 }>
                   {displayName}
                 </span>
-                <span className={`text-sm font-normal 
+                <span className={`text-xs sm:text-sm font-normal flex-shrink-0
                   ${isSender ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`
                 }>
                   {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -203,7 +203,7 @@ const MessageList = ({ messages, currentUserUid }) => {
   }, [messages]);
 
   return (
-    <div className="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col
+    <div className="flex-1 p-2 sm:p-4 overflow-y-auto space-y-2 sm:space-y-3 flex flex-col
         scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
     >
       {messages.length > 0 ? (
