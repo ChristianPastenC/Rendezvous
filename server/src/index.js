@@ -1,9 +1,11 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const cors = require("cors");
-const { socketConfig } = require("./config/socket.config");
-const { registerSocketHandlers } = require("./sockets/socketHandler");
+require('dotenv').config();
+
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+const { corsOptions, socketConfig } = require('./config/socket.config');
+const { registerSocketHandlers } = require('./sockets/socketHandler');
 
 // Import route modules
 const authRoutes = require('./routes/authRoutes');
@@ -19,8 +21,13 @@ const io = new Server(server, socketConfig);
 const userSocketMap = {};
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '1mb' }));
+
+// Health check endpoint
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 
 // Register API routes
 authRoutes(app);
@@ -33,5 +40,5 @@ registerSocketHandlers(io, userSocketMap);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`[${new Date().toLocaleTimeString()}] Servidor escuchando en ${PORT}`);
+  console.log(`[${new Date().toISOString()}] Server listening on port ${PORT}`);
 });
