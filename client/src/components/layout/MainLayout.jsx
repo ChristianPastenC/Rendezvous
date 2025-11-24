@@ -22,6 +22,7 @@ import IncomingCallModal from '../calls/IncomingCallModal'
 import CallTypeModal from '../calls/CallTypeModal';
 import OutgoingCallModal from '../calls/OutgoingCallModal';
 import Footer from './Footer';
+import SecurityPassphraseModal from '../auth/SecurityPassphraseModal';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
@@ -45,7 +46,37 @@ const MainLayout = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  const socket = useSocketManager(currentUser);
+  const [passphraseModal, setPassphraseModal] = useState({
+    isOpen: false,
+    isNewUser: false,
+    isRetry: false,
+  });
+  const passphraseResolverRef = useRef(null);
+
+  const requestPassphrase = useCallback(({ isNewUser, isRetry }) => {
+    return new Promise((resolve) => {
+      passphraseResolverRef.current = resolve;
+      setPassphraseModal({ isOpen: true, isNewUser, isRetry });
+    });
+  }, []);
+
+  const handlePassphraseSubmit = useCallback((value) => {
+    setPassphraseModal((prev) => ({ ...prev, isOpen: false }));
+    if (passphraseResolverRef.current) {
+      passphraseResolverRef.current(value);
+      passphraseResolverRef.current = null;
+    }
+  }, []);
+
+  const handlePassphraseCancel = useCallback(() => {
+    setPassphraseModal((prev) => ({ ...prev, isOpen: false }));
+    if (passphraseResolverRef.current) {
+      passphraseResolverRef.current(null);
+      passphraseResolverRef.current = null;
+    }
+  }, []);
+
+  const socket = useSocketManager(currentUser, requestPassphrase);
 
   const messagesCache = useRef({});
   const membersCache = useRef({});
@@ -375,6 +406,14 @@ const MainLayout = () => {
           callState={callState}
         />
       )}
+
+      <SecurityPassphraseModal
+        isOpen={passphraseModal.isOpen}
+        isNewUser={passphraseModal.isNewUser}
+        isRetry={passphraseModal.isRetry}
+        onSubmit={handlePassphraseSubmit}
+        onCancel={handlePassphraseCancel}
+      />
     </div>
   );
 };
