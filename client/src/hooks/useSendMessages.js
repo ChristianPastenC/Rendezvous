@@ -57,7 +57,8 @@ export const useSendMessage = (socket, isDirectMessage, conversationId, groupId,
 
       const encryptedPayload = {};
       for (const member of memberKeys) {
-        const encrypted = cryptoService.encrypt(JSON.stringify(messageObject), member.publicKey);
+        if (!member.publicKey) continue;
+        const encrypted = await cryptoService.encrypt(JSON.stringify(messageObject), member.publicKey);
         if (encrypted) encryptedPayload[member.uid] = encrypted;
       }
 
@@ -72,7 +73,7 @@ export const useSendMessage = (socket, isDirectMessage, conversationId, groupId,
       } else {
         throw new Error("El payload cifrado está vacío.");
       }
-    } catch (error) {
+    } catch {
       alert(t('hooks.useSendMessages.sendEncryptedError'));
       return false;
     } finally {

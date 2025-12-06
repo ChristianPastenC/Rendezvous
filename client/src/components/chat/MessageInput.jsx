@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import EmojiPicker from 'emoji-picker-react';
 import { EmojiIcon, PlusIcon, SendIcon, ImageIcon, DocumentIcon, CodeIcon } from '../../assets/Icons';
-import { isFileTypeAllowed, ALLOWED_IMAGE_TYPES, ALLOWED_DOC_TYPES, ALLOWED_DEV_TYPES } from '../../utils/allowedFiles';
+import { isFileTypeAllowed, ALLOWED_IMAGE_TYPES, ALLOWED_DOC_TYPES, ALLOWED_TEXT_DATA_TYPES } from '../../utils/allowedFiles';
 import { useSendMessage } from '../../hooks/useSendMessages';
 import { useEmojiInput } from '../../hooks/useEmojiInput';
 import FilePreviewModal from './FilePreviewModal';
@@ -177,7 +177,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
       } else if (type === 'document') {
         fileInputRef.current.accept = ALLOWED_DOC_TYPES.join(',');
       } else if (type === 'code') {
-        fileInputRef.current.accept = ALLOWED_DEV_TYPES.join(',') + ',.html,.css,.js,.jsx,.ts,.tsx,.json,.xml,.py,.java,.c,.cpp,.php,.rb,.go,.rs,.md,.yaml,.yml,.sh,.sql';
+        fileInputRef.current.accept = ALLOWED_TEXT_DATA_TYPES.join(',') + ',.css,.json,.xml,.py,.java,.c,.cpp,.cs,.rb,.go,.rs,.md,.yaml,.yml,.sql';
       }
       fileInputRef.current.click();
     }

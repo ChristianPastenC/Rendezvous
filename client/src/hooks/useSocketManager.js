@@ -1,64 +1,54 @@
 // src/hooks/useSocketManager.js
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { initSocket } from '../lib/socket';
 import { cryptoService } from '../lib/cryptoService';
 
 /**
- * Custom hook to manage the Socket.IO connection lifecycle for an authenticated user.
- * It initializes the socket, handles cryptographic key registration, and manages disconnection.
- * @param {object | null} currentUser - The authenticated Firebase user object. If null, any existing socket connection is disconnected.
- * @returns {import('socket.io-client').Socket | null} The initialized and connected Socket.IO client instance, or null if not connected or if the user is not authenticated.
+ * Manages the Socket.IO connection lifecycle and E2EE key initialization for the authenticated user.
+ * @param {object | null} currentUser - Authenticated Firebase user.
+ * @param {function({ isNewUser: boolean, isRetry: boolean }): Promise<string|null>} requestPassphrase
+ * @returns {import('socket.io-client').Socket | null}
  */
-export const useSocketManager = (currentUser) => {
-  const { t } = useTranslation();
+export const useSocketManager = (currentUser, requestPassphrase) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
     if (!currentUser) {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
+      setSocket((prev) => {
+        if (prev) prev.disconnect();
+        return null;
+      });
       return;
     }
 
     let socketInstance;
-    /**
-     * Asynchronously initializes the socket connection.
-     * It calls `initSocket` to get a socket instance, then generates cryptographic keys
-     * and emits an event to register the public key with the server.
-     * Handles errors, including security phrase prompts.
-     * @async
-     */
+    let isCancelled = false;
+
     const connect = async () => {
       try {
         socketInstance = await initSocket();
-        if (socketInstance) {
+        if (socketInstance && !isCancelled) {
           setSocket(socketInstance);
 
-          const { publicKey } = await cryptoService.generateAndStoreKeys();
-          socketInstance.emit('security:register-public-key', { publicKey });
+          const { publicKey } = await cryptoService.generateAndStoreKeys(requestPassphrase);
+          if (!isCancelled) {
+            socketInstance.emit('security:register-public-key', { publicKey });
+          }
         }
       } catch (error) {
-        if (error.message.includes('frase de seguridad')) {
-          alert(
-            t('hooks.useSocketManager.securityAlert.title') + '\n\n' +
-            error.message + '\n\n' +
-            t('hooks.useSocketManager.securityAlert.instruction')
-          );
-        }
+        console.error('[SocketManager] Initialization error:', error);
       }
     };
 
     connect();
 
     return () => {
+      isCancelled = true;
       if (socketInstance) {
         socketInstance.disconnect();
       }
     };
-  }, [currentUser, t]);
+  }, [currentUser, requestPassphrase]);
 
   return socket;
 };

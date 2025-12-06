@@ -2,11 +2,11 @@
 import {
   useRef,
   useEffect,
+  useMemo,
   memo,
-  useMemo
 } from "react";
 import { useTranslation } from "react-i18next";
-import { cryptoService } from "../../lib/cryptoService";
+import { useDecryptedMessage } from "../../hooks/useDecryptedMessage";
 import { EmptyStateIcon, FileIcon } from "../../assets/Icons";
 import UserAvatar from "../user/UserAvatar";
 
@@ -21,79 +21,83 @@ import UserAvatar from "../user/UserAvatar";
  * @returns {JSX.Element} The rendered message content.
  */
 const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
-  return useMemo(() => {
-    const encryptedDataForUser = msg.encryptedPayload?.[currentUserUid];
+  const encryptedDataForUser = msg.encryptedPayload?.[currentUserUid];
+  const { decryptedText, isDecrypting } = useDecryptedMessage(encryptedDataForUser);
 
-    if (!encryptedDataForUser) {
-      return (
-        <p className="text-sm font-normal text-gray-500 dark:text-gray-400 italic">
-          {t('messages.noPermission')}
-        </p>
-      );
-    }
+  if (!encryptedDataForUser) {
+    return (
+      <p className="text-sm font-normal text-gray-500 dark:text-gray-400 italic">
+        {t('messages.noPermission')}
+      </p>
+    );
+  }
 
-    const decryptedString = cryptoService.decrypt(encryptedDataForUser);
-    if (!decryptedString) {
-      return (
-        <p className="text-sm font-normal text-red-500 dark:text-red-400 italic">
-          {t('messages.decryptionError')}
-        </p>
-      );
-    }
+  if (isDecrypting) {
+    return (
+      <p className="text-sm font-normal text-gray-400 italic">...</p>
+    );
+  }
 
-    try {
-      const messageObject = JSON.parse(decryptedString);
-      switch (messageObject.type) {
-        case 'image':
-          return (
-            <a
-              href={messageObject.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 block"
-            >
-              <img
-                src={messageObject.fileUrl}
-                alt={messageObject.content || t('messages.imageAlt')}
-                className="rounded-lg w-full max-w-[280px] sm:max-w-sm h-auto max-h-48 sm:max-h-64 object-cover"
-              />
-            </a>
-          );
-        case 'file':
-          return (
-            <a
-              href={messageObject.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`mt-1 flex items-center gap-2 p-2 sm:p-3 rounded-lg min-w-0
-                ${isSender
-                  ? 'bg-blue-700 hover:bg-blue-800 text-white'
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                }`}
-            >
-              <FileIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-              <span className="truncate text-sm sm:text-base" title={messageObject.content}>
-                {messageObject.content}
-              </span>
-            </a>
-          );
-        default:
-          return (
-            <p className={`text-sm sm:text-base font-normal leading-relaxed break-words
-              ${isSender ? 'text-white' : 'text-gray-900 dark:text-white'}`
-            }>
+  if (!decryptedText) {
+    return (
+      <p className="text-sm font-normal text-red-500 dark:text-red-400 italic">
+        {t('messages.decryptionError')}
+      </p>
+    );
+  }
+
+  try {
+    const messageObject = JSON.parse(decryptedText);
+    switch (messageObject.type) {
+      case 'image':
+        return (
+          <a
+            href={messageObject.fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 block"
+          >
+            <img
+              src={messageObject.fileUrl}
+              alt={messageObject.content || t('messages.imageAlt')}
+              className="rounded-lg w-full max-w-[280px] sm:max-w-sm h-auto max-h-48 sm:max-h-64 object-cover"
+            />
+          </a>
+        );
+      case 'file':
+        return (
+          <a
+            href={messageObject.fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`mt-1 flex items-center gap-2 p-2 sm:p-3 rounded-lg min-w-0
+              ${isSender
+                ? 'bg-blue-700 hover:bg-blue-800 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+              }`}
+          >
+            <FileIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+            <span className="truncate text-sm sm:text-base" title={messageObject.content}>
               {messageObject.content}
-            </p>
-          );
-      }
-    } catch (e) {
-      return (
-        <p className="text-sm font-normal text-red-500 dark:text-red-400 italic">
-          {t('messages.corrupt')}
-        </p>
-      );
+            </span>
+          </a>
+        );
+      default:
+        return (
+          <p className={`text-sm sm:text-base font-normal leading-relaxed break-words
+            ${isSender ? 'text-white' : 'text-gray-900 dark:text-white'}`
+          }>
+            {messageObject.content}
+          </p>
+        );
     }
-  }, [msg.encryptedPayload, currentUserUid, isSender, t]);
+  } catch {
+    return (
+      <p className="text-sm font-normal text-red-500 dark:text-red-400 italic">
+        {t('messages.corrupt')}
+      </p>
+    );
+  }
 });
 
 /**

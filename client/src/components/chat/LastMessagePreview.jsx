@@ -1,10 +1,12 @@
 // client/src/components/chat/LastMessagePreview.jsx
-import { cryptoService } from "../../lib/cryptoService";
-import { FileIcon, ImageIcon } from "../../assets/Icons";
+import { FileIcon, ImageIcon } from '../../assets/Icons';
 import { useTranslation } from 'react-i18next';
+import { useDecryptedMessage } from '../../hooks/useDecryptedMessage';
 
 const LastMessagePreview = ({ lastMessage, currentUser, isSelected }) => {
   const { t } = useTranslation();
+  const encryptedDataForUser = lastMessage?.encryptedPayload?.[currentUser.uid];
+  const { decryptedText, isDecrypting } = useDecryptedMessage(encryptedDataForUser);
 
   if (!lastMessage) {
     return null;
@@ -12,20 +14,22 @@ const LastMessagePreview = ({ lastMessage, currentUser, isSelected }) => {
 
   const isSender = lastMessage.authorId === currentUser.uid;
   const prefix = isSender ? t('messages.preview.youPrefix') : '';
+  const textColor = isSelected ? 'text-blue-100' : 'text-gray-500';
 
-  const encryptedDataForUser = lastMessage.encryptedPayload?.[currentUser.uid];
-  if (!encryptedDataForUser) {
+  if (!encryptedDataForUser || isDecrypting) {
     return <span className="text-xs italic truncate block">...</span>;
   }
 
-  const decryptedString = cryptoService.decrypt(encryptedDataForUser);
-  if (!decryptedString) {
-    return <span className="text-xs italic truncate block">{t('messages.preview.decryptionError')}</span>;
+  if (!decryptedText) {
+    return (
+      <span className="text-xs italic truncate block">
+        {t('messages.preview.decryptionError')}
+      </span>
+    );
   }
 
   try {
-    const messageObject = JSON.parse(decryptedString);
-    const textColor = isSelected ? 'text-blue-100' : 'text-gray-500';
+    const messageObject = JSON.parse(decryptedText);
 
     switch (messageObject.type) {
       case 'image':
@@ -52,8 +56,13 @@ const LastMessagePreview = ({ lastMessage, currentUser, isSelected }) => {
           </span>
         );
     }
-  } catch (e) {
-    return <span className={`text-xs italic truncate ${textColor} block`}>{t()('messages.preview.corrupt')}</span>;
+  } catch {
+    return (
+      <span className={`text-xs italic truncate ${textColor} block`}>
+        {t('messages.preview.corrupt')}
+      </span>
+    );
   }
 };
+
 export default LastMessagePreview;
