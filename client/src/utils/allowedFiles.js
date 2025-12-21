@@ -1,9 +1,10 @@
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 export const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
-  'image/svg+xml'
 ];
 
 export const ALLOWED_DOC_TYPES = [
@@ -14,52 +15,59 @@ export const ALLOWED_DOC_TYPES = [
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ];
 
-export const ALLOWED_DEV_TYPES = [
-  'text/html',
+export const ALLOWED_TEXT_DATA_TYPES = [
   'text/css',
-  'text/javascript',
-  'application/javascript',
   'application/json',
   'application/xml',
   'text/xml',
-  'application/x-sh',
-  'application/x-python-code',
-  'text/x-python',
-  'text/x-java-source',
-  'text/x-c',
-  'text/x-c++',
-  'text/x-csharp',
-  'text/x-php',
-  'text/x-ruby',
-  'text/x-go',
-  'text/x-rust',
-  'text/x-typescript',
-  'application/typescript',
   'text/markdown',
   'text/x-yaml',
-  'application/x-yaml'
+  'application/x-yaml',
+  'text/csv',
 ];
 
 export const ALL_ALLOWED_TYPES = [
   ...ALLOWED_IMAGE_TYPES,
   ...ALLOWED_DOC_TYPES,
-  ...ALLOWED_DEV_TYPES
+  ...ALLOWED_TEXT_DATA_TYPES,
 ];
 
+const ALLOWED_SAFE_EXTENSIONS = [
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.pdf', '.txt', '.md', '.csv', '.json', '.xml', '.yaml', '.yml',
+  '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.py', '.java', '.c', '.cpp', '.cs', '.rb', '.go', '.rs', '.sql',
+];
+
+/**
+ * Checks whether the file MIME type or extension is allowed for upload.
+ * Executable web/script types (e.g. .html, .js, .svg, .sh) are excluded to mitigate XSS risks.
+ * @param {File} file
+ * @returns {boolean}
+ */
 export const isFileTypeAllowed = (file) => {
+  if (!file) return false;
   if (ALL_ALLOWED_TYPES.includes(file.type)) {
     return true;
   }
   const fileName = file.name.toLowerCase();
-  const devExtensions = [
-    '.html', '.htm', '.css', '.js', '.jsx', '.ts', '.tsx',
-    '.json', '.xml', '.sh', '.bash', '.py', '.java', '.c',
-    '.cpp', '.cs', '.php', '.rb', '.go', '.rs', '.yaml',
-    '.yml', '.md', '.txt', '.sql', '.env', '.gitignore',
-    '.vue', '.svelte', '.scss', '.sass', '.less'
-  ];
-  return devExtensions.some(ext => fileName.endsWith(ext));
+  return ALLOWED_SAFE_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+};
+
+/**
+ * Validates both file type and maximum allowed size.
+ * @param {File} file
+ * @returns {{ valid: boolean, reason?: 'type' | 'size' }}
+ */
+export const validateFile = (file) => {
+  if (!isFileTypeAllowed(file)) {
+    return { valid: false, reason: 'type' };
+  }
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return { valid: false, reason: 'size' };
+  }
+  return { valid: true };
 };
