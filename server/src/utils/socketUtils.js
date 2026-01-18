@@ -8,7 +8,7 @@ const notifyUserOfNewConversation = async (userId, groupRef, io, userSocketMap) 
 
       const groupData = groupDoc.data();
       const channelsSnapshot = await groupRef.collection('channels').get();
-      const channels = channelsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const channels = channelsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
       const payload = {
         id: `group_${groupRef.id}`,
@@ -17,14 +17,14 @@ const notifyUserOfNewConversation = async (userId, groupRef, io, userSocketMap) 
         groupData: {
           ...groupData,
           id: groupRef.id,
-          channelId: channels.length > 0 ? channels[0].id : null
-        }
+          channelId: channels.length > 0 ? channels[0].id : null,
+        },
       };
 
       io.to(userSocketMap[userId]).emit('newConversation', payload);
-      console.log(`[Socket] Emitiendo 'newConversation' (grupo) a ${userId}`);
+      console.log(`[Socket] Emitted 'newConversation' (group) to ${userId}`);
     } catch (error) {
-      console.error(`[Socket] Error al notificar a ${userId}:`, error);
+      console.error(`[Socket] Error notifying ${userId}:`, error);
     }
   }
 };

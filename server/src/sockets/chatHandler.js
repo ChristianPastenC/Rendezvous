@@ -1,27 +1,30 @@
 const { db } = require('../config/firebaseAdmin');
 const { FieldValue } = require('firebase-admin/firestore');
+const { sendMessageSchema } = require('../utils/validation');
 
 const registerChatHandlers = (io, socket, userSocketMap) => {
   socket.on('joinChannel', ({ conversationId }) => {
-    if (conversationId) {
+    if (typeof conversationId === 'string' && conversationId) {
       socket.join(conversationId);
-      console.log(`[Socket] Usuario ${socket.user.uid} se unio a la conversación: ${conversationId}`);
+      console.log(`[Socket] User ${socket.user.uid} joined conversation: ${conversationId}`);
     }
   });
 
   socket.on('leaveChannel', ({ conversationId }) => {
-    if (conversationId) {
+    if (typeof conversationId === 'string' && conversationId) {
       socket.leave(conversationId);
-      console.log(`[Socket] Usuario ${socket.user.uid} salio de la conversación: ${conversationId}`);
+      console.log(`[Socket] User ${socket.user.uid} left conversation: ${conversationId}`);
     }
   });
 
-  socket.on('sendMessage', async ({ conversationId, isDirectMessage, groupId, encryptedPayload }) => {
+  socket.on('sendMessage', async (rawPayload) => {
     try {
-      if (!conversationId || !encryptedPayload) {
-        return socket.emit('messageError', { message: 'Datos del mensaje invalidos.' });
+      const parsed = sendMessageSchema.safeParse(rawPayload);
+      if (!parsed.success) {
+        return socket.emit('messageError', { message: 'Invalid message payload.' });
       }
 
+      const { conversationId, isDirectMessage, groupId, encryptedPayload } = parsed.data;
       const author = socket.user;
       let messageCollectionRef;
       let members = [];
@@ -38,9 +41,10 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
         }
         messageCollectionRef = dmRef.collection('messages');
         members = participants;
-
       } else {
-        if (!groupId) return socket.emit('messageError', { message: 'GroupID es requerido para mensajes de grupo.' });
+        if (!groupId) {
+          return socket.emit('messageError', { message: 'Group ID is required for group messages.' });
+        }
 
         const groupRef = db.collection('groups').doc(groupId);
         const groupDoc = await groupRef.get();
@@ -51,20 +55,22 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
       }
 
       const authorDoc = await db.collection('users').doc(author.uid).get();
-      const authorData = authorDoc.exists ? authorDoc.data() : {
-        displayName: author.name || 'Usuario',
-        photoURL: author.picture || null,
-        status: 'offline',
-        lastSeen: null
-      };
+      const authorData = authorDoc.exists
+        ? authorDoc.data()
+        : {
+            displayName: author.name || 'User',
+            photoURL: author.picture || null,
+            status: 'offline',
+            lastSeen: null,
+          };
 
       const messageData = {
         encryptedPayload,
         authorId: author.uid,
         authorInfo: {
           uid: author.uid,
-          displayName: authorData.displayName || author.name || 'Usuario',
-          photoURL: authorData.photoURL || author.picture || null
+          displayName: authorData.displayName || author.name || 'User',
+          photoURL: authorData.photoURL || author.picture || null,
         },
         createdAt: FieldValue.serverTimestamp(),
       };
@@ -73,10 +79,20 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
 
       if (isDirectMessage) {
         const now = FieldValue.serverTimestamp();
-        const otherUserId = members.find(uid => uid !== author.uid);
+        const otherUserId = members.find((uid) => uid !== author.uid);
         if (otherUserId) {
-          await db.collection('users').doc(author.uid).collection('contacts').doc(otherUserId).set({ lastActivity: now, dmId: conversationId }, { merge: true });
-          await db.collection('users').doc(otherUserId).collection('contacts').doc(author.uid).set({ lastActivity: now, dmId: conversationId }, { merge: true });
+          await db
+            .collection('users')
+            .doc(author.uid)
+            .collection('contacts')
+            .doc(otherUserId)
+            .set({ lastActivity: now, dmId: conversationId }, { merge: true });
+          await db
+            .collection('users')
+            .doc(otherUserId)
+            .collection('contacts')
+            .doc(author.uid)
+            .set({ lastActivity: now, dmId: conversationId }, { merge: true });
         }
       }
 
@@ -84,27 +100,25 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
         ...messageData,
         id: messageRef.id,
         createdAt: new Date().toISOString(),
-        conversationId: conversationId,
-        groupId: isDirectMessage ? null : groupId
+        conversationId,
+        groupId: isDirectMessage ? null : groupId,
       };
 
       io.to(conversationId).emit('encryptedMessage', savedMessage);
-      console.log(`[Socket] Emitiendo 'encryptedMessage' a la sala: ${conversationId}`);
+      console.log(`[Socket] Broadcast 'encryptedMessage' to room: ${conversationId}`);
 
-      members.forEach(memberId => {
+      members.forEach((memberId) => {
         const memberSocketId = userSocketMap[memberId];
-
         if (memberSocketId) {
           const memberSocket = io.sockets.sockets.get(memberSocketId);
-
           if (memberSocket && memberSocket.id !== socket.id && !memberSocket.rooms.has(conversationId)) {
-            console.log(`[Socket] Emitiendo 'encryptedMessage' (fuera de sala) a ${memberId} via socket ${memberSocketId}`);
             io.to(memberSocketId).emit('encryptedMessage', savedMessage);
           }
         }
       });
     } catch (error) {
-      console.error(`[Error] en sendMessage para ${socket.id}:`, error);
+      console.error(`[Socket] Error in sendMessage for ${socket.id}:`, error);
+      socket.emit('messageError', { message: 'Failed to send message.' });
     }
   });
 };

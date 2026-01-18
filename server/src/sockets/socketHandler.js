@@ -6,22 +6,22 @@ const registerWebRTCHandlers = require('./webrtcHandlers');
 const socketAuthMiddleware = async (socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) {
-    return next(new Error('Autenticacion fallida: Token no proporcionado.'));
+    return next(new Error('Authentication failed: Missing token.'));
   }
   try {
     const decodedToken = await auth.verifyIdToken(token);
     socket.user = decodedToken;
     next();
-  } catch (error) {
-    return next(new Error('Autenticacion fallida: Token inválido.'));
+  } catch (_error) {
+    return next(new Error('Authentication failed: Invalid token.'));
   }
 };
 
 const registerSocketHandlers = (io, userSocketMap) => {
   io.use(socketAuthMiddleware);
 
-  io.on("connection", async (socket) => {
-    console.log(`[Socket] Cliente autenticado: ${socket.id} (Usuario: ${socket.user.uid})`);
+  io.on('connection', async (socket) => {
+    console.log(`[Socket] Client authenticated: ${socket.id} (User: ${socket.user.uid})`);
 
     userSocketMap[socket.user.uid] = socket.id;
 
@@ -33,36 +33,38 @@ const registerSocketHandlers = (io, userSocketMap) => {
         status: 'online',
         lastSeen: null,
         photoURL: socket.user.photoURL,
-        displayName: socket.user.displayName
+        displayName: socket.user.displayName,
       });
-      console.log(`[Status] Usuario ${socket.user.uid} esta online.`);
+      console.log(`[Status] User ${socket.user.uid} is online.`);
     } catch (error) {
-      console.error(`Error al actualizar estado a online para ${socket.user.uid}:`, error);
+      console.error(`[Status] Error setting online status for ${socket.user.uid}:`, error);
     }
 
     socket.on('security:register-public-key', async ({ publicKey }) => {
+      if (typeof publicKey !== 'string' || !publicKey) return;
       try {
         await db.collection('users').doc(socket.user.uid).set({ publicKey }, { merge: true });
-        console.log(`[Seguridad] Clave publica registrada para ${socket.user.uid}`);
+        console.log(`[Security] Registered public key for ${socket.user.uid}`);
       } catch (error) {
-        console.error("Error al registrar la clave publica:", error);
+        console.error('[Security] Error registering public key:', error);
       }
     });
 
     socket.on('subscribeToStatus', (userIds) => {
       if (Array.isArray(userIds)) {
-        userIds.forEach(uid => {
-          socket.join(`status_${uid}`);
+        userIds.forEach((uid) => {
+          if (typeof uid === 'string' && uid) {
+            socket.join(`status_${uid}`);
+          }
         });
       }
     });
 
-
     registerChatHandlers(io, socket, userSocketMap);
     registerWebRTCHandlers(io, socket, userSocketMap);
 
-    socket.on("disconnect", async (reason) => {
-      console.log(`[Socket] Cliente desconectado: ${socket.id}, Razon: ${reason}`);
+    socket.on('disconnect', async (reason) => {
+      console.log(`[Socket] Client disconnected: ${socket.id}, Reason: ${reason}`);
       delete userSocketMap[socket.user.uid];
 
       try {
@@ -77,11 +79,11 @@ const registerSocketHandlers = (io, userSocketMap) => {
           status: 'offline',
           lastSeen: new Date().toISOString(),
           photoURL: socket.user.photoURL,
-          displayName: socket.user.displayName
+          displayName: socket.user.displayName,
         });
-        console.log(`[Status] Usuario ${socket.user.uid} esta offline.`);
+        console.log(`[Status] User ${socket.user.uid} is offline.`);
       } catch (error) {
-        console.error(`Error al actualizar estado a offline para ${socket.user.uid}:`, error);
+        console.error(`[Status] Error setting offline status for ${socket.user.uid}:`, error);
       }
     });
   });

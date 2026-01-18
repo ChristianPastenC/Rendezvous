@@ -1,82 +1,90 @@
-const express = require('express');
 const { auth, db } = require('../config/firebaseAdmin');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { FieldValue } = require('firebase-admin/firestore');
+const {
+  syncAuthSchema,
+  updateProfileSchema,
+  saveKeysSchema,
+  validateBody,
+} = require('../utils/validation');
 
 const authRoutes = (app) => {
-  // Sync user with backend
-  app.post("/api/auth/sync", async (req, res) => {
+  // Sync Firebase user with Firestore
+  app.post('/api/auth/sync', validateBody(syncAuthSchema), async (req, res) => {
     const { token } = req.body;
-    if (!token) return res.status(400).json({ error: "Token no proporcionado." });
     try {
       const decodedToken = await auth.verifyIdToken(token);
       const { uid, name, email, picture } = decodedToken;
-      const userRef = db.collection("users").doc(uid);
+      const userRef = db.collection('users').doc(uid);
       const userDoc = await userRef.get();
+
       if (!userDoc.exists) {
-        await userRef.set({
-          displayName: name || 'Usuario',
-          email: email,
-          photoURL: picture || null,
-          createdAt: FieldValue.serverTimestamp(),
-          publicKey: null,
-          wrappedPrivateKey: null,
-          status: 'offline',
-          lastSeen: null
-        }, { merge: true });
+        await userRef.set(
+          {
+            displayName: name || 'User',
+            email,
+            photoURL: picture || null,
+            createdAt: FieldValue.serverTimestamp(),
+            publicKey: null,
+            wrappedPrivateKey: null,
+            status: 'offline',
+            lastSeen: null,
+          },
+          { merge: true }
+        );
       } else {
         await userRef.update({
-          displayName: name,
-          photoURL: picture || (userDoc.data() && userDoc.data().photoURL) || null
+          displayName: name || userDoc.data().displayName || 'User',
+          photoURL: picture || userDoc.data()?.photoURL || null,
         });
       }
-      res.status(200).json({ status: "success", uid });
+
+      res.status(200).json({ status: 'success', uid });
     } catch (error) {
-      res.status(401).json({ error: "Token invalido." });
+      console.error('[Auth] Sync error:', error);
+      res.status(401).json({ error: 'Invalid token.' });
     }
   });
 
   // Update user profile
-  app.put("/api/users/profile", authMiddleware, async (req, res) => {
+  app.put('/api/users/profile', authMiddleware, validateBody(updateProfileSchema), async (req, res) => {
     const { displayName, photoURL } = req.body;
     const userId = req.user.uid;
 
-    if (!displayName || !displayName.trim()) {
-      return res.status(400).json({ error: "El nombre de usuario no puede estar vacio." });
-    }
-
     try {
       await auth.updateUser(userId, {
-        displayName: displayName.trim(),
+        displayName,
         photoURL: photoURL || null,
       });
 
       await db.collection('users').doc(userId).update({
-        displayName: displayName.trim(),
+        displayName,
         photoURL: photoURL || null,
       });
 
-      console.log(`[Perfil] Usuario ${userId} actualizo su perfil.`);
-      res.status(200).json({ success: true, message: "Perfil actualizado correctamente." });
-
+      console.log(`[Profile] User ${userId} updated their profile.`);
+      res.status(200).json({ success: true, message: 'Profile updated successfully.' });
     } catch (error) {
-      console.error("Error al actualizar perfil:", error);
-      res.status(500).json({ error: "No se pudo actualizar el perfil." });
+      console.error('[Profile] Error updating profile:', error);
+      res.status(500).json({ error: 'Failed to update profile.' });
     }
   });
 
-  // Delete user account
-  app.delete("/api/users/me", authMiddleware, async (req, res) => {
+  // Delete user account and clean up group memberships
+  app.delete('/api/users/me', authMiddleware, async (req, res) => {
     const userId = req.user.uid;
-    console.log(`[Eliminacion] Solicitud para eliminar usuario ${userId}`);
+    console.log(`[Account] Deletion requested for user ${userId}`);
 
     try {
       const batch = db.batch();
 
-      const groupsSnapshot = await db.collection('groups').where('members', 'array-contains', userId).get();
+      const groupsSnapshot = await db
+        .collection('groups')
+        .where('members', 'array-contains', userId)
+        .get();
+
       if (!groupsSnapshot.empty) {
-        groupsSnapshot.forEach(doc => {
-          console.log(`[Eliminación] Quitando a ${userId} del grupo ${doc.id}`);
+        groupsSnapshot.forEach((doc) => {
           const groupRef = db.collection('groups').doc(doc.id);
           batch.update(groupRef, { members: FieldValue.arrayRemove(userId) });
         });
@@ -84,78 +92,68 @@ const authRoutes = (app) => {
 
       const userDocRef = db.collection('users').doc(userId);
       batch.delete(userDocRef);
-      console.log(`[Eliminación] Documento de Firestore para ${userId} marcado para borrado.`);
 
       await batch.commit();
-      console.log(`[Eliminación] Limpieza de Firestore completada para ${userId}.`);
-
       await auth.deleteUser(userId);
-      console.log(`[Eliminación] Usuario ${userId} eliminado de Firebase Auth exitosamente.`);
 
-      res.status(200).json({ success: true, message: "Cuenta eliminada correctamente." });
-
+      console.log(`[Account] User ${userId} deleted successfully.`);
+      res.status(200).json({ success: true, message: 'Account deleted successfully.' });
     } catch (error) {
-      console.error(`Error al eliminar la cuenta de ${userId}:`, error);
-      res.status(500).json({ error: "No se pudo eliminar la cuenta. Por favor, intentalo de nuevo." });
+      console.error(`[Account] Error deleting account for ${userId}:`, error);
+      res.status(500).json({ error: 'Failed to delete account. Please try again.' });
     }
   });
 
-  // Get user keys
-  app.get("/api/users/me/keys", authMiddleware, async (req, res) => {
+  // Get current user's E2EE keys
+  app.get('/api/users/me/keys', authMiddleware, async (req, res) => {
     const userId = req.user.uid;
 
     try {
       const userDoc = await db.collection('users').doc(userId).get();
 
       if (!userDoc.exists) {
-        return res.status(404).json({ error: 'Usuario no encontrado' });
+        return res.status(404).json({ error: 'User not found.' });
       }
 
       const userData = userDoc.data();
 
       if (userData.publicKey && userData.wrappedPrivateKey) {
-        console.log(`[Keys] Claves recuperadas para usuario ${userId}`);
         return res.status(200).json({
           publicKey: userData.publicKey,
-          wrappedPrivateKey: userData.wrappedPrivateKey
+          wrappedPrivateKey: userData.wrappedPrivateKey,
         });
       }
 
-      console.log(`[Keys] Usuario ${userId} no tiene claves generadas`);
-      return res.status(404).json({ error: 'Claves no encontradas' });
+      return res.status(404).json({ error: 'Encryption keys not found.' });
     } catch (error) {
-      console.error(`[Keys] Error al obtener claves para ${userId}:`, error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error(`[Keys] Error fetching keys for ${userId}:`, error);
+      res.status(500).json({ error: 'Internal server error.' });
     }
   });
 
-  // Save user keys
-  app.post("/api/users/me/keys", authMiddleware, async (req, res) => {
+  // Save or update current user's E2EE keys
+  app.post('/api/users/me/keys', authMiddleware, validateBody(saveKeysSchema), async (req, res) => {
     const userId = req.user.uid;
     const { publicKey, wrappedPrivateKey } = req.body;
 
-    if (!publicKey || !wrappedPrivateKey) {
-      return res.status(400).json({
-        error: 'Se requieren publicKey y wrappedPrivateKey'
-      });
-    }
-
     try {
-      // Use set with merge: true to handle both creation and update of keys robustly
-      await db.collection('users').doc(userId).set({
-        publicKey,
-        wrappedPrivateKey,
-        updatedAt: FieldValue.serverTimestamp()
-      }, { merge: true });
+      await db.collection('users').doc(userId).set(
+        {
+          publicKey,
+          wrappedPrivateKey,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-      console.log(`[Keys] Claves guardadas/actualizadas para usuario ${userId}`);
+      console.log(`[Keys] Saved encryption keys for user ${userId}`);
       res.status(200).json({
         success: true,
-        message: 'Claves guardadas correctamente'
+        message: 'Encryption keys saved successfully.',
       });
     } catch (error) {
-      console.error(`[Keys] Error al guardar claves para ${userId}:`, error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error(`[Keys] Error saving keys for ${userId}:`, error);
+      res.status(500).json({ error: 'Internal server error.' });
     }
   });
 };

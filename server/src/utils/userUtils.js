@@ -4,7 +4,7 @@ const processUserDoc = (doc) => {
   const lastSeenTimestamp = data.lastSeen;
   return {
     uid: doc.id,
-    displayName: data.displayName || 'Usuario',
+    displayName: data.displayName || 'User',
     email: data.email,
     photoURL: data.photoURL || null,
     publicKey: data.publicKey || null,
