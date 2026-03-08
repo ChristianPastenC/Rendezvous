@@ -1,4 +1,7 @@
-const getAllowedOrigins = () => {
+import type { CorsOptions } from 'cors';
+import type { ServerOptions } from 'socket.io';
+
+export const getAllowedOrigins = (): string[] => {
   const raw = process.env.CORS_ORIGIN || 'http://localhost:5173';
   return raw
     .split(',')
@@ -6,10 +9,9 @@ const getAllowedOrigins = () => {
     .filter(Boolean);
 };
 
-const corsOptions = {
+export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins = getAllowedOrigins();
-    // Allow requests without an Origin header (e.g. health checks, curl, server-to-server)
     if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
@@ -18,11 +20,9 @@ const corsOptions = {
   credentials: true,
 };
 
-const socketConfig = {
+export const socketConfig: Partial<ServerOptions> = {
   cors: {
     origin: getAllowedOrigins(),
     credentials: true,
   },
 };
-
-module.exports = { getAllowedOrigins, corsOptions, socketConfig };

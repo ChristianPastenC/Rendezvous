@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const admin = require('firebase-admin');
+import fs from 'fs';
+import path from 'path';
+import admin from 'firebase-admin';
 
 /**
  * Resolves Firebase Admin credentials from environment variables or a local service account file.
@@ -9,9 +9,9 @@ const admin = require('firebase-admin');
  * 2. GOOGLE_APPLICATION_CREDENTIALS file path
  * 3. Fallback to ../../serviceAccountKey.json if present
  */
-const initializeFirebaseAdmin = () => {
-  if (admin.apps.length > 0) {
-    return admin.app();
+const initializeFirebaseAdmin = (): admin.app.App => {
+  if (admin.apps.length > 0 && admin.apps[0]) {
+    return admin.apps[0];
   }
 
   const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -29,7 +29,7 @@ const initializeFirebaseAdmin = () => {
     : path.resolve(__dirname, '../../serviceAccountKey.json');
 
   if (fs.existsSync(credentialsPath)) {
-    const serviceAccount = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+    const serviceAccount = JSON.parse(fs.readFileSync(credentialsPath, 'utf8')) as admin.ServiceAccount;
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
@@ -42,7 +42,6 @@ const initializeFirebaseAdmin = () => {
 
 initializeFirebaseAdmin();
 
-const auth = admin.auth();
-const db = admin.firestore();
-
-module.exports = { admin, auth, db };
+export const auth = admin.auth();
+export const db = admin.firestore();
+export { admin };
