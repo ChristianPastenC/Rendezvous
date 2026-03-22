@@ -1,11 +1,12 @@
-const { db } = require('../config/firebaseAdmin');
-const { authMiddleware } = require('../middleware/authMiddleware');
-const { processUserDoc } = require('../utils/userUtils');
+import type { Express, Response } from 'express';
+import { db } from '../config/firebaseAdmin.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import type { AuthenticatedRequest } from '../types/index.js';
+import { processUserDoc } from '../utils/userUtils.js';
 
-const contactRoutes = (app) => {
-  // Get user contacts ordered by last activity
-  app.get('/api/contacts', authMiddleware, async (req, res) => {
-    const userId = req.user.uid;
+export const contactRoutes = (app: Express): void => {
+  app.get('/api/contacts', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user!.uid;
     try {
       const contactsSnapshot = await db
         .collection('users')
@@ -14,7 +15,10 @@ const contactRoutes = (app) => {
         .orderBy('lastActivity', 'desc')
         .get();
 
-      if (contactsSnapshot.empty) return res.status(200).json([]);
+      if (contactsSnapshot.empty) {
+        res.status(200).json([]);
+        return;
+      }
 
       const userPromises = contactsSnapshot.docs.map((doc) =>
         db.collection('users').doc(doc.id).get()
@@ -29,5 +33,3 @@ const contactRoutes = (app) => {
     }
   });
 };
-
-module.exports = contactRoutes;

@@ -1,15 +1,19 @@
-const { db } = require('../config/firebaseAdmin');
-const { authMiddleware } = require('../middleware/authMiddleware');
-const { processUserDoc } = require('../utils/userUtils');
+import type { Express, Response } from 'express';
+import type { QuerySnapshot } from 'firebase-admin/firestore';
+import type { UserProfile } from '@rendezvous/shared';
+import { db } from '../config/firebaseAdmin.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import type { AuthenticatedRequest } from '../types/index.js';
+import { processUserDoc } from '../utils/userUtils.js';
 
-const userRoutes = (app) => {
-  // Search users by email or displayName (defined before parameterized :uid routes)
-  app.get('/api/users/search', authMiddleware, async (req, res) => {
+export const userRoutes = (app: Express): void => {
+  app.get('/api/users/search', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
     const query = typeof req.query.query === 'string' ? req.query.query.trim() : '';
-    const currentUserUid = req.user.uid;
+    const currentUserUid = req.user!.uid;
 
     if (query.length < 3) {
-      return res.status(400).json({ error: 'Search query must be at least 3 characters.' });
+      res.status(400).json({ error: 'Search query must be at least 3 characters.' });
+      return;
     }
 
     try {
@@ -24,9 +28,9 @@ const userRoutes = (app) => {
         .where('displayName', '<=', `${query}\uf8ff`);
 
       const [emailSnapshot, nameSnapshot] = await Promise.all([emailQuery.get(), nameQuery.get()]);
-      const usersMap = new Map();
+      const usersMap = new Map<string, UserProfile>();
 
-      const processSnapshot = (snapshot) => {
+      const processSnapshot = (snapshot: QuerySnapshot) => {
         snapshot.docs.forEach((doc) => {
           if (doc.id !== currentUserUid) {
             const userData = processUserDoc(doc);
@@ -45,29 +49,30 @@ const userRoutes = (app) => {
     }
   });
 
-  // Get a user's public key
-  app.get('/api/users/:uid/key', authMiddleware, async (req, res) => {
-    const { uid } = req.params;
+  app.get('/api/users/:uid/key', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+    const uid = String(req.params.uid);
     try {
       const userDoc = await db.collection('users').doc(uid).get();
-      if (!userDoc.exists || !userDoc.data().publicKey) {
-        return res.status(404).json({ error: 'Public key not found for this user.' });
+      const publicKey = userDoc.data()?.publicKey as string | undefined;
+      if (!userDoc.exists || !publicKey) {
+        res.status(404).json({ error: 'Public key not found for this user.' });
+        return;
       }
-      res.status(200).json({ publicKey: userDoc.data().publicKey });
+      res.status(200).json({ publicKey });
     } catch (error) {
       console.error(`[Users] Error fetching public key for ${uid}:`, error);
       res.status(500).json({ error: 'Internal server error.' });
     }
   });
 
-  // Get a user's public profile
-  app.get('/api/users/:uid/profile', authMiddleware, async (req, res) => {
-    const { uid } = req.params;
+  app.get('/api/users/:uid/profile', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+    const uid = String(req.params.uid);
     try {
       const userDoc = await db.collection('users').doc(uid).get();
       const userData = processUserDoc(userDoc);
       if (!userData) {
-        return res.status(404).json({ error: 'User not found.' });
+        res.status(404).json({ error: 'User not found.' });
+        return;
       }
       res.status(200).json(userData);
     } catch (error) {
@@ -76,5 +81,3 @@ const userRoutes = (app) => {
     }
   });
 };
-
-module.exports = userRoutes;
