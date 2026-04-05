@@ -1,4 +1,10 @@
-const registerWebRTCHandlers = (io, socket, userSocketMap) => {
+import type { AuthenticatedSocket, TypedServer, UserSocketMap } from '../types/index.js';
+
+export const registerWebRTCHandlers = (
+  io: TypedServer,
+  socket: AuthenticatedSocket,
+  userSocketMap: UserSocketMap
+): void => {
   socket.on('webrtc:offer', ({ recipientUid, offer, callType, callerName }) => {
     const recipientSocketId = userSocketMap[recipientUid];
 
@@ -61,5 +67,3 @@ const registerWebRTCHandlers = (io, socket, userSocketMap) => {
     }
   });
 };
-
-module.exports = registerWebRTCHandlers;

@@ -1,18 +1,24 @@
-const { db } = require('../config/firebaseAdmin');
-const { FieldValue } = require('firebase-admin/firestore');
-const { sendMessageSchema } = require('../utils/validation');
+import { FieldValue, type CollectionReference } from 'firebase-admin/firestore';
+import type { EncryptedMessage } from '@rendezvous/shared';
+import { db } from '../config/firebaseAdmin.js';
+import type { AuthenticatedSocket, TypedServer, UserSocketMap } from '../types/index.js';
+import { sendMessageSchema } from '../utils/validation.js';
 
-const registerChatHandlers = (io, socket, userSocketMap) => {
+export const registerChatHandlers = (
+  io: TypedServer,
+  socket: AuthenticatedSocket,
+  userSocketMap: UserSocketMap
+): void => {
   socket.on('joinChannel', ({ conversationId }) => {
     if (typeof conversationId === 'string' && conversationId) {
-      socket.join(conversationId);
+      void socket.join(conversationId);
       console.log(`[Socket] User ${socket.user.uid} joined conversation: ${conversationId}`);
     }
   });
 
   socket.on('leaveChannel', ({ conversationId }) => {
     if (typeof conversationId === 'string' && conversationId) {
-      socket.leave(conversationId);
+      void socket.leave(conversationId);
       console.log(`[Socket] User ${socket.user.uid} left conversation: ${conversationId}`);
     }
   });
@@ -21,13 +27,14 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
     try {
       const parsed = sendMessageSchema.safeParse(rawPayload);
       if (!parsed.success) {
-        return socket.emit('messageError', { message: 'Invalid message payload.' });
+        socket.emit('messageError', { message: 'Invalid message payload.' });
+        return;
       }
 
       const { conversationId, isDirectMessage, groupId, encryptedPayload } = parsed.data;
       const author = socket.user;
-      let messageCollectionRef;
-      let members = [];
+      let messageCollectionRef: CollectionReference;
+      let members: string[] = [];
 
       if (isDirectMessage) {
         const participants = conversationId.split('_');
@@ -43,39 +50,37 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
         members = participants;
       } else {
         if (!groupId) {
-          return socket.emit('messageError', { message: 'Group ID is required for group messages.' });
+          socket.emit('messageError', { message: 'Group ID is required for group messages.' });
+          return;
         }
 
         const groupRef = db.collection('groups').doc(groupId);
         const groupDoc = await groupRef.get();
-        if (!groupDoc.exists || !groupDoc.data().members.includes(author.uid)) return;
+        const groupMembers = (groupDoc.data()?.members as string[] | undefined) || [];
+        if (!groupDoc.exists || !groupMembers.includes(author.uid)) return;
 
-        messageCollectionRef = groupRef.collection('channels').doc(conversationId).collection('messages');
-        members = groupDoc.data().members;
+        messageCollectionRef = groupRef
+          .collection('channels')
+          .doc(conversationId)
+          .collection('messages');
+        members = groupMembers;
       }
 
       const authorDoc = await db.collection('users').doc(author.uid).get();
-      const authorData = authorDoc.exists
-        ? authorDoc.data()
-        : {
-            displayName: author.name || 'User',
-            photoURL: author.picture || null,
-            status: 'offline',
-            lastSeen: null,
-          };
+      const authorData = authorDoc.exists ? authorDoc.data() : undefined;
 
-      const messageData = {
-        encryptedPayload,
-        authorId: author.uid,
-        authorInfo: {
-          uid: author.uid,
-          displayName: authorData.displayName || author.name || 'User',
-          photoURL: authorData.photoURL || author.picture || null,
-        },
-        createdAt: FieldValue.serverTimestamp(),
+      const authorInfo = {
+        uid: author.uid,
+        displayName: (authorData?.displayName as string) || author.name || 'User',
+        photoURL: (authorData?.photoURL as string | null) || author.picture || null,
       };
 
-      const messageRef = await messageCollectionRef.add(messageData);
+      const messageRef = await messageCollectionRef.add({
+        encryptedPayload,
+        authorId: author.uid,
+        authorInfo,
+        createdAt: FieldValue.serverTimestamp(),
+      });
 
       if (isDirectMessage) {
         const now = FieldValue.serverTimestamp();
@@ -96,12 +101,14 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
         }
       }
 
-      const savedMessage = {
-        ...messageData,
+      const savedMessage: EncryptedMessage = {
         id: messageRef.id,
+        encryptedPayload,
+        authorId: author.uid,
+        authorInfo,
         createdAt: new Date().toISOString(),
         conversationId,
-        groupId: isDirectMessage ? null : groupId,
+        groupId: isDirectMessage ? null : groupId ?? null,
       };
 
       io.to(conversationId).emit('encryptedMessage', savedMessage);
@@ -122,5 +129,3 @@ const registerChatHandlers = (io, socket, userSocketMap) => {
     }
   });
 };
-
-module.exports = registerChatHandlers;

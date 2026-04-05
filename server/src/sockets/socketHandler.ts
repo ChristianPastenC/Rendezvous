@@ -1,26 +1,36 @@
-const { auth, db } = require('../config/firebaseAdmin');
-const { FieldValue } = require('firebase-admin/firestore');
-const registerChatHandlers = require('./chatHandler');
-const registerWebRTCHandlers = require('./webrtcHandlers');
+import { FieldValue } from 'firebase-admin/firestore';
+import type { ClientToServerEvents, ServerToClientEvents } from '@rendezvous/shared';
+import type { Socket } from 'socket.io';
+import { auth, db } from '../config/firebaseAdmin.js';
+import type { AuthenticatedSocket, TypedServer, UserSocketMap } from '../types/index.js';
+import { registerChatHandlers } from './chatHandler.js';
+import { registerWebRTCHandlers } from './webrtcHandlers.js';
 
-const socketAuthMiddleware = async (socket, next) => {
-  const token = socket.handshake.auth.token;
+const socketAuthMiddleware = async (
+  socket: Socket<ClientToServerEvents, ServerToClientEvents>,
+  next: (err?: Error) => void
+): Promise<void> => {
+  const token = socket.handshake.auth.token as string | undefined;
   if (!token) {
-    return next(new Error('Authentication failed: Missing token.'));
+    next(new Error('Authentication failed: Missing token.'));
+    return;
   }
   try {
     const decodedToken = await auth.verifyIdToken(token);
-    socket.user = decodedToken;
+    (socket as AuthenticatedSocket).user = decodedToken;
     next();
-  } catch (_error) {
-    return next(new Error('Authentication failed: Invalid token.'));
+  } catch {
+    next(new Error('Authentication failed: Invalid token.'));
   }
 };
 
-const registerSocketHandlers = (io, userSocketMap) => {
-  io.use(socketAuthMiddleware);
+export const registerSocketHandlers = (io: TypedServer, userSocketMap: UserSocketMap): void => {
+  io.use((socket, next) => {
+    void socketAuthMiddleware(socket, next);
+  });
 
-  io.on('connection', async (socket) => {
+  io.on('connection', async (rawSocket) => {
+    const socket = rawSocket as AuthenticatedSocket;
     console.log(`[Socket] Client authenticated: ${socket.id} (User: ${socket.user.uid})`);
 
     userSocketMap[socket.user.uid] = socket.id;
@@ -32,8 +42,8 @@ const registerSocketHandlers = (io, userSocketMap) => {
         uid: socket.user.uid,
         status: 'online',
         lastSeen: null,
-        photoURL: socket.user.photoURL,
-        displayName: socket.user.displayName,
+        photoURL: socket.user.picture,
+        displayName: socket.user.name,
       });
       console.log(`[Status] User ${socket.user.uid} is online.`);
     } catch (error) {
@@ -54,7 +64,7 @@ const registerSocketHandlers = (io, userSocketMap) => {
       if (Array.isArray(userIds)) {
         userIds.forEach((uid) => {
           if (typeof uid === 'string' && uid) {
-            socket.join(`status_${uid}`);
+            void socket.join(`status_${uid}`);
           }
         });
       }
@@ -69,17 +79,16 @@ const registerSocketHandlers = (io, userSocketMap) => {
 
       try {
         const userRef = db.collection('users').doc(socket.user.uid);
-        const lastSeenTime = FieldValue.serverTimestamp();
         await userRef.update({
           status: 'offline',
-          lastSeen: lastSeenTime,
+          lastSeen: FieldValue.serverTimestamp(),
         });
         io.to(`status_${socket.user.uid}`).emit('statusUpdate', {
           uid: socket.user.uid,
           status: 'offline',
           lastSeen: new Date().toISOString(),
-          photoURL: socket.user.photoURL,
-          displayName: socket.user.displayName,
+          photoURL: socket.user.picture,
+          displayName: socket.user.name,
         });
         console.log(`[Status] User ${socket.user.uid} is offline.`);
       } catch (error) {
@@ -88,5 +97,3 @@ const registerSocketHandlers = (io, userSocketMap) => {
     });
   });
 };
-
-module.exports = { registerSocketHandlers };
