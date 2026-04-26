@@ -1,4 +1,3 @@
-// client/src/lib/cryptoService.js
 import { auth } from './firebase';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
@@ -10,16 +9,23 @@ const PBKDF2_ITERATIONS = 100000;
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
-const arrayBufferToBase64 = (buffer) => {
+export interface PassphrasePromptOptions {
+  isNewUser: boolean;
+  isRetry: boolean;
+}
+
+export type RequestPassphraseFn = (options: PassphrasePromptOptions) => Promise<string | null>;
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i += 1) {
-    binary += String.fromCharCode(bytes[i]);
+    binary += String.fromCharCode(bytes[i]!);
   }
   return btoa(binary);
 };
 
-const base64ToArrayBuffer = (base64) => {
+const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
@@ -35,19 +41,18 @@ const base64ToArrayBuffer = (base64) => {
  * - PBKDF2 (SHA-256, 100k iterations) for passphrase-based key derivation
  */
 class CryptoService {
+  private privateKeyBase64: string | null;
+  private publicKey: string | null;
+  private privateCryptoKey: CryptoKey | null = null;
+  private publicKeyCache = new Map<string, string>();
+  private importedPublicKeyCache = new Map<string, CryptoKey>();
+
   constructor() {
     this.privateKeyBase64 = sessionStorage.getItem(SESSION_KEY_PRIVATE);
     this.publicKey = localStorage.getItem(STORAGE_KEY_PUBLIC);
-    this.privateCryptoKey = null;
-    this.publicKeyCache = new Map();
-    this.importedPublicKeyCache = new Map();
   }
 
-  /**
-   * Lazily imports and caches the user's RSA-OAEP private CryptoKey from sessionStorage.
-   * @returns {Promise<CryptoKey|null>}
-   */
-  async getPrivateCryptoKey() {
+  async getPrivateCryptoKey(): Promise<CryptoKey | null> {
     if (this.privateCryptoKey) return this.privateCryptoKey;
     if (!this.privateKeyBase64) return null;
 
@@ -61,15 +66,10 @@ class CryptoService {
     return this.privateCryptoKey;
   }
 
-  /**
-   * Imports and caches a recipient's RSA-OAEP public key from Base64 SPKI.
-   * @param {string} publicKeyBase64
-   * @returns {Promise<CryptoKey>}
-   */
-  async importPublicKey(publicKeyBase64) {
-    if (this.importedPublicKeyCache.has(publicKeyBase64)) {
-      return this.importedPublicKeyCache.get(publicKeyBase64);
-    }
+  async importPublicKey(publicKeyBase64: string): Promise<CryptoKey> {
+    const cached = this.importedPublicKeyCache.get(publicKeyBase64);
+    if (cached) return cached;
+
     const cryptoKey = await window.crypto.subtle.importKey(
       'spki',
       base64ToArrayBuffer(publicKeyBase64),
@@ -81,13 +81,7 @@ class CryptoService {
     return cryptoKey;
   }
 
-  /**
-   * Derives an AES-GCM-256 key from a user passphrase and salt using PBKDF2.
-   * @param {string} passphrase
-   * @param {Uint8Array} salt
-   * @returns {Promise<CryptoKey>}
-   */
-  async deriveWrappingKey(passphrase, salt) {
+  async deriveWrappingKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
     const keyMaterial = await window.crypto.subtle.importKey(
       'raw',
       textEncoder.encode(passphrase),
@@ -99,7 +93,7 @@ class CryptoService {
     return window.crypto.subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt,
+        salt: salt as BufferSource,
         iterations: PBKDF2_ITERATIONS,
         hash: 'SHA-256',
       },
@@ -110,13 +104,7 @@ class CryptoService {
     );
   }
 
-  /**
-   * Encrypts a PKCS#8 private key buffer using a passphrase-derived AES-GCM key.
-   * @param {ArrayBuffer} privateKeyBuffer
-   * @param {string} passphrase
-   * @returns {Promise<string>} JSON string containing salt, iv, and ciphertext.
-   */
-  async encryptPrivateKey(privateKeyBuffer, passphrase) {
+  async encryptPrivateKey(privateKeyBuffer: ArrayBuffer, passphrase: string): Promise<string> {
     const salt = window.crypto.getRandomValues(new Uint8Array(16));
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
     const wrappingKey = await this.deriveWrappingKey(passphrase, salt);
@@ -135,15 +123,13 @@ class CryptoService {
     });
   }
 
-  /**
-   * Decrypts a wrapped private key using the user's security passphrase.
-   * @param {string} wrappedKey
-   * @param {string} passphrase
-   * @returns {Promise<string|null>} Base64 PKCS#8 private key, or null if decryption fails.
-   */
-  async decryptPrivateKey(wrappedKey, passphrase) {
+  async decryptPrivateKey(wrappedKey: string, passphrase: string): Promise<string | null> {
     try {
-      const parsed = JSON.parse(wrappedKey);
+      const parsed = JSON.parse(wrappedKey) as {
+        salt?: string;
+        iv?: string;
+        encrypted?: string;
+      };
       if (!parsed.salt || !parsed.iv || !parsed.encrypted) return null;
 
       const salt = new Uint8Array(base64ToArrayBuffer(parsed.salt));
@@ -163,14 +149,11 @@ class CryptoService {
     }
   }
 
-  /**
-   * Resolves the security passphrase from sessionStorage or by invoking the UI callback.
-   * @param {function({ isNewUser: boolean, isRetry: boolean }): Promise<string|null>} requestPassphrase
-   * @param {boolean} isNewUser
-   * @param {boolean} isRetry
-   * @returns {Promise<string|null>}
-   */
-  async getOrPromptPassphrase(requestPassphrase, isNewUser = false, isRetry = false) {
+  async getOrPromptPassphrase(
+    requestPassphrase: RequestPassphraseFn,
+    isNewUser = false,
+    isRetry = false
+  ): Promise<string | null> {
     if (!isRetry) {
       const cachedPassphrase = sessionStorage.getItem(SESSION_KEY_PASSPHRASE);
       if (cachedPassphrase) return cachedPassphrase;
@@ -178,10 +161,6 @@ class CryptoService {
 
     if (!auth.currentUser) {
       throw new Error('User is not authenticated.');
-    }
-
-    if (typeof requestPassphrase !== 'function') {
-      throw new Error('A passphrase prompt handler is required.');
     }
 
     const passphrase = await requestPassphrase({ isNewUser, isRetry });
@@ -194,13 +173,9 @@ class CryptoService {
     return null;
   }
 
-  /**
-   * Loads existing E2EE keys from the server and decrypts them, or generates a new RSA-OAEP key pair
-   * and stores the wrapped private key on the server.
-   * @param {function({ isNewUser: boolean, isRetry: boolean }): Promise<string|null>} requestPassphrase
-   * @returns {Promise<{ publicKey: string, privateKey: string }>}
-   */
-  async generateAndStoreKeys(requestPassphrase) {
+  async generateAndStoreKeys(
+    requestPassphrase: RequestPassphraseFn
+  ): Promise<{ publicKey: string; privateKey: string }> {
     if (!auth.currentUser) {
       throw new Error('User is not authenticated.');
     }
@@ -212,10 +187,12 @@ class CryptoService {
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data = (await response.json()) as {
+        publicKey: string;
+        wrappedPrivateKey: string;
+      };
       let isRetry = false;
 
-      // Retry loop until valid passphrase or user cancellation
       while (true) {
         const passphrase = await this.getOrPromptPassphrase(requestPassphrase, false, isRetry);
         if (!passphrase) {
@@ -244,11 +221,10 @@ class CryptoService {
     }
 
     if (response.status !== 404) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = (await response.json().catch(() => ({}))) as { error?: string };
       throw new Error(errorData.error || `Server error: ${response.status}`);
     }
 
-    // No keys found: generate a new RSA-OAEP key pair
     const passphrase = await this.getOrPromptPassphrase(requestPassphrase, true, false);
     if (!passphrase) {
       throw new Error('Security passphrase is required to protect your messages.');
@@ -287,7 +263,7 @@ class CryptoService {
     });
 
     if (!saveResponse.ok) {
-      const errorData = await saveResponse.json().catch(() => ({}));
+      const errorData = (await saveResponse.json().catch(() => ({}))) as { error?: string };
       throw new Error(errorData.error || 'Failed to save encryption keys on the server.');
     }
 
@@ -297,24 +273,14 @@ class CryptoService {
     return { publicKey: this.publicKey, privateKey: this.privateKeyBase64 };
   }
 
-  /**
-   * Returns the current user's Base64 SPKI public key.
-   * @returns {string|null}
-   */
-  getPublicKey() {
+  getPublicKey(): string | null {
     return this.publicKey;
   }
 
-  /**
-   * Fetches the public key for a given user ID from the API or local cache.
-   * @param {string} userId
-   * @returns {Promise<string|null>}
-   */
-  async fetchPublicKey(userId) {
+  async fetchPublicKey(userId: string): Promise<string | null> {
     try {
-      if (this.publicKeyCache.has(userId)) {
-        return this.publicKeyCache.get(userId);
-      }
+      const cached = this.publicKeyCache.get(userId);
+      if (cached) return cached;
 
       if (!auth.currentUser) throw new Error('User is not authenticated.');
       const token = await auth.currentUser.getIdToken();
@@ -325,7 +291,7 @@ class CryptoService {
 
       if (!response.ok) return null;
 
-      const data = await response.json();
+      const data = (await response.json()) as { publicKey: string };
       this.publicKeyCache.set(userId, data.publicKey);
       return data.publicKey;
     } catch {
@@ -333,12 +299,9 @@ class CryptoService {
     }
   }
 
-  /**
-   * Fetches public keys for all members of a given group.
-   * @param {string} groupId
-   * @returns {Promise<Array<{ uid: string, publicKey: string }>>}
-   */
-  async fetchPublicKeysForGroup(groupId) {
+  async fetchPublicKeysForGroup(
+    groupId: string
+  ): Promise<Array<{ uid: string; publicKey: string }>> {
     try {
       if (!auth.currentUser) throw new Error('User is not authenticated.');
       const token = await auth.currentUser.getIdToken();
@@ -349,8 +312,8 @@ class CryptoService {
 
       if (!response.ok) return [];
 
-      const members = await response.json();
-      const keys = [];
+      const members = (await response.json()) as Array<{ uid: string; publicKey?: string | null }>;
+      const keys: Array<{ uid: string; publicKey: string }> = [];
 
       for (const member of members) {
         if (member.publicKey) {
@@ -367,13 +330,7 @@ class CryptoService {
     }
   }
 
-  /**
-   * Encrypts plaintext using hybrid encryption (AES-GCM-256 + RSA-OAEP).
-   * @param {string} text
-   * @param {string} recipientPublicKeyBase64
-   * @returns {Promise<string|null>}
-   */
-  async encrypt(text, recipientPublicKeyBase64) {
+  async encrypt(text: string, recipientPublicKeyBase64: string): Promise<string | null> {
     try {
       const aesKey = await window.crypto.subtle.generateKey(
         { name: 'AES-GCM', length: 256 },
@@ -407,14 +364,13 @@ class CryptoService {
     }
   }
 
-  /**
-   * Decrypts a hybrid-encrypted payload using the user's RSA-OAEP private key.
-   * @param {string} encryptedPayload
-   * @returns {Promise<string>}
-   */
-  async decrypt(encryptedPayload) {
+  async decrypt(encryptedPayload: string): Promise<string> {
     try {
-      const { key: encryptedAesKey, iv, data: encryptedData } = JSON.parse(encryptedPayload);
+      const { key: encryptedAesKey, iv, data: encryptedData } = JSON.parse(encryptedPayload) as {
+        key: string;
+        iv?: string;
+        data: string;
+      };
       const privateKey = await this.getPrivateCryptoKey();
       if (!privateKey || !iv) {
         return '[Unable to decrypt message key]';
@@ -446,10 +402,7 @@ class CryptoService {
     }
   }
 
-  /**
-   * Clears all cryptographic keys and passphrases from the current session.
-   */
-  clearSession() {
+  clearSession(): void {
     sessionStorage.removeItem(SESSION_KEY_PRIVATE);
     sessionStorage.removeItem(SESSION_KEY_PASSPHRASE);
     this.privateKeyBase64 = null;

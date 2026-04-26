@@ -5,7 +5,7 @@ export const ALLOWED_IMAGE_TYPES = [
   'image/png',
   'image/gif',
   'image/webp',
-];
+] as const;
 
 export const ALLOWED_DOC_TYPES = [
   'application/pdf',
@@ -16,7 +16,7 @@ export const ALLOWED_DOC_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-];
+] as const;
 
 export const ALLOWED_TEXT_DATA_TYPES = [
   'text/css',
@@ -27,9 +27,9 @@ export const ALLOWED_TEXT_DATA_TYPES = [
   'text/x-yaml',
   'application/x-yaml',
   'text/csv',
-];
+] as const;
 
-export const ALL_ALLOWED_TYPES = [
+export const ALL_ALLOWED_TYPES: readonly string[] = [
   ...ALLOWED_IMAGE_TYPES,
   ...ALLOWED_DOC_TYPES,
   ...ALLOWED_TEXT_DATA_TYPES,
@@ -45,10 +45,8 @@ const ALLOWED_SAFE_EXTENSIONS = [
 /**
  * Checks whether the file MIME type or extension is allowed for upload.
  * Executable web/script types (e.g. .html, .js, .svg, .sh) are excluded to mitigate XSS risks.
- * @param {File} file
- * @returns {boolean}
  */
-export const isFileTypeAllowed = (file) => {
+export const isFileTypeAllowed = (file: File | null | undefined): boolean => {
   if (!file) return false;
   if (ALL_ALLOWED_TYPES.includes(file.type)) {
     return true;
@@ -59,10 +57,8 @@ export const isFileTypeAllowed = (file) => {
 
 /**
  * Validates both file type and maximum allowed size.
- * @param {File} file
- * @returns {{ valid: boolean, reason?: 'type' | 'size' }}
  */
-export const validateFile = (file) => {
+export const validateFile = (file: File): { valid: boolean; reason?: 'type' | 'size' } => {
   if (!isFileTypeAllowed(file)) {
     return { valid: false, reason: 'type' };
   }
