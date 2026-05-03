@@ -3,12 +3,12 @@ import { cryptoService } from '../lib/cryptoService';
 
 /**
  * Asynchronously decrypts an E2EE payload for the current user using Web Crypto API.
- * @param {string|null|undefined} encryptedData
- * @returns {{ decryptedText: string|null, isDecrypting: boolean }}
  */
-export const useDecryptedMessage = (encryptedData) => {
-  const [decryptedText, setDecryptedText] = useState(null);
-  const [isDecrypting, setIsDecrypting] = useState(Boolean(encryptedData));
+export const useDecryptedMessage = (
+  encryptedData: string | null | undefined
+): { decryptedText: string | null; isDecrypting: boolean } => {
+  const [decryptedText, setDecryptedText] = useState<string | null>(null);
+  const [isDecrypting, setIsDecrypting] = useState<boolean>(Boolean(encryptedData));
 
   useEffect(() => {
     if (!encryptedData) {
@@ -20,7 +20,7 @@ export const useDecryptedMessage = (encryptedData) => {
     let cancelled = false;
     setIsDecrypting(true);
 
-    cryptoService.decrypt(encryptedData).then((result) => {
+    void cryptoService.decrypt(encryptedData).then((result) => {
       if (!cancelled) {
         setDecryptedText(result);
         setIsDecrypting(false);

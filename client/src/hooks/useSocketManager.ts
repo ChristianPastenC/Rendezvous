@@ -1,16 +1,16 @@
-// src/hooks/useSocketManager.js
 import { useState, useEffect } from 'react';
-import { initSocket } from '../lib/socket';
-import { cryptoService } from '../lib/cryptoService';
+import type { User } from 'firebase/auth';
+import { initSocket, type TypedClientSocket } from '../lib/socket';
+import { cryptoService, type RequestPassphraseFn } from '../lib/cryptoService';
 
 /**
  * Manages the Socket.IO connection lifecycle and E2EE key initialization for the authenticated user.
- * @param {object | null} currentUser - Authenticated Firebase user.
- * @param {function({ isNewUser: boolean, isRetry: boolean }): Promise<string|null>} requestPassphrase
- * @returns {import('socket.io-client').Socket | null}
  */
-export const useSocketManager = (currentUser, requestPassphrase) => {
-  const [socket, setSocket] = useState(null);
+export const useSocketManager = (
+  currentUser: User | null,
+  requestPassphrase: RequestPassphraseFn
+): TypedClientSocket | null => {
+  const [socket, setSocket] = useState<TypedClientSocket | null>(null);
 
   useEffect(() => {
     if (!currentUser) {
@@ -21,7 +21,7 @@ export const useSocketManager = (currentUser, requestPassphrase) => {
       return;
     }
 
-    let socketInstance;
+    let socketInstance: TypedClientSocket | null = null;
     let isCancelled = false;
 
     const connect = async () => {
@@ -40,7 +40,7 @@ export const useSocketManager = (currentUser, requestPassphrase) => {
       }
     };
 
-    connect();
+    void connect();
 
     return () => {
       isCancelled = true;
