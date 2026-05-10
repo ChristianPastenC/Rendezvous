@@ -2,13 +2,21 @@
 import PasswordInput from './PasswordInput';
 import { useTranslation } from 'react-i18next';
 
-const LoginForm = ({ 
-  email, 
-  setEmail, 
-  password, 
-  setPassword, 
-  error
-}) => {
+interface LoginFormProps {
+  email: string;
+  setEmail: (value: string) => void;
+  password: string;
+  setPassword: (value: string) => void;
+  error: string;
+}
+
+const LoginForm = ({
+  email,
+  setEmail,
+  password,
+  setPassword,
+  error,
+}: LoginFormProps) => {
   const { t } = useTranslation();
 
   return (

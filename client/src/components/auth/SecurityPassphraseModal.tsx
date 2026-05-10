@@ -1,16 +1,30 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+
+interface SecurityPassphraseModalProps {
+  isOpen: boolean;
+  isNewUser: boolean;
+  isRetry: boolean;
+  onSubmit: (passphrase: string) => void;
+  onCancel: () => void;
+}
 
 /**
  * Modal for creating or entering the user's E2EE security passphrase.
  * Replaces native browser prompt()/alert() dialogs.
  */
-const SecurityPassphraseModal = ({ isOpen, isNewUser, isRetry, onSubmit, onCancel }) => {
+const SecurityPassphraseModal = ({
+  isOpen,
+  isNewUser,
+  isRetry,
+  onSubmit,
+  onCancel,
+}: SecurityPassphraseModalProps) => {
   const [passphrase, setPassphrase] = useState('');
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (passphrase.trim().length < 8) {
       setError('Passphrase must be at least 8 characters long.');

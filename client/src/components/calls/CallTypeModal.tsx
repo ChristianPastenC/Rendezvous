@@ -1,8 +1,14 @@
 // client/src/components/chat/CallTypeModal.jsx
 import { useTranslation } from 'react-i18next';
+import type { CallType } from '@rendezvous/shared';
 import { CallIcon, VideoOnIcon } from '../../assets/Icons';
 
-const CallTypeModal = ({ onSelectType, onCancel }) => {
+interface CallTypeModalProps {
+  onSelectType: (callType: CallType) => void;
+  onCancel: () => void;
+}
+
+const CallTypeModal = ({ onSelectType, onCancel }: CallTypeModalProps) => {
   const { t } = useTranslation();
   
   return (

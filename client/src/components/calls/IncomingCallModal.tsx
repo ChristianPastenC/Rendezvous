@@ -1,8 +1,16 @@
 // client/src/components/calls/IncomingCallModal.jsx
 import { useTranslation } from 'react-i18next';
+import type { CallType } from '@rendezvous/shared';
 import { AcceptCallIcon, DeclineCallIcon, IncomingCallIcon } from "../../assets/Icons";
 
-const IncomingCallModal = ({ callerName, callType, onAccept, onReject }) => {
+interface IncomingCallModalProps {
+  callerName: string;
+  callType: CallType;
+  onAccept: () => void;
+  onReject: () => void;
+}
+
+const IncomingCallModal = ({ callerName, callType, onAccept, onReject }: IncomingCallModalProps) => {
   const { t } = useTranslation();
 
   return (

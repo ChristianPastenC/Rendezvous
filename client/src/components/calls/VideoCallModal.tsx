@@ -1,20 +1,30 @@
 // client/src/components/calls/VideoCallModal.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { CallType } from '@rendezvous/shared';
+import type { CallState } from '../../hooks/useWebRTC';
 import { HangUpIcon, MicOffIcon, MicOnIcon, SpinnerIcon, UserIcon, VideoOnIcon, VideoOffIcon } from '../../assets/Icons';
 
-const VideoCallModal = ({ 
-  localStream, 
-  remoteStream, 
-  onHangUp, 
-  callType = 'video', 
-  callState 
-}) => {
+interface VideoCallModalProps {
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  onHangUp: () => void;
+  callType?: CallType;
+  callState: CallState;
+}
+
+const VideoCallModal = ({
+  localStream,
+  remoteStream,
+  onHangUp,
+  callType = 'video',
+  callState,
+}: VideoCallModalProps) => {
   const { t } = useTranslation();
 
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const remoteAudioRef = useRef(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isRemoteVideoOff, setIsRemoteVideoOff] = useState(false);

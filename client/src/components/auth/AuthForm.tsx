@@ -1,8 +1,25 @@
 // src/components/auth/AuthForm.jsx
+import type { FormEvent } from 'react';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import { GoogleIcon } from '../../assets/Icons';
 import { useTranslation } from 'react-i18next';
+
+interface AuthFormProps {
+  isLoginView: boolean;
+  displayName: string;
+  setDisplayName: (value: string) => void;
+  email: string;
+  setEmail: (value: string) => void;
+  password: string;
+  setPassword: (value: string) => void;
+  confirmPassword: string;
+  setConfirmPassword: (value: string) => void;
+  error: string;
+  handleEmailPasswordSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  handleGoogleLogin: () => void;
+  toggleView: () => void;
+}
 
 const AuthForm = ({
   isLoginView,
@@ -14,7 +31,7 @@ const AuthForm = ({
   handleEmailPasswordSubmit,
   handleGoogleLogin,
   toggleView,
-}) => {
+}: AuthFormProps) => {
   const { t } = useTranslation();
 
   return (

@@ -2,17 +2,29 @@
 import PasswordInput from './PasswordInput';
 import { useTranslation } from 'react-i18next';
 
-const RegisterForm = ({ 
-  displayName, 
-  setDisplayName, 
-  email, 
-  setEmail, 
-  password, 
-  setPassword, 
-  confirmPassword, 
-  setConfirmPassword, 
-  error 
-}) => {
+interface RegisterFormProps {
+  displayName: string;
+  setDisplayName: (value: string) => void;
+  email: string;
+  setEmail: (value: string) => void;
+  password: string;
+  setPassword: (value: string) => void;
+  confirmPassword: string;
+  setConfirmPassword: (value: string) => void;
+  error: string;
+}
+
+const RegisterForm = ({
+  displayName,
+  setDisplayName,
+  email,
+  setEmail,
+  password,
+  setPassword,
+  confirmPassword,
+  setConfirmPassword,
+  error,
+}: RegisterFormProps) => {
   const { t } = useTranslation();
   return (
     <div className="space-y-5">

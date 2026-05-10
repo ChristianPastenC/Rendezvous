@@ -1,8 +1,15 @@
 // client/src/components/calls/OutgoingCallModal.jsx
 import { useTranslation } from 'react-i18next';
+import type { CallState } from '../../hooks/useWebRTC';
 import { HangUpIcon, PhoneRingIcon } from "../../assets/Icons";
 
-const OutgoingCallModal = ({ targetName, status, onCancel }) => {
+interface OutgoingCallModalProps {
+  targetName: string;
+  status: CallState;
+  onCancel: () => void;
+}
+
+const OutgoingCallModal = ({ targetName, status, onCancel }: OutgoingCallModalProps) => {
   const { t } = useTranslation();
 
   const statusText = status === 'calling' 

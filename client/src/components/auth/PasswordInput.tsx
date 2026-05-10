@@ -1,15 +1,23 @@
 // src/components/auth/PasswordInput.jsx
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { EyeClosedIcon, EyeOpenIcon } from '../../assets/Icons';
 import { useTranslation } from 'react-i18next';
 
-const PasswordInput = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  id, 
-  label 
-}) => {
+interface PasswordInputProps {
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string;
+  id: string;
+  label: string;
+}
+
+const PasswordInput = ({
+  value,
+  onChange,
+  placeholder,
+  id,
+  label,
+}: PasswordInputProps) => {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
 
