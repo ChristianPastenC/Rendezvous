@@ -15,7 +15,7 @@ import {
  * @param {File} file - The file object to analyze.
  * @returns {string} A string representing the file type (e.g., 'image', 'pdf', 'document', 'code').
  */
-const getFileType = (file) => {
+const getFileType = (file: File): string => {
   const type = file.type;
   const name = file.name.toLowerCase();
 
@@ -57,7 +57,7 @@ const getFileType = (file) => {
  * @param {string} fileType - The file type string returned by getFileType.
  * @returns {JSX.Element} The corresponding icon component.
  */
-const getFileIcon = (fileType) => {
+const getFileIcon = (fileType: string) => {
   switch (fileType) {
     case 'pdf':
       return <PDFIcon className="w-20 h-20 text-red-500" />;
@@ -75,17 +75,21 @@ const getFileIcon = (fileType) => {
 };
 
 
-const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
+export interface FilePreviewData {
+  file: File;
+  url: string;
+}
+
+interface FilePreviewModalProps {
+  previewData: FilePreviewData | null;
+  onClose: () => void;
+  onConfirm: (file: File) => void;
+}
+
+const FilePreviewModal = ({ previewData, onClose, onConfirm }: FilePreviewModalProps) => {
   const { t } = useTranslation();
 
-  const { file, url } = previewData || {};
-
-  /**
-   * Formats a file size in bytes into a human-readable string (Bytes, KB, MB, GB).
-   * @param {number} bytes - The file size in bytes.
-   * @returns {string} A formatted string with the appropriate unit.
-   */
-  const formatFileSize = useCallback((bytes) => {
+  const formatFileSize = useCallback((bytes: number) => {
     if (!bytes) return `0 ${t('filePreview.size.bytes', 'Bytes')}`;
     const k = 1024;
     const sizes = [
@@ -102,23 +106,14 @@ const FilePreviewModal = ({ previewData, onClose, onConfirm }) => {
     return null;
   }
 
+  const { file, url } = previewData;
   const fileType = getFileType(file);
 
-  /**
-   * Extracts the file extension from a filename.
-   * @param {string} filename - The name of the file.
-   * @returns {string} The uppercase file extension without the dot.
-   */
-  const getFileExtension = (filename) => {
+  const getFileExtension = (filename: string) => {
     return filename.slice(filename.lastIndexOf('.')).toUpperCase().slice(1);
   };
 
-  /**
-   * Gets the translated string for a given file type.
-   * @param {string} type - The file type string.
-   * @returns {string} The translated file type string.
-   */
-  const getTranslatedFileType = (type) => {
+  const getTranslatedFileType = (type: string) => {
     switch (type) {
       case 'code':
         return t('filePreview.types.code');

@@ -2,18 +2,18 @@
 import { useTranslation } from 'react-i18next';
 import { PlusIcon, SettingIcon, ChatIcon, SearchIcon } from '../../assets/Icons';
 
-const MobileNav = ({ onShowSearch, onCreateGroup, onEditProfile }) => {
+interface MobileNavProps {
+  onShowSearch: () => void;
+  onCreateGroup: () => void;
+  onEditProfile: () => void;
+}
+
+const MobileNav = ({ onShowSearch, onCreateGroup, onEditProfile }: MobileNavProps) => {
   const { t } = useTranslation();
 
   const ICONS = {
-    Chat:
-      (({ className }) => (
-        <ChatIcon className={className} />
-      )),
-    Search:
-      (({ className }) => (
-        <SearchIcon className={className} />
-      )),
+    Chat: ({ className }: { className?: string }) => <ChatIcon className={className} />,
+    Search: ({ className }: { className?: string }) => <SearchIcon className={className} />,
     Plus: PlusIcon,
     Settings: SettingIcon,
   };

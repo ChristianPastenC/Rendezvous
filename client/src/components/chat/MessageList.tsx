@@ -6,22 +6,21 @@ import {
   memo,
 } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
+import type { EncryptedMessage, MessageAuthorInfo } from "@rendezvous/shared";
 import { useDecryptedMessage } from "../../hooks/useDecryptedMessage";
 import { EmptyStateIcon, FileIcon } from "../../assets/Icons";
 import UserAvatar from "../user/UserAvatar";
 
-/**
- * Renders the decrypted content of a single message.
- * It handles different message types like text, image, and file.
- * @param {object} props - The component props.
- * @param {object} props.msg - The message object.
- * @param {string} props.currentUserUid - The UID of the current user.
- * @param {boolean} props.isSender - True if the current user is the sender of the message.
- * @param {function} props.t - The translation function.
- * @returns {JSX.Element} The rendered message content.
- */
-const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
-  const encryptedDataForUser = msg.encryptedPayload?.[currentUserUid];
+interface MessageContentProps {
+  msg: EncryptedMessage;
+  currentUserUid?: string;
+  isSender: boolean;
+  t: TFunction;
+}
+
+const MessageContent = memo(({ msg, currentUserUid, isSender, t }: MessageContentProps) => {
+  const encryptedDataForUser = currentUserUid ? msg.encryptedPayload?.[currentUserUid] : undefined;
   const { decryptedText, isDecrypting } = useDecryptedMessage(encryptedDataForUser);
 
   if (!encryptedDataForUser) {
@@ -111,7 +110,16 @@ const MessageContent = memo(({ msg, currentUserUid, isSender, t }) => {
  * @param {function} props.t - The translation function.
  * @returns {JSX.Element} The rendered message group.
  */
-const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, isSender, t }) => {
+interface MessageGroupProps {
+  messages: EncryptedMessage[];
+  currentUserUid?: string;
+  showAvatar: boolean;
+  authorInfo: MessageAuthorInfo;
+  isSender: boolean;
+  t: TFunction;
+}
+
+const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, isSender, t }: MessageGroupProps) => {
   const displayName = isSender ? t('messages.you') : (authorInfo?.displayName || t('messages.user'));
 
   return (
@@ -168,23 +176,36 @@ const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, i
   );
 });
 
-const MessageList = ({ messages, currentUserUid }) => {
-  const { t } = useTranslation();
-  const messagesEndRef = useRef(null);
+interface MessageListProps {
+  messages: EncryptedMessage[];
+  currentUserUid?: string;
+}
 
-  const groupedMessages = useMemo(() => {
+interface GroupedMessages {
+  authorId: string;
+  authorInfo: MessageAuthorInfo;
+  messages: EncryptedMessage[];
+}
+
+const MessageList = ({ messages, currentUserUid }: MessageListProps) => {
+  const { t } = useTranslation();
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const groupedMessages = useMemo((): GroupedMessages[] => {
     if (!messages.length) return [];
 
-    const groups = [];
-    let currentGroup = {
-      authorId: messages[0].authorId,
-      authorInfo: messages[0].authorInfo,
-      messages: [messages[0]]
+    const firstMsg = messages[0]!;
+    const groups: GroupedMessages[] = [];
+    let currentGroup: GroupedMessages = {
+      authorId: firstMsg.authorId,
+      authorInfo: firstMsg.authorInfo,
+      messages: [firstMsg]
     };
 
     for (let i = 1; i < messages.length; i++) {
-      const msg = messages[i];
-      const timeDiff = new Date(msg.createdAt) - new Date(currentGroup.messages[currentGroup.messages.length - 1].createdAt);
+      const msg = messages[i]!;
+      const lastInGroup = currentGroup.messages[currentGroup.messages.length - 1]!;
+      const timeDiff = new Date(msg.createdAt).getTime() - new Date(lastInGroup.createdAt).getTime();
 
       if (msg.authorId === currentGroup.authorId && timeDiff < 120000) {
         currentGroup.messages.push(msg);

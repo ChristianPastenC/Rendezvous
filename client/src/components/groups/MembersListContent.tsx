@@ -1,8 +1,17 @@
 // client/src/components/groups/MembersListContent.jsx
-import { useTranslation } from 'react-i18next'; // 1. Importar
+import { useTranslation } from 'react-i18next';
+import type { UserProfile } from '@rendezvous/shared';
 import { CallIcon } from "../../assets/Icons";
 import { formatLastSeen } from "../../utils/lastSeen";
 import UserAvatar from "../user/UserAvatar";
+
+export interface MembersListContentProps {
+  members: UserProfile[];
+  onCallMember: (member: UserProfile) => void;
+  currentUserId?: string;
+  onAddMemberClick: () => void;
+  isOwner: boolean;
+}
 
 const MembersListContent = ({
   members,
@@ -10,7 +19,7 @@ const MembersListContent = ({
   currentUserId,
   onAddMemberClick,
   isOwner,
-}) => {
+}: MembersListContentProps) => {
   const { t } = useTranslation();
 
   return <>

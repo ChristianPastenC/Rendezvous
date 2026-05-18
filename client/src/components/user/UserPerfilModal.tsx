@@ -1,5 +1,5 @@
 // client/src/components/user/UserPerfilModal.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../lib/firebase';
@@ -9,19 +9,27 @@ import { CameraIcon, CloseIcon } from '../../assets/Icons';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
+interface ProfileEditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onProfileUpdate: () => void;
+  onAccountDelete: () => void;
+  onSignOut: () => void;
+}
+
 const ProfileEditModal = ({
   isOpen,
   onClose,
   onProfileUpdate,
   onAccountDelete,
   onSignOut
-}) => {
+}: ProfileEditModalProps) => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
 
-  const [displayName, setDisplayName] = useState(currentUser.displayName || '');
-  const [photoFile, setPhotoFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -50,8 +58,8 @@ const ProfileEditModal = ({
    * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
    * @returns {void}
    */
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
         setError(t('profileModal.error.imageSize'));
@@ -69,12 +77,8 @@ const ProfileEditModal = ({
     }
   };
 
-  /**
-   * Handles the profile save logic.
-   * It uploads a new avatar to Firebase Storage if one was selected,
-   * then sends the updated profile data (displayName, photoURL) to the backend API.
-   */
   const handleSave = async () => {
+    if (!currentUser) return;
     setIsSaving(true);
     setError('');
     let newPhotoURL = currentUser.photoURL;
@@ -85,12 +89,12 @@ const ProfileEditModal = ({
         const storageRef = ref(storage, `avatars/${currentUser.uid}/${photoFile.name}`);
         const uploadTask = uploadBytesResumable(storageRef, photoFile);
 
-        await new Promise((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
           uploadTask.on('state_changed',
             () => { },
             (uploadError) => reject(uploadError),
             () => {
-              getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+              void getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
                 newPhotoURL = downloadURL;
                 resolve();
               });
@@ -114,7 +118,7 @@ const ProfileEditModal = ({
       });
 
       if (!response.ok) {
-        const errData = await response.json();
+        const errData = (await response.json()) as { error?: string };
         throw new Error(errData.error || t('profileModal.error.updateFailed'));
       }
 
@@ -126,7 +130,7 @@ const ProfileEditModal = ({
       onClose();
 
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : t('profileModal.error.updateFailed'));
     } finally {
       setIsSaving(false);
       setIsUploading(false);
@@ -143,7 +147,7 @@ const ProfileEditModal = ({
     return t('profileModal.saveButton.default');
   };
 
-  const displayPhotoURL = previewUrl || currentUser.photoURL;
+  const displayPhotoURL = previewUrl || currentUser?.photoURL;
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">

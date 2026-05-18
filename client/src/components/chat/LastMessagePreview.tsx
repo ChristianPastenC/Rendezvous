@@ -1,9 +1,17 @@
 // client/src/components/chat/LastMessagePreview.jsx
 import { FileIcon, ImageIcon } from '../../assets/Icons';
 import { useTranslation } from 'react-i18next';
+import type { User } from 'firebase/auth';
+import type { EncryptedMessage } from '@rendezvous/shared';
 import { useDecryptedMessage } from '../../hooks/useDecryptedMessage';
 
-const LastMessagePreview = ({ lastMessage, currentUser, isSelected }) => {
+interface LastMessagePreviewProps {
+  lastMessage?: EncryptedMessage | null;
+  currentUser: User;
+  isSelected: boolean;
+}
+
+const LastMessagePreview = ({ lastMessage, currentUser, isSelected }: LastMessagePreviewProps) => {
   const { t } = useTranslation();
   const encryptedDataForUser = lastMessage?.encryptedPayload?.[currentUser.uid];
   const { decryptedText, isDecrypting } = useDecryptedMessage(encryptedDataForUser);

@@ -1,12 +1,24 @@
 // src/components/layout/Sidebar.jsx
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { User } from 'firebase/auth';
+import type { ConversationItem, UserProfile } from '@rendezvous/shared';
 import UserSearch from '../user/UserSearch';
 import { PlusIcon, SettingIcon } from '../../assets/Icons';
 import { formatLastSeen } from '../../utils/lastSeen';
 import UserAvatar from '../user/UserAvatar';
 import LastMessagePreview from '../chat/LastMessagePreview';
 import { formatMessageTimestamp } from '../../utils/formatMessageTimestamp';
+
+interface SidebarProps {
+  currentUser: User | null;
+  conversations: ConversationItem[];
+  selectedId?: string;
+  onSelectConversation: (conv: ConversationItem) => void;
+  onCreateGroup: () => void;
+  onStartConversation: (user: UserProfile) => void;
+  onEditProfile: () => void;
+}
 
 const Sidebar = ({
   currentUser,
@@ -16,20 +28,21 @@ const Sidebar = ({
   onCreateGroup,
   onStartConversation,
   onEditProfile
-}) => {
+}: SidebarProps) => {
   const { t } = useTranslation();
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState<'all' | 'dms' | 'groups'>('all');
 
-  const getLastMessageTimestamp = (conv) => {
-    if (!conv.lastMessage?.createdAt) return 0;
+  const getLastMessageTimestamp = (conv: ConversationItem): number => {
+    const createdAt = conv.lastMessage?.createdAt as
+      | string
+      | { _seconds?: number; toDate?: () => Date }
+      | undefined;
+    if (!createdAt) return 0;
 
-    const createdAt = conv.lastMessage.createdAt;
-
-    if (createdAt._seconds) {
-      return createdAt._seconds * 1000;
-    }
-    if (createdAt.toDate) {
-      return createdAt.toDate().getTime();
+    if (typeof createdAt === 'object') {
+      if (createdAt._seconds) return createdAt._seconds * 1000;
+      if (createdAt.toDate) return createdAt.toDate().getTime();
+      return 0;
     }
     return new Date(createdAt).getTime();
   };
@@ -140,11 +153,13 @@ const Sidebar = ({
                 </span>
               </div>
 
-              <LastMessagePreview
-                lastMessage={conv.lastMessage}
-                currentUser={currentUser}
-                isSelected={selectedId === conv.id}
-              />
+              {currentUser && (
+                <LastMessagePreview
+                  lastMessage={conv.lastMessage}
+                  currentUser={currentUser}
+                  isSelected={selectedId === conv.id}
+                />
+              )}
             </div>
 
           </button>
@@ -179,7 +194,7 @@ const Sidebar = ({
                 <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center font-bold text-lg text-white">
                   {currentUser.displayName
                     ? currentUser.displayName.charAt(0).toUpperCase()
-                    : currentUser.email.charAt(0).toUpperCase()}
+                    : (currentUser.email?.charAt(0).toUpperCase() ?? 'U')}
                 </div>
               )}
             </div>
@@ -190,7 +205,7 @@ const Sidebar = ({
               </p>
               <p
                 className="text-xs text-gray-500 truncate"
-                title={currentUser.email}
+                title={currentUser.email ?? undefined}
               >
                 {currentUser.email}
               </p>

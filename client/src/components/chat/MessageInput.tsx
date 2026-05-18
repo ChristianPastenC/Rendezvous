@@ -1,24 +1,24 @@
 // client/src/components/chat/MessageInput.jsx
-import { useState, useRef, useEffect, useCallback } from 'react';
-import EmojiPicker from 'emoji-picker-react';
+import { useState, useRef, useEffect, useCallback, type ChangeEvent, type RefObject } from 'react';
+import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
+import type { TFunction } from 'i18next';
 import { EmojiIcon, PlusIcon, SendIcon, ImageIcon, DocumentIcon, CodeIcon } from '../../assets/Icons';
 import { isFileTypeAllowed, ALLOWED_IMAGE_TYPES, ALLOWED_DOC_TYPES, ALLOWED_TEXT_DATA_TYPES } from '../../utils/allowedFiles';
-import { useSendMessage } from '../../hooks/useSendMessages';
+import { useSendMessage, type MessageMember } from '../../hooks/useSendMessages';
 import { useEmojiInput } from '../../hooks/useEmojiInput';
-import FilePreviewModal from './FilePreviewModal';
+import type { TypedClientSocket } from '../../lib/socket';
+import FilePreviewModal, { type FilePreviewData } from './FilePreviewModal';
 import { useTranslation } from 'react-i18next';
 
 const MAX_FILE_SIZE_MB = 5;
 
-/**
- * A menu component for selecting the type of file to attach.
- * @param {object} props - The component props.
- * @param {function} props.t - The translation function.
- * @param {function(string): void} props.onAttachClick - Callback executed when a menu item is clicked.
- * @param {React.RefObject<HTMLDivElement>} props.attachMenuRef - Ref for the menu's root element.
- * @returns {JSX.Element} The rendered attachment menu.
- */
-const AttachMenu = ({ t, onAttachClick, attachMenuRef }) => (
+interface AttachMenuProps {
+  t: TFunction;
+  onAttachClick: (type: 'image' | 'document' | 'code') => void;
+  attachMenuRef: RefObject<HTMLDivElement | null>;
+}
+
+const AttachMenu = ({ t, onAttachClick, attachMenuRef }: AttachMenuProps) => (
   <div
     ref={attachMenuRef}
     className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-300"
@@ -50,7 +50,15 @@ const AttachMenu = ({ t, onAttachClick, attachMenuRef }) => (
   </div>
 );
 
-const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, members }) => {
+interface MessageInputProps {
+  socket: TypedClientSocket | null;
+  isDirectMessage: boolean;
+  conversationId: string | null;
+  groupId: string | null;
+  members: MessageMember[];
+}
+
+const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, members }: MessageInputProps) => {
   const { t } = useTranslation();
 
   const { sending, uploadProgress, sendTextMessage, sendFileMessage } = useSendMessage(
@@ -75,12 +83,12 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     return await sendTextMessage(finalContent);
   });
 
-  const [previewData, setPreviewData] = useState(null);
+  const [previewData, setPreviewData] = useState<FilePreviewData | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
 
-  const fileInputRef = useRef(null);
-  const emojiPickerRef = useRef(null);
-  const attachMenuRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
+  const attachMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -91,11 +99,12 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
   }, [previewData]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(target)) {
         closeEmojiPicker();
       }
-      if (attachMenuRef.current && !attachMenuRef.current.contains(event.target)) {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(target)) {
         setShowAttachMenu(false);
       }
     };
@@ -103,13 +112,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [closeEmojiPicker]);
 
-  /**
-   * Handles the file input change event. Validates the selected file's size and type,
-   * then creates a preview URL and sets the state to show the FilePreviewModal.
-   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
-   * @returns {void}
-   */
-  const handleFileChange = useCallback((e) => {
+  const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -134,13 +137,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     e.target.value = '';
   }, [t, previewData]);
 
-  /**
-   * Handles the confirmation of a file upload from the preview modal.
-   * Hides the modal and triggers the sendFileMessage function.
-   * @param {File} file - The file object to be sent.
-   * @returns {Promise<void>}
-   */
-  const handleConfirmUpload = useCallback(async (file) => {
+  const handleConfirmUpload = useCallback(async (file: File) => {
     try {
       await sendFileMessage(file);
 
@@ -149,14 +146,11 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
       }
       setPreviewData(null);
     } catch (error) {
-      console.error("Error en handleConfirmUpload:", error);
-      alert(t('fileInput.error.uploadFailed', 'Error al subir el archivo. Por favor, intenta de nuevo.'));
+      console.error("Error in handleConfirmUpload:", error);
+      alert(t('fileInput.error.uploadFailed', 'Failed to upload file. Please try again.'));
     }
   }, [sendFileMessage, previewData, t]);
 
-  /**
-   * Handles closing the preview modal and cleaning up blob URLs
-   */
   const handleClosePreview = useCallback(() => {
     if (previewData?.url && previewData.url.startsWith('blob:')) {
       URL.revokeObjectURL(previewData.url);
@@ -164,13 +158,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     setPreviewData(null);
   }, [previewData]);
 
-  /**
-   * Handles clicks on the attachment menu options. It sets the appropriate 'accept'
-   * attribute on the file input and programmatically triggers a click to open the file dialog.
-   * @param {'image' | 'document' | 'code'} type - The type of file to attach.
-   * @returns {void}
-   */
-  const handleAttachClick = useCallback((type) => {
+  const handleAttachClick = useCallback((type: 'image' | 'document' | 'code') => {
     if (fileInputRef.current) {
       if (type === 'image') {
         fileInputRef.current.accept = ALLOWED_IMAGE_TYPES.join(',');
@@ -191,8 +179,8 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
           <div ref={emojiPickerRef} className="absolute bottom-full mb-2 left-0 z-50">
             <EmojiPicker
               onEmojiClick={handleEmojiClick}
-              theme="light"
-              emojiStyle="native"
+              theme={Theme.LIGHT}
+              emojiStyle={EmojiStyle.NATIVE}
               searchPlaceholder={t('fileInput.emoji.search')}
               previewConfig={{ showPreview: false }}
             />

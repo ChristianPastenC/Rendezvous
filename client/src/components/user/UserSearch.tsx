@@ -1,27 +1,26 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { UserProfile } from '@rendezvous/shared';
 import { useAuth } from '../../context/AuthContext';
 import { SearchIcon } from '../../assets/Icons';
 
-const UserSearch = ({ onSelectUser }) => {
+interface UserSearchProps {
+  onSelectUser: (user: UserProfile) => void;
+}
+
+const UserSearch = ({ onSelectUser }: UserSearchProps) => {
   const { t } = useTranslation();
 
   const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
   const { currentUser } = useAuth();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  /**
-   * Handles the user search form submission.
-   * It prevents the default form action, validates the query length,
-   * and fetches user search results from the API.
-   * Updates state for loading, results, and errors.
-   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
-   */
-  const handleSearch = async (e) => {
+  const handleSearch = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!currentUser) return;
     if (query.length < 3) {
       setError(t('userSearch.error.minLength'));
       return;
@@ -30,31 +29,25 @@ const UserSearch = ({ onSelectUser }) => {
     setLoading(true);
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`${API_URL}/api/users/search?query=${query}`, {
+      const response = await fetch(`${API_URL}/api/users/search?query=${encodeURIComponent(query)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) {
         throw new Error(t('userSearch.error.fetchFailed'));
       }
-      const data = await response.json();
+      const data = (await response.json()) as UserProfile[];
       setResults(data);
       if (data.length === 0) {
         setError(t('userSearch.error.noResults'));
       }
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : t('userSearch.error.fetchFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * Handles the selection of a user from the search results.
-   * It resets the search input and results, then calls the onSelectUser callback
-   * with the chosen user.
-   * @param {object} user - The selected user object.
-   */
-  const handleSelect = (user) => {
+  const handleSelect = (user: UserProfile) => {
     setQuery('');
     setResults([]);
     setError('');

@@ -2,19 +2,30 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
+type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+type AvatarColor = 'blue' | 'purple' | 'green' | 'red' | 'gray';
+
+interface UserAvatarProps {
+  photoURL?: string | null;
+  displayName?: string | null;
+  size?: AvatarSize;
+  className?: string;
+  fallbackColor?: AvatarColor;
+}
+
 const UserAvatar = ({
   photoURL,
   displayName,
   size = "md",
   className = "",
   fallbackColor = "blue"
-}) => {
+}: UserAvatarProps) => {
   const { t } = useTranslation();
 
   const [imgError, setImgError] = useState(false);
-  const [imgSrc, setImgSrc] = useState(null);
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
 
-  const sizeClasses = {
+  const sizeClasses: Record<AvatarSize, string> = {
     xs: "w-6 h-6 text-xs",
     sm: "w-8 h-8 text-sm",
     md: "w-10 h-10 text-base",
@@ -22,7 +33,7 @@ const UserAvatar = ({
     xl: "w-16 h-16 text-xl"
   };
 
-  const colorClasses = {
+  const colorClasses: Record<AvatarColor, string> = {
     blue: "bg-blue-600",
     purple: "bg-purple-500",
     green: "bg-green-500",
@@ -61,35 +72,17 @@ const UserAvatar = ({
     setImgSrc(processedUrl);
   }, [photoURL, size]);
 
-  /**
-   * Handles the image loading error event.
-   * Logs a warning and sets the component state to show the fallback avatar.
-   * @param {React.SyntheticEvent<HTMLImageElement, Event>} e - The error event object.
-   */
-  const handleError = (e) => {
+  const handleError = () => {
     setImgError(true);
   };
 
-  /**
-   * Handles the successful image loading event.
-   * Logs a success message in development environments.
-   */
-  const handleLoad = () => {
-    if (process.env.NODE_ENV === 'development') {
-    }
-  };
+  const handleLoad = () => {};
 
-  /**
-   * Generates initials from a display name.
-   * It returns the first letter of the first two words, or just the first letter if only one word.
-   * @param {string | undefined} name - The user's display name.
-   * @returns {string} The calculated initials in uppercase.
-   */
-  const getInitials = (name) => {
+  const getInitials = (name?: string | null): string => {
     if (!name) return '?';
     const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
+    if (parts.length >= 2 && parts[0] && parts[1]) {
+      return ((parts[0][0] ?? '') + (parts[1][0] ?? '')).toUpperCase();
     }
     return name.charAt(0).toUpperCase();
   };
@@ -98,12 +91,10 @@ const UserAvatar = ({
   const sizeClass = sizeClasses[size] || sizeClasses.md;
   const colorClass = colorClasses[fallbackColor] || colorClasses.blue;
 
-  const defaultTitle = t('common.avatar.defaultTitle', 'Usuario');
+  const defaultTitle = t('common.avatar.defaultTitle', 'User');
   const defaultAlt = t('common.avatar.defaultAlt', 'Avatar');
 
-  const isFirebaseStorage = imgSrc && imgSrc.includes('firebasestorage.googleapis.com');
-
-  const isGoogleUrl = imgSrc && imgSrc.includes('googleusercontent.com');
+  const isGoogleUrl = Boolean(imgSrc && imgSrc.includes('googleusercontent.com'));
 
   if (showFallback) {
     return (

@@ -2,12 +2,19 @@
 import {
   useCallback,
   useState,
-  useRef
+  useRef,
+  type MutableRefObject,
+  type Dispatch,
+  type SetStateAction
 } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { signOut } from 'firebase/auth';
+import type { TFunction } from 'i18next';
+import { signOut, type User } from 'firebase/auth';
+import type { CallType, ConversationItem, EncryptedMessage, UserProfile } from '@rendezvous/shared';
 import { auth } from '../../lib/firebase';
+import type { TypedClientSocket } from '../../lib/socket';
+import type { PassphrasePromptOptions } from '../../lib/cryptoService';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from './Sidebar';
 import CreateGroupModal from '../groups/CreateGroupModal';
@@ -18,7 +25,7 @@ import { useSocketManager } from '../../hooks/useSocketManager';
 import { useConversations } from '../../hooks/useConversations';
 import { useWebRTC } from '../../hooks/useWebRTC';
 import VideoCallModal from '../calls/VideoCallModal';
-import IncomingCallModal from '../calls/IncomingCallModal'
+import IncomingCallModal from '../calls/IncomingCallModal';
 import CallTypeModal from '../calls/CallTypeModal';
 import OutgoingCallModal from '../calls/OutgoingCallModal';
 import Footer from './Footer';
@@ -26,13 +33,20 @@ import SecurityPassphraseModal from '../auth/SecurityPassphraseModal';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
-/**
- * A simple loader component displayed while data is being fetched.
- * @param {object} props - The component props.
- * @param {function} props.t - The translation function.
- * @returns {JSX.Element} The rendered loader.
- */
-const Loader = ({ t }) => (
+export interface MainOutletContext {
+  socket: TypedClientSocket | null;
+  currentUser: User | null;
+  selectedConversation: ConversationItem | null;
+  loadAllData: () => Promise<void>;
+  onClearSelectedConversation: () => void;
+  messagesCache: MutableRefObject<Record<string, EncryptedMessage[]>>;
+  membersCache: MutableRefObject<Record<string, UserProfile[]>>;
+  setConversations: Dispatch<SetStateAction<ConversationItem[]>>;
+  startCallProcess: (member: UserProfile) => void;
+  inCall: boolean;
+}
+
+const Loader = ({ t }: { t: TFunction }) => (
   <div className="flex items-center justify-center h-screen bg-gray-100">
     <div className="text-center">
       <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#3B82F6] mb-4"></div>
@@ -46,21 +60,25 @@ const MainLayout = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  const [passphraseModal, setPassphraseModal] = useState({
+  const [passphraseModal, setPassphraseModal] = useState<{
+    isOpen: boolean;
+    isNewUser: boolean;
+    isRetry: boolean;
+  }>({
     isOpen: false,
     isNewUser: false,
     isRetry: false,
   });
-  const passphraseResolverRef = useRef(null);
+  const passphraseResolverRef = useRef<((value: string | null) => void) | null>(null);
 
-  const requestPassphrase = useCallback(({ isNewUser, isRetry }) => {
-    return new Promise((resolve) => {
+  const requestPassphrase = useCallback(({ isNewUser, isRetry }: PassphrasePromptOptions) => {
+    return new Promise<string | null>((resolve) => {
       passphraseResolverRef.current = resolve;
       setPassphraseModal({ isOpen: true, isNewUser, isRetry });
     });
   }, []);
 
-  const handlePassphraseSubmit = useCallback((value) => {
+  const handlePassphraseSubmit = useCallback((value: string) => {
     setPassphraseModal((prev) => ({ ...prev, isOpen: false }));
     if (passphraseResolverRef.current) {
       passphraseResolverRef.current(value);
@@ -78,8 +96,8 @@ const MainLayout = () => {
 
   const socket = useSocketManager(currentUser, requestPassphrase);
 
-  const messagesCache = useRef({});
-  const membersCache = useRef({});
+  const messagesCache = useRef<Record<string, EncryptedMessage[]>>({});
+  const membersCache = useRef<Record<string, UserProfile[]>>({});
 
   const { conversations, setConversations, loadAllData, isLoading } = useConversations(
     currentUser,
@@ -87,7 +105,7 @@ const MainLayout = () => {
     messagesCache
   );
 
-  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [selectedConversation, setSelectedConversation] = useState<ConversationItem | null>(null);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserSearchModalOpen, setIsUserSearchModalOpen] = useState(false);
@@ -106,26 +124,18 @@ const MainLayout = () => {
   } = useWebRTC(socket, currentUser);
 
   const [showCallTypeModal, setShowCallTypeModal] = useState(false);
-  const [selectedMemberToCall, setSelectedMemberToCall] = useState(null);
+  const [selectedMemberToCall, setSelectedMemberToCall] = useState<UserProfile | null>(null);
 
-  /**
-   * Initiates the call process by showing the call type selection modal.
-   * @param {object} member - The user object of the member to call.
-   */
-  const startCallProcess = useCallback((member) => {
+  const startCallProcess = useCallback((member: UserProfile) => {
     if (inCall || callState !== 'idle') return;
     setSelectedMemberToCall(member);
     setShowCallTypeModal(true);
   }, [inCall, callState]);
 
-  /**
-   * Handles the selection of a call type ('video' or 'audio') and starts the call.
-   * @param {'video' | 'audio'} callType - The type of call to start.
-   */
-  const handleSelectCallType = useCallback((callType) => {
+  const handleSelectCallType = useCallback((callType: CallType) => {
     setShowCallTypeModal(false);
     if (!selectedMemberToCall || !startCall) return;
-    startCall(selectedMemberToCall.uid, callType);
+    void startCall(selectedMemberToCall.uid, callType);
   }, [selectedMemberToCall, startCall]);
 
   /**
@@ -156,32 +166,23 @@ const MainLayout = () => {
       await signOut(auth);
       navigate('/auth');
     } catch (error) {
-      throw new Error("Error during sign-out:", error);
+      console.error('Error during sign-out:', error);
     }
-  }, [navigate, inCall, hangUp, t]);
+  }, [navigate, inCall, hangUp]);
 
-  /**
-   * Sets the currently selected conversation in the state.
-   * @param {object} conv - The conversation object to select.
-   */
-  const handleSelectConversation = useCallback((conv) => {
+  const handleSelectConversation = useCallback((conv: ConversationItem) => {
     setSelectedConversation(conv);
   }, []);
 
-  /**
-   * Starts a new direct message conversation or selects an existing one.
-   * If the conversation doesn't exist, it's created locally and added to the list.
-   * @param {object} user - The user object to start a conversation with.
-   */
   const handleStartConversation = useCallback(
-    (user) => {
+    (user: UserProfile) => {
       const existingConv = conversations.find(
-        (c) => c.type === 'dm' && c.userData.uid === user.uid
+        (c) => c.type === 'dm' && c.userData?.uid === user.uid
       );
       if (existingConv) {
         setSelectedConversation(existingConv);
       } else {
-        const newConv = {
+        const newConv: ConversationItem = {
           id: `dm_${user.uid}`,
           type: 'dm',
           name: user.displayName,
@@ -196,26 +197,17 @@ const MainLayout = () => {
     [conversations, setConversations]
   );
 
-  /**
-   * A wrapper function to start a conversation and then close the user search modal.
-   * @param {object} user - The user object selected from the search modal.
-   */
   const handleStartConversationAndCloseModal = useCallback(
-    (user) => {
+    (user: UserProfile) => {
       handleStartConversation(user);
       setIsUserSearchModalOpen(false);
     },
     [handleStartConversation]
   );
 
-  /**
-   * Handles the creation of a new group.
-   * Makes an API call and reloads all data on success.
-   * @param {string} name - The name of the new group.
-   * @param {string[]} memberIds - An array of user UIDs to add to the group.
-   */
   const handleCreateGroup = useCallback(
-    async (name, memberIds) => {
+    async (name: string, memberIds: string[] = []) => {
+      if (!currentUser) return;
       const token = await currentUser.getIdToken();
       const response = await fetch(`${API_URL}/api/groups`, {
         method: 'POST',
@@ -237,19 +229,12 @@ const MainLayout = () => {
     [currentUser, loadAllData, t]
   );
 
-  /**
-   * Callback executed after a user's profile has been updated.
-   * Triggers a full data reload to reflect changes.
-   */
   const handleProfileUpdate = useCallback(() => {
-    loadAllData();
+    void loadAllData();
   }, [loadAllData]);
 
-  /**
-   * Handles the account deletion process. It shows a confirmation dialog,
-   * makes an API call to delete the user data, and signs the user out.
-   */
   const handleDeleteAccount = useCallback(async () => {
+    if (!currentUser) return;
     if (
       !window.confirm(
         t('layout.main.deleteConfirm')
@@ -275,24 +260,21 @@ const MainLayout = () => {
         navigate('/auth');
         window.location.reload();
       } else {
-        const { error } = await response.json();
-        alert(`${t('layout.main.deleteError')} ${error}`);
+        const { error } = (await response.json()) as { error?: string };
+        alert(`${t('layout.main.deleteError')} ${error || ''}`);
       }
-    } catch (error) {
+    } catch {
       alert(t('layout.main.deleteNetworkError'));
     }
   }, [currentUser, navigate, inCall, hangUp, t]);
 
-  /**
-   * Clears the currently selected conversation, returning to the default view on mobile.
-   */
   const handleClearSelectedConversation = useCallback(() => {
     setSelectedConversation(null);
   }, []);
 
   if (isLoading) return <Loader t={t} />;
 
-  const outletContext = {
+  const outletContext: MainOutletContext = {
     socket,
     currentUser,
     selectedConversation,
@@ -326,7 +308,7 @@ const MainLayout = () => {
               <Sidebar
                 currentUser={currentUser}
                 conversations={conversations}
-                selectedId={selectedConversation?.id}
+                selectedId={undefined}
                 onSelectConversation={handleSelectConversation}
                 onCreateGroup={() => setIsCreateGroupModalOpen(true)}
                 onStartConversation={handleStartConversation}

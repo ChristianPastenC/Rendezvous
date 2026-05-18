@@ -1,36 +1,36 @@
 // client/src/components/groups/AddMemberModal.jsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { UserProfile } from '@rendezvous/shared';
 import { useAuth } from '../../context/AuthContext';
 import UserSearch from '../user/UserSearch';
 import { CloseIcon } from '../../assets/Icons';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
-const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
+interface AddMemberModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onMemberAdded: () => void;
+  groupId: string;
+}
+
+const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }: AddMemberModalProps) => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  /**
-   * Sets the selected user from the search results and clears any existing errors.
-   * @param {object} user - The user object selected from the UserSearch component.
-   */
-  const handleSelectUser = (user) => {
+  const handleSelectUser = (user: UserProfile) => {
     setSelectedUser(user);
     setError('');
   };
 
-  /**
-   * Handles the logic for adding a selected user to the group.
-   * Makes an API call to the backend and handles success or error states.
-   */
   const handleAddClick = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || !currentUser) return;
     setIsAdding(true);
     setError('');
     try {
@@ -45,7 +45,7 @@ const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
+        const errData = (await response.json()) as { error?: string };
         throw new Error(errData.error || t('modals.addMember.errorDefault'));
       }
 
@@ -53,7 +53,7 @@ const AddMemberModal = ({ isOpen, onClose, onMemberAdded, groupId }) => {
       handleClose();
 
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : t('modals.addMember.errorDefault'));
     } finally {
       setIsAdding(false);
     }

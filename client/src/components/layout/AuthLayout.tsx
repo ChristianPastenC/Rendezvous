@@ -1,7 +1,14 @@
 // src/components/auth/AuthLayout.jsx
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const AuthLayout = ({ title, subtitle, children }) => {
+interface AuthLayoutProps {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}
+
+const AuthLayout = ({ title, subtitle, children }: AuthLayoutProps) => {
   const { t } = useTranslation();
 
   return (

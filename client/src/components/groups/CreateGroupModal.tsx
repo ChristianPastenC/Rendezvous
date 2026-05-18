@@ -1,15 +1,21 @@
 // client/src/components/groups/CreateGroupModal.jsx
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloseIcon } from '../../assets/Icons';
 
-const CreateGroupModal = ({ isOpen, onClose, onCreate }) => {
+interface CreateGroupModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (groupName: string) => void;
+}
+
+const CreateGroupModal = ({ isOpen, onClose, onCreate }: CreateGroupModalProps) => {
   const { t } = useTranslation();
   const [groupName, setGroupName] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (groupName.trim()) onCreate(groupName);
   };

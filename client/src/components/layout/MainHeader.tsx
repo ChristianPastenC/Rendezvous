@@ -1,8 +1,18 @@
 // src/components/layout/MainHeader.jsx
 import { useTranslation } from 'react-i18next';
+import type { ConversationItem, UserProfile } from '@rendezvous/shared';
 import { formatLastSeen } from '../../utils/lastSeen';
 import { BackIcon, CallIcon, MembersIcon } from '../../assets/Icons';
 import UserAvatar from '../user/UserAvatar';
+
+interface MainHeaderProps {
+  selectedConversation: ConversationItem | null;
+  onClearSelectedConversation: () => void;
+  inCall: boolean;
+  callTarget: UserProfile | null | undefined;
+  onCallClick: () => void;
+  onMembersClick: () => void;
+}
 
 const MainHeader = ({
   selectedConversation,
@@ -11,7 +21,7 @@ const MainHeader = ({
   callTarget,
   onCallClick,
   onMembersClick,
-}) => {
+}: MainHeaderProps) => {
   const { t } = useTranslation();
 
   return (

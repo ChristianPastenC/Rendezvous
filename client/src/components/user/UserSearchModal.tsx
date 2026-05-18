@@ -1,8 +1,15 @@
 // src/components/dms/UserSearchModal.jsx
 import { useTranslation } from 'react-i18next';
+import type { UserProfile } from '@rendezvous/shared';
 import UserSearch from './UserSearch';
 
-const UserSearchModal = ({ isOpen, onClose, onSelectUser }) => {
+interface UserSearchModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectUser: (user: UserProfile) => void;
+}
+
+const UserSearchModal = ({ isOpen, onClose, onSelectUser }: UserSearchModalProps) => {
   const { t } = useTranslation();
 
   if (!isOpen) return null;

@@ -1,9 +1,14 @@
 // client/src/components/groups/MembersModal.jsx
-import MembersListContent from "./MembersListContent";
+import MembersListContent, { type MembersListContentProps } from "./MembersListContent";
 import { BackArrowIcon } from "../../assets/Icons";
 import { useTranslation } from "react-i18next";
 
-const MembersModal = ({ isOpen, onClose, ...props }) => {
+interface MembersModalProps extends MembersListContentProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const MembersModal = ({ isOpen, onClose, ...props }: MembersModalProps) => {
   const { t } = useTranslation();
 
   if (!isOpen) return null;
