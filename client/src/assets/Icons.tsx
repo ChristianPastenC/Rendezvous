@@ -1,4 +1,6 @@
-export const GoogleIcon = (props) => {
+import type { SVGProps } from 'react';
+
+export const GoogleIcon = (props: SVGProps<SVGSVGElement>) => {
   return (
     <svg
       viewBox='0 0 48 48'
@@ -14,7 +16,7 @@ export const GoogleIcon = (props) => {
   );
 }
 
-export const EyeOpenIcon = (props) => (
+export const EyeOpenIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -36,7 +38,7 @@ export const EyeOpenIcon = (props) => (
   </svg>
 );
 
-export const EyeClosedIcon = (props) => (
+export const EyeClosedIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -53,7 +55,7 @@ export const EyeClosedIcon = (props) => (
   </svg>
 );
 
-export const PlusIcon = (props) => (
+export const PlusIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -69,7 +71,7 @@ export const PlusIcon = (props) => (
   </svg>
 );
 
-export const SettingIcon = (props) => (
+export const SettingIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -91,7 +93,7 @@ export const SettingIcon = (props) => (
   </svg>
 );
 
-export const FileIcon = (props) => (
+export const FileIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -108,7 +110,7 @@ export const FileIcon = (props) => (
   </svg>
 );
 
-export const BackIcon = (props) => (
+export const BackIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -124,7 +126,7 @@ export const BackIcon = (props) => (
   </svg>
 );
 
-export const CallIcon = (props) => (
+export const CallIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -137,7 +139,7 @@ export const CallIcon = (props) => (
   </svg>
 );
 
-export const MembersIcon = (props) => (
+export const MembersIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -153,7 +155,7 @@ export const MembersIcon = (props) => (
   </svg>
 );
 
-export const EmptyStateIcon = (props) => (
+export const EmptyStateIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -169,7 +171,7 @@ export const EmptyStateIcon = (props) => (
   </svg>
 );
 
-export const SearchIcon = (props) => (
+export const SearchIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     xmlns="http://www.w3.org/2000/svg"
@@ -182,7 +184,7 @@ export const SearchIcon = (props) => (
   </svg>
 );
 
-export const EmojiIcon = (props) => (
+export const EmojiIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -198,7 +200,7 @@ export const EmojiIcon = (props) => (
   </svg>
 );
 
-export const SendIcon = (props) => (
+export const SendIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -215,7 +217,7 @@ export const SendIcon = (props) => (
   </svg>
 );
 
-export const CameraIcon = (props) => (
+export const CameraIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -230,7 +232,7 @@ export const CameraIcon = (props) => (
   </svg>
 );
 
-export const CloseIcon = (props) => (
+export const CloseIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -247,7 +249,7 @@ export const CloseIcon = (props) => (
   </svg>
 );
 
-export const BackArrowIcon = (props) => (
+export const BackArrowIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -264,7 +266,7 @@ export const BackArrowIcon = (props) => (
   </svg>
 );
 
-export const CodeIcon = (props) => (
+export const CodeIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -280,7 +282,7 @@ export const CodeIcon = (props) => (
   </svg>
 );
 
-export const DocumentIcon = (props) => (
+export const DocumentIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -296,7 +298,7 @@ export const DocumentIcon = (props) => (
   </svg>
 );
 
-export const ImageIcon = (props) => (
+export const ImageIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -312,7 +314,7 @@ export const ImageIcon = (props) => (
   </svg>
 );
 
-export const ChatIcon = (props) => (
+export const ChatIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -328,7 +330,7 @@ export const ChatIcon = (props) => (
   </svg>
 );
 
-export const IncomingCallIcon = (props) => (
+export const IncomingCallIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -344,7 +346,7 @@ export const IncomingCallIcon = (props) => (
   </svg>
 );
 
-export const DeclineCallIcon = (props) => (
+export const DeclineCallIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -360,8 +362,9 @@ export const DeclineCallIcon = (props) => (
   </svg>
 );
 
-export const AcceptCallIcon = (props) => (
+export const AcceptCallIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
+    {...props}
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -374,7 +377,7 @@ export const AcceptCallIcon = (props) => (
   </svg>
 );
 
-export const PhoneRingIcon = (props) => (
+export const PhoneRingIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -390,7 +393,7 @@ export const PhoneRingIcon = (props) => (
   </svg>
 );
 
-export const HangUpIcon = (props) => (
+export const HangUpIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -406,7 +409,7 @@ export const HangUpIcon = (props) => (
   </svg>
 );
 
-export const UserIcon = (props) => (
+export const UserIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -421,7 +424,7 @@ export const UserIcon = (props) => (
   </svg>
 );
 
-export const MicOffIcon = (props) => (
+export const MicOffIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -443,7 +446,7 @@ export const MicOffIcon = (props) => (
   </svg>
 );
 
-export const MicOnIcon = (props) => (
+export const MicOnIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -459,7 +462,7 @@ export const MicOnIcon = (props) => (
   </svg>
 );
 
-export const VideoOffIcon = (props) => (
+export const VideoOffIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -481,7 +484,7 @@ export const VideoOffIcon = (props) => (
   </svg>
 );
 
-export const VideoOnIcon = (props) => (
+export const VideoOnIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -497,7 +500,7 @@ export const VideoOnIcon = (props) => (
   </svg>
 );
 
-export const SpinnerIcon = (props) => (
+export const SpinnerIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     viewBox="0 0 24 24"
@@ -514,7 +517,7 @@ export const SpinnerIcon = (props) => (
   </svg>
 );
 
-export const PDFIcon = (props) => (
+export const PDFIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="currentColor"
@@ -525,7 +528,7 @@ export const PDFIcon = (props) => (
   </svg>
 );
 
-export const DocIcon = (props) => (
+export const DocIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="currentColor"
@@ -536,7 +539,7 @@ export const DocIcon = (props) => (
   </svg>
 );
 
-export const XLSIcon = () => (
+export const XLSIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="currentColor"
@@ -547,7 +550,7 @@ export const XLSIcon = () => (
   </svg>
 );
 
-export const PPTIcon = () => (
+export const PPTIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="currentColor"
@@ -558,7 +561,7 @@ export const PPTIcon = () => (
   </svg>
 );
 
-export const CodePreviewIcon = (props) => (
+export const CodePreviewIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="none"
@@ -573,7 +576,7 @@ export const CodePreviewIcon = (props) => (
   </svg>
 );
 
-export const DefaultFileIcon = (props) => (
+export const DefaultFileIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     fill="currentColor"
