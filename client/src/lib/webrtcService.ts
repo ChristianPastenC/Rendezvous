@@ -11,15 +11,28 @@ class WebRTCService {
   public onCallEnded: (() => void) | null = null;
   public onIncomingCall: ((data: WebRTCIncomingOfferPayload) => void) | null = null;
   public onCallRinging: ((from: string) => void) | null = null;
+  public onCallError: ((message: string) => void) | null = null;
 
   constructor(socket: TypedClientSocket) {
     this.socket = socket;
-    this.iceServers = {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-      ],
-    };
+    const iceServers: RTCIceServer[] = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ];
+
+    const turnUrl = import.meta.env.VITE_TURN_URL;
+    if (turnUrl) {
+      const turnServer: RTCIceServer = { urls: turnUrl };
+      if (import.meta.env.VITE_TURN_USERNAME) {
+        turnServer.username = import.meta.env.VITE_TURN_USERNAME;
+      }
+      if (import.meta.env.VITE_TURN_CREDENTIAL) {
+        turnServer.credential = import.meta.env.VITE_TURN_CREDENTIAL;
+      }
+      iceServers.push(turnServer);
+    }
+
+    this.iceServers = { iceServers };
 
     this.registerSocketListeners();
   }
@@ -36,14 +49,24 @@ class WebRTCService {
     this.socket.on('webrtc:answer', async ({ from, answer }) => {
       const pc = this.peerConnections.get(from);
       if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (err) {
+          console.error('[WebRTC] Failed to set remote answer:', err);
+          this.onCallError?.('Failed to establish peer connection.');
+          this.endCall(from);
+        }
       }
     });
 
     this.socket.on('webrtc:ice-candidate', async ({ from, candidate }) => {
       const pc = this.peerConnections.get(from);
       if (pc && candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.warn('[WebRTC] Ignoring invalid or late ICE candidate:', err);
+        }
       }
     });
 
@@ -81,11 +104,17 @@ class WebRTCService {
     };
 
     pc.onconnectionstatechange = () => {
-      if (
-        pc.connectionState === 'disconnected' ||
-        pc.connectionState === 'failed' ||
-        pc.connectionState === 'closed'
-      ) {
+      if (pc.connectionState === 'failed') {
+        this.onCallError?.('Call connection failed. Check your network or TURN configuration.');
+        this.endCall(recipientUid);
+      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+        this.endCall(recipientUid);
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === 'failed') {
+        this.onCallError?.('ICE connection failed. Unable to reach peer.');
         this.endCall(recipientUid);
       }
     };
@@ -103,8 +132,23 @@ class WebRTCService {
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => track.stop());
     }
-    this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-    return this.localStream;
+
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      return this.localStream;
+    } catch (error) {
+      const errName = error instanceof DOMException ? error.name : '';
+      let message = 'Unable to access microphone or camera.';
+      if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
+        message = 'Camera or microphone permission was denied.';
+      } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+        message = 'No camera or microphone device was found.';
+      } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
+        message = 'Camera or microphone is already in use by another application.';
+      }
+      this.onCallError?.(message);
+      throw new Error(message);
+    }
   }
 
   private addLocalStreamToPC(pc: RTCPeerConnection): void {
