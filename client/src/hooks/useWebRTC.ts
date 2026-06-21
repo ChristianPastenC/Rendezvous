@@ -14,6 +14,11 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [incomingCallData, setIncomingCallData] = useState<WebRTCIncomingOfferPayload | null>(null);
   const [currentCallType, setCurrentCallType] = useState<CallType>('video');
+  const [callError, setCallError] = useState<string | null>(null);
+
+  const clearCallError = useCallback(() => {
+    setCallError(null);
+  }, []);
 
   const webrtcRef = useRef<WebRTCService | null>(null);
   const remoteUserIdRef = useRef<string | null>(null);
@@ -78,6 +83,10 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
       setRemoteStream(stream);
       setCallState('connected');
       setInCall(true);
+    };
+
+    webrtcService.onCallError = (message) => {
+      setCallError(message);
     };
 
     webrtcService.onCallEnded = () => {
@@ -211,6 +220,8 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
     remoteStream,
     incomingCallData,
     currentCallType,
+    callError,
+    clearCallError,
     startCall,
     acceptCall,
     rejectCall,
