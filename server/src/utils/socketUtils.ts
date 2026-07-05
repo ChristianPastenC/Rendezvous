@@ -8,8 +8,8 @@ export const notifyUserOfNewConversation = async (
   io: TypedServer,
   userSocketMap: UserSocketMap
 ): Promise<void> => {
-  const socketId = userSocketMap[userId];
-  if (!socketId) return;
+  const socketIds = userSocketMap.get(userId);
+  if (!socketIds || socketIds.size === 0) return;
 
   try {
     const groupDoc = await groupRef.get();
@@ -23,15 +23,19 @@ export const notifyUserOfNewConversation = async (
       (doc) => ({ id: doc.id, ...(doc.data() as Omit<Channel, 'id'>) })
     );
 
-    io.to(socketId).emit('newConversation', {
+    const payload = {
       id: `group_${groupRef.id}`,
-      type: 'group',
+      type: 'group' as const,
       name: groupData.name,
       groupData: {
         ...groupData,
         id: groupRef.id,
         channelId: channels.length > 0 && channels[0] ? channels[0].id : null,
       },
+    };
+
+    socketIds.forEach((socketId) => {
+      io.to(socketId).emit('newConversation', payload);
     });
     console.log(`[Socket] Emitted 'newConversation' (group) to ${userId}`);
   } catch (error) {

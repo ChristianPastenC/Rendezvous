@@ -115,13 +115,14 @@ export const registerChatHandlers = (
       console.log(`[Socket] Broadcast 'encryptedMessage' to room: ${conversationId}`);
 
       members.forEach((memberId) => {
-        const memberSocketId = userSocketMap[memberId];
-        if (memberSocketId) {
+        const memberSockets = userSocketMap.get(memberId);
+        if (!memberSockets) return;
+        memberSockets.forEach((memberSocketId) => {
           const memberSocket = io.sockets.sockets.get(memberSocketId);
           if (memberSocket && memberSocket.id !== socket.id && !memberSocket.rooms.has(conversationId)) {
             io.to(memberSocketId).emit('encryptedMessage', savedMessage);
           }
-        }
+        });
       });
     } catch (error) {
       console.error(`[Socket] Error in sendMessage for ${socket.id}:`, error);

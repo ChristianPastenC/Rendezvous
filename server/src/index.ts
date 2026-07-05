@@ -18,7 +18,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, socketConfig);
 
-const userSocketMap: UserSocketMap = {};
+const userSocketMap: UserSocketMap = new Map();
 
 // Middleware
 app.use(cors(corsOptions));

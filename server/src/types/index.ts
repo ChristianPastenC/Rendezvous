@@ -13,4 +13,5 @@ export interface AuthenticatedSocket extends Socket<ClientToServerEvents, Server
   user: DecodedIdToken;
 }
 
-export type UserSocketMap = Record<string, string>;
+/** Maps each user UID to all active Socket.IO connection IDs (multi-session support). */
+export type UserSocketMap = Map<string, Set<string>>;

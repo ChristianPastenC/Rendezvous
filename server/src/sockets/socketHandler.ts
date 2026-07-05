@@ -33,21 +33,30 @@ export const registerSocketHandlers = (io: TypedServer, userSocketMap: UserSocke
     const socket = rawSocket as AuthenticatedSocket;
     console.log(`[Socket] Client authenticated: ${socket.id} (User: ${socket.user.uid})`);
 
-    userSocketMap[socket.user.uid] = socket.id;
+    const uid = socket.user.uid;
+    let userSockets = userSocketMap.get(uid);
+    if (!userSockets) {
+      userSockets = new Set();
+      userSocketMap.set(uid, userSockets);
+    }
+    const isFirstSession = userSockets.size === 0;
+    userSockets.add(socket.id);
 
-    try {
-      const userRef = db.collection('users').doc(socket.user.uid);
-      await userRef.update({ status: 'online' });
-      io.to(`status_${socket.user.uid}`).emit('statusUpdate', {
-        uid: socket.user.uid,
-        status: 'online',
-        lastSeen: null,
-        photoURL: socket.user.picture,
-        displayName: socket.user.name,
-      });
-      console.log(`[Status] User ${socket.user.uid} is online.`);
-    } catch (error) {
-      console.error(`[Status] Error setting online status for ${socket.user.uid}:`, error);
+    if (isFirstSession) {
+      try {
+        const userRef = db.collection('users').doc(uid);
+        await userRef.update({ status: 'online' });
+        io.to(`status_${uid}`).emit('statusUpdate', {
+          uid,
+          status: 'online',
+          lastSeen: null,
+          photoURL: socket.user.picture,
+          displayName: socket.user.name,
+        });
+        console.log(`[Status] User ${uid} is online.`);
+      } catch (error) {
+        console.error(`[Status] Error setting online status for ${uid}:`, error);
+      }
     }
 
     socket.on('security:register-public-key', async ({ publicKey }) => {
@@ -75,24 +84,31 @@ export const registerSocketHandlers = (io: TypedServer, userSocketMap: UserSocke
 
     socket.on('disconnect', async (reason) => {
       console.log(`[Socket] Client disconnected: ${socket.id}, Reason: ${reason}`);
-      delete userSocketMap[socket.user.uid];
+      const sessions = userSocketMap.get(uid);
+      if (sessions) {
+        sessions.delete(socket.id);
+        if (sessions.size > 0) {
+          return;
+        }
+        userSocketMap.delete(uid);
+      }
 
       try {
-        const userRef = db.collection('users').doc(socket.user.uid);
+        const userRef = db.collection('users').doc(uid);
         await userRef.update({
           status: 'offline',
           lastSeen: FieldValue.serverTimestamp(),
         });
-        io.to(`status_${socket.user.uid}`).emit('statusUpdate', {
-          uid: socket.user.uid,
+        io.to(`status_${uid}`).emit('statusUpdate', {
+          uid,
           status: 'offline',
           lastSeen: new Date().toISOString(),
           photoURL: socket.user.picture,
           displayName: socket.user.name,
         });
-        console.log(`[Status] User ${socket.user.uid} is offline.`);
+        console.log(`[Status] User ${uid} is offline.`);
       } catch (error) {
-        console.error(`[Status] Error setting offline status for ${socket.user.uid}:`, error);
+        console.error(`[Status] Error setting offline status for ${uid}:`, error);
       }
     });
   });
