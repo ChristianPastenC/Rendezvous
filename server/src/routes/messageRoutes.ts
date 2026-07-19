@@ -1,8 +1,11 @@
 import type { Express, Response } from 'express';
-import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import type { CollectionReference, Query, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { db } from '../config/firebaseAdmin.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import type { AuthenticatedRequest } from '../types/index.js';
+
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
 
 const serializeMessage = (doc: QueryDocumentSnapshot) => {
   const data = doc.data();
@@ -15,6 +18,38 @@ const serializeMessage = (doc: QueryDocumentSnapshot) => {
         ? createdAt.toDate().toISOString()
         : new Date().toISOString(),
   };
+};
+
+const fetchPaginatedMessages = async (
+  collectionRef: CollectionReference,
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  const rawLimit = Number(req.query.limit);
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.floor(rawLimit), MAX_PAGE_LIMIT)
+      : DEFAULT_PAGE_LIMIT;
+
+  let query: Query = collectionRef.orderBy('createdAt', 'desc');
+
+  const rawBefore = req.query.before;
+  if (typeof rawBefore === 'string' && rawBefore.trim().length > 0) {
+    const beforeDate = new Date(rawBefore);
+    if (Number.isNaN(beforeDate.getTime())) {
+      res.status(400).json({ error: 'Invalid "before" cursor timestamp.' });
+      return;
+    }
+    query = query.where('createdAt', '<', beforeDate);
+  }
+
+  const snapshot = await query.limit(limit + 1).get();
+  const hasMore = snapshot.docs.length > limit;
+  const pageDocs = (hasMore ? snapshot.docs.slice(0, limit) : snapshot.docs).reverse();
+
+  res.setHeader('Access-Control-Expose-Headers', 'X-Has-More');
+  res.setHeader('X-Has-More', hasMore ? 'true' : 'false');
+  res.status(200).json(pageDocs.map(serializeMessage));
 };
 
 export const messageRoutes = (app: Express): void => {
@@ -32,17 +67,14 @@ export const messageRoutes = (app: Express): void => {
           res.status(403).json({ error: 'You do not have permission to access this channel.' });
           return;
         }
-        const messagesSnapshot = await db
+        const collectionRef = db
           .collection('groups')
           .doc(groupId)
           .collection('channels')
           .doc(channelId)
-          .collection('messages')
-          .orderBy('createdAt', 'asc')
-          .limit(50)
-          .get();
+          .collection('messages');
 
-        res.status(200).json(messagesSnapshot.docs.map(serializeMessage));
+        await fetchPaginatedMessages(collectionRef, req, res);
       } catch (error) {
         console.error('[Messages] Error fetching group channel messages:', error);
         res.status(500).json({ error: 'Failed to fetch messages.' });
@@ -62,14 +94,12 @@ export const messageRoutes = (app: Express): void => {
           res.status(403).json({ error: 'You do not have permission to access this conversation.' });
           return;
         }
-        const dmRef = db.collection('directMessages').doc(conversationId);
-        const messagesSnapshot = await dmRef
-          .collection('messages')
-          .orderBy('createdAt', 'asc')
-          .limit(50)
-          .get();
+        const collectionRef = db
+          .collection('directMessages')
+          .doc(conversationId)
+          .collection('messages');
 
-        res.status(200).json(messagesSnapshot.docs.map(serializeMessage));
+        await fetchPaginatedMessages(collectionRef, req, res);
       } catch (error) {
         console.error('[Messages] Error fetching direct messages:', error);
         res.status(500).json({ error: 'Failed to fetch messages.' });
