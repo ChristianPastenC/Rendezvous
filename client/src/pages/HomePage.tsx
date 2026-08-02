@@ -33,6 +33,9 @@ const HomePage = () => {
     messages,
     members,
     isLoadingMessages,
+    isLoadingOlder,
+    hasMoreMessages,
+    loadOlderMessages,
     refetchData,
     getCurrentConversationId,
   } = useConversationsData(
@@ -108,6 +111,9 @@ const HomePage = () => {
                     <MessageList
                       messages={messages}
                       currentUserUid={currentUser?.uid}
+                      hasMoreMessages={hasMoreMessages}
+                      isLoadingOlder={isLoadingOlder}
+                      onLoadOlder={() => void loadOlderMessages()}
                     />
                   </div>
                   {socket && (

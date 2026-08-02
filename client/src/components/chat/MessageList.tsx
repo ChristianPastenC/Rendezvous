@@ -179,6 +179,9 @@ const MessageGroup = memo(({ messages, currentUserUid, showAvatar, authorInfo, i
 interface MessageListProps {
   messages: EncryptedMessage[];
   currentUserUid?: string;
+  hasMoreMessages?: boolean;
+  isLoadingOlder?: boolean;
+  onLoadOlder?: () => void;
 }
 
 interface GroupedMessages {
@@ -187,9 +190,16 @@ interface GroupedMessages {
   messages: EncryptedMessage[];
 }
 
-const MessageList = ({ messages, currentUserUid }: MessageListProps) => {
+const MessageList = ({
+  messages,
+  currentUserUid,
+  hasMoreMessages = false,
+  isLoadingOlder = false,
+  onLoadOlder,
+}: MessageListProps) => {
   const { t } = useTranslation();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
 
   const groupedMessages = useMemo((): GroupedMessages[] => {
     if (!messages.length) return [];
@@ -224,7 +234,11 @@ const MessageList = ({ messages, currentUserUid }: MessageListProps) => {
   }, [messages]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const latestId = messages.length > 0 ? messages[messages.length - 1]?.id ?? null : null;
+    if (latestId && latestId !== lastMessageIdRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    lastMessageIdRef.current = latestId;
   }, [messages]);
 
   return (
@@ -233,6 +247,18 @@ const MessageList = ({ messages, currentUserUid }: MessageListProps) => {
     >
       {messages.length > 0 ? (
         <>
+          {hasMoreMessages && onLoadOlder && (
+            <div className="flex justify-center py-2">
+              <button
+                type="button"
+                onClick={onLoadOlder}
+                disabled={isLoadingOlder}
+                className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50"
+              >
+                {isLoadingOlder ? t('messages.loadingOlder') : t('messages.loadOlder')}
+              </button>
+            </div>
+          )}
           {groupedMessages.map((group, idx) => {
             const showAvatar = idx === groupedMessages.length - 1 ||
               groupedMessages[idx + 1]?.authorId !== group.authorId;

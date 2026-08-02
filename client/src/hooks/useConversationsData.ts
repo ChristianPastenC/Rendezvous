@@ -15,8 +15,23 @@ export const useConversationsData = (
   const [messages, setMessages] = useState<EncryptedMessage[]>([]);
   const [members, setMembers] = useState<UserProfile[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [forceRefetch, setForceRefetch] = useState(0);
   const previousConversationId = useRef<string | null>(null);
+  const hasMoreCache = useRef<Record<string, boolean>>({});
+
+  const getMessagesEndpoint = useCallback(
+    (convId: string): string | null => {
+      if (!selectedConversation) return null;
+      if (selectedConversation.type === 'dm') {
+        return `/api/dms/${convId}/messages`;
+      }
+      const groupId = selectedConversation.groupData?.id;
+      return groupId ? `/api/groups/${groupId}/channels/${convId}/messages` : null;
+    },
+    [selectedConversation]
+  );
 
   const getCurrentConversationId = useCallback((): string | null => {
     if (!selectedConversation || !currentUser) return null;
@@ -93,11 +108,15 @@ export const useConversationsData = (
         const cachedMsgs = messagesCache.current[backendConversationId];
         if (cachedMsgs) {
           setMessages(cachedMsgs);
+          setHasMoreMessages(Boolean(hasMoreCache.current[backendConversationId]));
         } else {
           const token = await currentUser.getIdToken();
-          const endpoint = isDirectMessage
-            ? `/api/dms/${backendConversationId}/messages`
-            : `/api/groups/${selectedConversation.groupData?.id}/channels/${backendConversationId}/messages`;
+          const endpoint = getMessagesEndpoint(backendConversationId);
+          if (!endpoint) {
+            setMessages([]);
+            setHasMoreMessages(false);
+            return;
+          }
 
           const response = await fetch(`${API_URL}${endpoint}`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -106,9 +125,12 @@ export const useConversationsData = (
           const messagesData = response.ok
             ? ((await response.json()) as EncryptedMessage[])
             : [];
+          const hasMore = response.headers.get('X-Has-More') === 'true';
 
           messagesCache.current[backendConversationId] = messagesData;
+          hasMoreCache.current[backendConversationId] = hasMore;
           setMessages(messagesData);
+          setHasMoreMessages(hasMore);
         }
       } catch {
         setMessages([]);
@@ -146,12 +168,49 @@ export const useConversationsData = (
     membersCache,
     forceRefetch,
     getCurrentConversationId,
+    getMessagesEndpoint,
   ]);
+
+  const loadOlderMessages = useCallback(async () => {
+    const conversationId = getCurrentConversationId();
+    if (!conversationId || !currentUser || isLoadingOlder || !hasMoreMessages) return;
+
+    const currentMessages = messagesCache.current[conversationId] || [];
+    const oldest = currentMessages[0];
+    const endpoint = getMessagesEndpoint(conversationId);
+    if (!oldest || !endpoint) return;
+
+    setIsLoadingOlder(true);
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch(
+        `${API_URL}${endpoint}?before=${encodeURIComponent(oldest.createdAt)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!response.ok) return;
+
+      const older = (await response.json()) as EncryptedMessage[];
+      const hasMore = response.headers.get('X-Has-More') === 'true';
+      hasMoreCache.current[conversationId] = hasMore;
+      setHasMoreMessages(hasMore);
+
+      const existingIds = new Set(currentMessages.map((m) => m.id));
+      const merged = [...older.filter((m) => !existingIds.has(m.id)), ...currentMessages];
+      messagesCache.current[conversationId] = merged;
+
+      if (getCurrentConversationId() === conversationId) {
+        setMessages(merged);
+      }
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  }, [currentUser, getCurrentConversationId, getMessagesEndpoint, hasMoreMessages, isLoadingOlder, messagesCache]);
 
   const refetchData = () => {
     const conversationId = getCurrentConversationId();
     if (conversationId) {
       delete messagesCache.current[conversationId];
+      delete hasMoreCache.current[conversationId];
     }
     if (selectedConversation?.type === 'group' && selectedConversation.groupData) {
       delete membersCache.current[selectedConversation.groupData.id];
@@ -159,5 +218,14 @@ export const useConversationsData = (
     setForceRefetch((c) => c + 1);
   };
 
-  return { messages, members, isLoadingMessages, refetchData, getCurrentConversationId };
+  return {
+    messages,
+    members,
+    isLoadingMessages,
+    isLoadingOlder,
+    hasMoreMessages,
+    loadOlderMessages,
+    refetchData,
+    getCurrentConversationId,
+  };
 };
