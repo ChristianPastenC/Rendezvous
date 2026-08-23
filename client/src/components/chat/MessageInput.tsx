@@ -9,6 +9,7 @@ import { useEmojiInput } from '../../hooks/useEmojiInput';
 import type { TypedClientSocket } from '../../lib/socket';
 import FilePreviewModal, { type FilePreviewData } from './FilePreviewModal';
 import { useTranslation } from 'react-i18next';
+import { useNotification } from '../../context/NotificationContext';
 
 const MAX_FILE_SIZE_MB = 5;
 
@@ -85,6 +86,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
 
   const [previewData, setPreviewData] = useState<FilePreviewData | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const { showToast } = useNotification();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
@@ -117,13 +119,13 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     if (!file) return;
 
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      alert(t('fileInput.error.fileSize', { size: MAX_FILE_SIZE_MB }));
+      showToast(t('fileInput.error.fileSize', { size: MAX_FILE_SIZE_MB }), 'error');
       e.target.value = '';
       return;
     }
 
     if (!isFileTypeAllowed(file)) {
-      alert(t('fileInput.error.fileType'));
+      showToast(t('fileInput.error.fileType'), 'error');
       e.target.value = '';
       return;
     }
@@ -135,7 +137,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     const previewUrl = URL.createObjectURL(file);
     setPreviewData({ file, url: previewUrl });
     e.target.value = '';
-  }, [t, previewData]);
+  }, [t, previewData, showToast]);
 
   const handleConfirmUpload = useCallback(async (file: File) => {
     try {
@@ -147,9 +149,9 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
       setPreviewData(null);
     } catch (error) {
       console.error("Error in handleConfirmUpload:", error);
-      alert(t('fileInput.error.uploadFailed', 'Failed to upload file. Please try again.'));
+      showToast(t('fileInput.error.uploadFailed', 'Failed to upload file. Please try again.'), 'error');
     }
-  }, [sendFileMessage, previewData, t]);
+  }, [sendFileMessage, previewData, t, showToast]);
 
   const handleClosePreview = useCallback(() => {
     if (previewData?.url && previewData.url.startsWith('blob:')) {

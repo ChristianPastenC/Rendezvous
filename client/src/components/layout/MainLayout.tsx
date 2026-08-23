@@ -1,6 +1,7 @@
 // src/components/layout/MainLayout.jsx
 import {
   useCallback,
+  useEffect,
   useState,
   useRef,
   type MutableRefObject,
@@ -16,6 +17,7 @@ import { auth } from '../../lib/firebase';
 import type { TypedClientSocket } from '../../lib/socket';
 import type { PassphrasePromptOptions } from '../../lib/cryptoService';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import Sidebar from './Sidebar';
 import CreateGroupModal from '../groups/CreateGroupModal';
 import ProfileEditModal from '../user/UserPerfilModal';
@@ -58,6 +60,7 @@ const Loader = ({ t }: { t: TFunction }) => (
 const MainLayout = () => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
+  const { showToast, confirmAction } = useNotification();
   const navigate = useNavigate();
 
   const [passphraseModal, setPassphraseModal] = useState<{
@@ -117,11 +120,20 @@ const MainLayout = () => {
     remoteStream,
     incomingCallData,
     currentCallType,
+    callError,
+    clearCallError,
     startCall,
     acceptCall,
     rejectCall,
     hangUp,
   } = useWebRTC(socket, currentUser);
+
+  useEffect(() => {
+    if (callError) {
+      showToast(callError, 'error');
+      clearCallError();
+    }
+  }, [callError, clearCallError, showToast]);
 
   const [showCallTypeModal, setShowCallTypeModal] = useState(false);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState<UserProfile | null>(null);
@@ -223,10 +235,10 @@ const MainLayout = () => {
         membersCache.current = {};
         await loadAllData();
       } else {
-        alert(t('layout.main.createGroupError'));
+        showToast(t('layout.main.createGroupError'), 'error');
       }
     },
-    [currentUser, loadAllData, t]
+    [currentUser, loadAllData, t, showToast]
   );
 
   const handleProfileUpdate = useCallback(() => {
@@ -235,11 +247,14 @@ const MainLayout = () => {
 
   const handleDeleteAccount = useCallback(async () => {
     if (!currentUser) return;
-    if (
-      !window.confirm(
-        t('layout.main.deleteConfirm')
-      )
-    ) {
+    const confirmed = await confirmAction({
+      title: t('layout.main.deleteTitle', 'Delete account'),
+      message: t('layout.main.deleteConfirm'),
+      confirmLabel: t('common.delete', 'Delete'),
+      cancelLabel: t('common.cancel', 'Cancel'),
+      isDanger: true,
+    });
+    if (!confirmed) {
       return;
     }
     try {
@@ -255,18 +270,18 @@ const MainLayout = () => {
       });
 
       if (response.ok) {
-        alert(t('layout.main.deleteSuccess'));
+        showToast(t('layout.main.deleteSuccess'), 'success');
         await signOut(auth);
         navigate('/auth');
         window.location.reload();
       } else {
         const { error } = (await response.json()) as { error?: string };
-        alert(`${t('layout.main.deleteError')} ${error || ''}`);
+        showToast(`${t('layout.main.deleteError')} ${error || ''}`, 'error');
       }
     } catch {
-      alert(t('layout.main.deleteNetworkError'));
+      showToast(t('layout.main.deleteNetworkError'), 'error');
     }
-  }, [currentUser, navigate, inCall, hangUp, t]);
+  }, [currentUser, navigate, inCall, hangUp, t, confirmAction, showToast]);
 
   const handleClearSelectedConversation = useCallback(() => {
     setSelectedConversation(null);

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DecryptedMessageContent } from '@rendezvous/shared';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { cryptoService } from '../lib/cryptoService';
 import type { TypedClientSocket } from '../lib/socket';
 import { storage } from '../lib/firebase';
@@ -21,6 +22,7 @@ export const useSendMessage = (
 ) => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
+  const { showToast } = useNotification();
   const [sending, setSending] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -69,13 +71,13 @@ export const useSendMessage = (
         }
         throw new Error('Encrypted payload is empty.');
       } catch {
-        alert(t('hooks.useSendMessages.sendEncryptedError'));
+        showToast(t('hooks.useSendMessages.sendEncryptedError'), 'error');
         return false;
       } finally {
         setSending(false);
       }
     },
-    [socket, isDirectMessage, conversationId, groupId, members, currentUser, t]
+    [socket, isDirectMessage, conversationId, groupId, members, currentUser, t, showToast]
   );
 
   const sendTextMessage = useCallback(
@@ -112,7 +114,7 @@ export const useSendMessage = (
           (error) => {
             setSending(false);
             setUploadProgress(0);
-            alert(t('hooks.useSendMessages.uploadError'));
+            showToast(t('hooks.useSendMessages.uploadError'), 'error');
             reject(error);
           },
           async () => {
@@ -137,7 +139,7 @@ export const useSendMessage = (
         );
       });
     },
-    [currentUser, encryptAndSendMessage, t]
+    [currentUser, encryptAndSendMessage, t, showToast]
   );
 
   const cancelSending = useCallback(() => {
