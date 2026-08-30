@@ -29,8 +29,9 @@ const Sidebar = ({
   onStartConversation,
   onEditProfile
 }: SidebarProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [filter, setFilter] = useState<'all' | 'dms' | 'groups'>('all');
+  const currentLang = i18n.resolvedLanguage?.startsWith('es') ? 'es' : 'en';
 
   const getLastMessageTimestamp = (conv: ConversationItem): number => {
     const createdAt = conv.lastMessage?.createdAt as
@@ -166,7 +167,7 @@ const Sidebar = ({
         ))}
       </div>
 
-      <div className="p-3">
+      <div className="p-3 space-y-2">
         <button
           onClick={onCreateGroup}
           className="w-full p-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 font-semibold text-white text-base"
@@ -174,6 +175,34 @@ const Sidebar = ({
           <PlusIcon className="w-5 h-5" />
           <span>{t('sidebar.createGroup')}</span>
         </button>
+
+        <div className="flex items-center justify-between px-2 py-1 text-xs text-gray-500">
+          <span>{t('sidebar.language')}</span>
+          <div className="inline-flex rounded-md border border-gray-200 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => void i18n.changeLanguage('en')}
+              className={`px-2 py-0.5 font-semibold transition-colors ${
+                currentLang === 'en'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => void i18n.changeLanguage('es')}
+              className={`px-2 py-0.5 font-semibold transition-colors ${
+                currentLang === 'es'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              ES
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="p-3 border-t border-gray-200 mt-auto">

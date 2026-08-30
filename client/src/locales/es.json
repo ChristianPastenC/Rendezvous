@@ -70,6 +70,8 @@
     "logoAlt": "Logo",
     "close": "Cerrar",
     "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
     "call": "Llamar",
     "loading": "Cargando...",
     "user": "Usuario",
@@ -83,9 +85,11 @@
     "decryptionError": "[Error al descifrar]",
     "corrupt": "[Mensaje corrupto]",
     "imageAlt": "Imagen adjunta",
+    "loadOlder": "Cargar mensajes anteriores",
+    "loadingOlder": "Cargando mensajes anteriores...",
     "empty": {
       "title": "Aún no hay mensajes",
-      "subtitle": "¡Sé el primero en enviar un saludo! 👋"
+      "subtitle": "¡Sé el primero en enviar un saludo!"
     },
     "preview": {
       "youPrefix": "Tú: ",
@@ -143,7 +147,8 @@
     },
     "error": {
       "fileSize": "El archivo es demasiado grande (Máx: {size} MB).",
-      "fileType": "Tipo de archivo no permitido. Se permiten imágenes, documentos y archivos de desarrollo."
+      "fileType": "Tipo de archivo no permitido. Se permiten imágenes, documentos y archivos de desarrollo.",
+      "uploadFailed": "Error al subir el archivo. Inténtalo de nuevo."
     },
     "uploadProgress": "Subiendo archivo: {progress}%"
   },
@@ -180,6 +185,7 @@
       "signOutSuccess": "Usuario cerró sesión exitosamente.",
       "signOutError": "Error al cerrar sesión:",
       "createGroupError": "Error al crear el grupo.",
+      "deleteTitle": "Eliminar cuenta",
       "deleteConfirm": "¿Estás seguro de que quieres eliminar tu cuenta permanentemente? Esta acción no se puede deshacer.",
       "deleteSuccess": "Tu cuenta ha sido eliminada exitosamente.",
       "deleteError": "Error al eliminar la cuenta:",
@@ -201,7 +207,8 @@
       "groups": "Grupos"
     },
     "createGroup": "Crear Grupo",
-    "editProfile": "Editar Perfil"
+    "editProfile": "Editar Perfil",
+    "language": "Idioma"
   },
   "header": {
     "prompt": "Selecciona una conversación",

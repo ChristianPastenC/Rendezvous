@@ -1,0 +1,305 @@
+{
+  "auth": {
+    "divider": "OR",
+    "googleLogin": "Continue with Google",
+    "promptRegister": "Don't have an account?",
+    "promptLogin": "Already have an account?",
+    "registerLink": "Sign up",
+    "loginLink": "Sign in",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "name@your-email.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Your password",
+    "login": {
+      "submitButton": "Sign In"
+    },
+    "register": {
+      "displayNameLabel": "Name",
+      "displayNamePlaceholder": "Your Full Name",
+      "confirmPasswordLabel": "Confirm Password",
+      "confirmPasswordPlaceholder": "Confirm your password",
+      "submitButton": "Sign Up"
+    }
+  },
+  "profileModal": {
+    "title": "Edit Profile",
+    "closeButtonTitle": "Close",
+    "changeAvatarTitle": "Change profile picture",
+    "displayNameLabel": "Display name",
+    "displayNamePlaceholder": "Enter your name",
+    "cancelButton": "Cancel",
+    "saveButton": {
+      "default": "Save Changes",
+      "uploading": "Uploading...",
+      "saving": "Saving..."
+    },
+    "signOutButton": "Sign Out",
+    "dangerZone": {
+      "title": "Danger Zone",
+      "warning": "Deleting your account is permanent and cannot be undone.",
+      "deleteButton": "Delete my account"
+    },
+    "error": {
+      "imageSize": "Image is too large (max 2MB).",
+      "updateFailed": "Could not update profile."
+    }
+  },
+  "searchModal": {
+    "title": "Start a new conversation",
+    "subtitle": "Search for a user to chat with.",
+    "closeButton": "Close"
+  },
+  "userSearch": {
+    "placeholder": "Search users by email...",
+    "loading": "Searching...",
+    "error": {
+      "minLength": "Search requires at least 3 characters.",
+      "fetchFailed": "Failed to search users.",
+      "noResults": "No users found."
+    }
+  },
+  "common": {
+    "password": {
+      "ariaShow": "Show password",
+      "ariaHide": "Hide password"
+    },
+    "avatar": {
+      "defaultTitle": "User",
+      "defaultAlt": "Avatar"
+    },
+    "logoAlt": "Logo",
+    "close": "Close",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "call": "Call",
+    "loading": "Loading...",
+    "user": "User",
+    "add": "Add",
+    "back": "Back"
+  },
+  "messages": {
+    "you": "You",
+    "user": "User",
+    "noPermission": "[You do not have permission to view this message]",
+    "decryptionError": "[Decryption error]",
+    "corrupt": "[Corrupted message]",
+    "imageAlt": "Attached image",
+    "loadOlder": "Load older messages",
+    "loadingOlder": "Loading older messages...",
+    "empty": {
+      "title": "No messages yet",
+      "subtitle": "Be the first to say hello!"
+    },
+    "preview": {
+      "youPrefix": "You: ",
+      "image": "Image",
+      "file": "File",
+      "decryptionError": "[Decryption error]",
+      "corrupt": "[Corrupted message]"
+    }
+  },
+  "calls": {
+    "typeModal": {
+      "title": "Select call type",
+      "video": "Video call",
+      "audio": "Voice call",
+      "cancel": "Cancel",
+      "defaultTargetName": "User"
+    },
+    "incoming": {
+      "title": "Incoming call",
+      "video": "Video call",
+      "audio": "Voice call",
+      "reject": "Decline",
+      "accept": "Accept"
+    },
+    "outgoing": {
+      "calling": "Calling...",
+      "ringing": "Ringing...",
+      "defaultName": "User",
+      "cancel": "Cancel"
+    },
+    "video": {
+      "ended": "Call ended",
+      "remoteCameraOff": "Camera off",
+      "inAudioCall": "In voice call",
+      "connecting": "Connecting...",
+      "unmute": "Unmute microphone",
+      "mute": "Mute",
+      "videoOn": "Turn camera on",
+      "videoOff": "Turn camera off",
+      "hangUp": "Hang up"
+    }
+  },
+  "fileInput": {
+    "placeholder": "Type a message... (use :) for emojis)",
+    "sendTitle": "Send message",
+    "attachTitle": "Attach file",
+    "emojiTitle": "Add emoji",
+    "attachMenu": {
+      "image": "Send Image",
+      "document": "Send Document",
+      "code": "Send Code"
+    },
+    "emoji": {
+      "search": "Search emoji..."
+    },
+    "error": {
+      "fileSize": "File is too large (Max: {size} MB).",
+      "fileType": "File type not allowed. Images, documents, and code files are supported.",
+      "uploadFailed": "Failed to upload file. Please try again."
+    },
+    "uploadProgress": "Uploading file: {progress}%"
+  },
+  "filePreview": {
+    "titleImage": "Confirm image upload",
+    "titleFile": "Confirm file upload",
+    "fileName": "Name:",
+    "fileSize": "Size:",
+    "fileType": "Type:",
+    "types": {
+      "code": "Code",
+      "image": "Image",
+      "pdf": "PDF",
+      "document": "Document",
+      "spreadsheet": "Spreadsheet",
+      "presentation": "Presentation",
+      "file": "File"
+    },
+    "size": {
+      "bytes": "Bytes",
+      "kb": "KB",
+      "mb": "MB",
+      "gb": "GB"
+    },
+    "cancel": "Cancel",
+    "send": "Send"
+  },
+  "status": {
+    "online": "Online",
+    "offlinePrefix": "Last seen"
+  },
+  "layout": {
+    "main": {
+      "signOutSuccess": "User signed out successfully.",
+      "signOutError": "Error signing out:",
+      "createGroupError": "Failed to create group.",
+      "deleteTitle": "Delete account",
+      "deleteConfirm": "Are you sure you want to permanently delete your account? This action cannot be undone.",
+      "deleteSuccess": "Your account has been permanently deleted.",
+      "deleteError": "Error deleting account:",
+      "deleteNetworkError": "A network error occurred. Please try again."
+    },
+    "mobileNav": {
+      "chats": "Chats",
+      "search": "Search",
+      "createGroupTitle": "Create Group",
+      "createGroup": "Group",
+      "profile": "Profile"
+    }
+  },
+  "sidebar": {
+    "title": "Conversations",
+    "filters": {
+      "all": "All",
+      "dms": "Direct",
+      "groups": "Groups"
+    },
+    "createGroup": "Create Group",
+    "editProfile": "Edit Profile",
+    "language": "Language"
+  },
+  "header": {
+    "prompt": "Select a conversation",
+    "viewMembers": "View Members"
+  },
+  "members": {
+    "title": "Members",
+    "addMember": "Add Member",
+    "modalTitle": "Group Members"
+  },
+  "modals": {
+    "createGroup": {
+      "title": "Create a New Group",
+      "label": "Group Name",
+      "placeholder": "e.g., Engineering Team",
+      "submit": "Create Group"
+    },
+    "addMember": {
+      "title": "Add Member",
+      "subtitle": "Search for a user to add to the group.",
+      "confirmPrompt": {
+        "start": "Add",
+        "end": "to the group?"
+      },
+      "adding": "Adding...",
+      "errorDefault": "Could not add user."
+    }
+  },
+  "hooks": {
+    "useWebRTC": {
+      "fallbackUserName": "User"
+    },
+    "useSocketManager": {
+      "securityAlert": {
+        "title": "Security Error",
+        "instruction": "Please reload the page and try again."
+      }
+    },
+    "useConversationsData": {
+      "loadMembersError": "Failed to load members"
+    },
+    "useSendMessages": {
+      "sendEncryptedError": "Error: Could not send encrypted message.",
+      "uploadError": "Failed to upload file."
+    }
+  },
+  "notifications": {
+    "defaultTitle": "New Message",
+    "imageBody": "Sent you an image",
+    "fileBody": "Sent you a file",
+    "defaultBody": "New message"
+  },
+  "time": {
+    "longAgo": "a long time ago",
+    "justNow": "just now",
+    "minuteAgo": "1 minute ago",
+    "minutesAgo": "{count} minutes ago",
+    "hourAgo": "1 hour ago",
+    "hoursAgo": "{count} hours ago",
+    "daysAgo": "{count} days ago",
+    "lastSeenYesterday": "yesterday",
+    "timestampYesterday": "Yesterday"
+  },
+  "pages": {
+    "home": {
+      "loadingMessages": "Loading messages...",
+      "emptyPrompt": "Select a conversation to start"
+    },
+    "auth": {
+      "titleLogin": "Sign in to your account",
+      "titleRegister": "Create a new account",
+      "subtitleLogin": "Welcome back",
+      "subtitleRegister": "Sign up to get started",
+      "loading": "Loading...",
+      "errors": {
+        "syncFailed": "Failed to sync user data",
+        "nameRequired": "Please enter your name.",
+        "passwordMismatch": "Passwords do not match.",
+        "passwordRequirements": "Password must be at least 8 characters long.",
+        "userNotFound": "User not found.",
+        "wrongPassword": "Incorrect password.",
+        "emailInUse": "This email is already registered.",
+        "weakPassword": "Password is too weak.",
+        "invalidEmail": "Invalid email address.",
+        "invalidCredential": "Invalid credentials.",
+        "tooManyRequests": "Too many attempts. Please try again later.",
+        "popupClosed": "Sign-in cancelled.",
+        "popupCancelled": "Operation cancelled.",
+        "popupBlocked": "Popup blocked by browser. Please allow popups for this site.",
+        "accountExists": "An account already exists with this email."
+      }
+    }
+  }
+}

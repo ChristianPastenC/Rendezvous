@@ -1,29 +1,32 @@
-// src/i18n.js
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import esTranslation from './resources.json';
+import enTranslation from './locales/en.json';
+import esTranslation from './locales/es.json';
 
 const resources = {
+  en: {
+    translation: enTranslation,
+  },
   es: {
-    translation: esTranslation
-  }
+    translation: esTranslation,
+  },
 };
 
-i18n
+void i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'es',
-    fallbackLng: 'es',
+    fallbackLng: 'en',
+    supportedLngs: ['en', 'es'],
     interpolation: {
-      escapeValue: false
+      escapeValue: false,
     },
     detection: {
-      order: ['navigator', 'localStorage', 'cookie', 'htmlTag'],
-      caches: ['localStorage', 'cookie'],
-    }
+      order: ['localStorage', 'navigator', 'htmlTag'],
+      caches: ['localStorage'],
+    },
   });
 
 export default i18n;
