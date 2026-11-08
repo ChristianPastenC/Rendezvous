@@ -1,87 +1,121 @@
-# Rendezvous - Aplicación de Chat Seguro con Cifrado E2EE
+# Rendezvous
 
-Rendezvous es una aplicación de chat full-stack en tiempo real que ofrece mensajería segura con cifrado de extremo a extremo (E2EE), chats grupales, y llamadas de audio y video basadas en WebRTC.
+A real-time, end-to-end encrypted (E2EE) messaging and peer-to-peer WebRTC audio/video calling platform built with TypeScript, React 19, Express 5, Socket.IO, and Firebase.
 
-## Características Principales
+## Architecture
 
-- **Cifrado de Extremo a Extremo (E2EE):** Todos los mensajes directos y grupales están protegidos con un esquema de cifrado híbrido (RSA-2048 + AES-256), asegurando que solo el emisor y los receptores puedan leer el contenido.
-- **Comunicación en Tiempo Real:**
-  - Mensajería instantánea en chats directos y grupales.
-  - Indicadores de estado de presencia (en línea / última vez).
-- **Llamadas de Audio y Video:** Conexiones directas Peer-to-Peer (P2P) utilizando WebRTC para llamadas privadas y eficientes.
-- **Autenticación Segura:** Inicio de sesión con Email/Contraseña y proveedores OAuth como Google, gestionado a través de Firebase Authentication.
-- **Gestión de Grupos:** Crea grupos, añade o elimina miembros y gestiona conversaciones grupales.
-- **Gestión de Perfil:** Los usuarios pueden actualizar su nombre, foto de perfil y eliminar su cuenta de forma segura.
-- **Búsqueda de Usuarios:** Encuentra y comienza conversaciones con otros usuarios registrados en la plataforma.
+```mermaid
+flowchart LR
+  subgraph Client["Client (React 19 + Vite + Web Crypto)"]
+    UI["Chat & Call UI"]
+    Crypto["Web Crypto API\n(RSA-OAEP + AES-GCM + PBKDF2)"]
+    RTC["WebRTC PeerConnection"]
+  end
 
-## Stack Tecnológico
+  subgraph Shared["@rendezvous/shared"]
+    Types["Socket & Domain Types"]
+  end
 
-| Área                | Tecnologías                                                              |
-| ------------------- | ------------------------------------------------------------------------ |
-| **Frontend (Cliente)** | React, Vite, Tailwind CSS, Socket.IO Client, JSEncrypt, CryptoJS         |
-| **Backend (Servidor)** | Node.js, Express, Socket.IO, Firebase Admin SDK                          |
-| **Base de Datos y Servicios** | Firebase (Authentication, Firestore, Cloud Storage)                      |
+  subgraph Server["Server (Express 5 + Socket.IO)"]
+    REST["REST API + Zod Validation"]
+    WS["Socket.IO Signaling & Presence"]
+    Auth["Firebase Admin Auth Middleware"]
+  end
 
-## Guía de Inicio Rápido
+  subgraph Firebase["Firebase"]
+    FBAuth["Firebase Auth"]
+    Firestore["Cloud Firestore"]
+    Storage["Cloud Storage"]
+  end
 
-Sigue estos pasos para poner en marcha tanto el cliente como el servidor en tu entorno local.
-
-### Prerrequisitos
-
-- [Node.js](https://nodejs.org/) (v18 o superior)
-- [npm](https://www.npmjs.com/) o [yarn](https://yarnpkg.com/)
-- Un proyecto de **Firebase** configurado con:
-  - Authentication (Email/Password y Google habilitados).
-  - Firestore Database.
-  - Cloud Storage.
-
-### 1. Configuración del Servidor
-
-```bash
-# Navega al directorio del servidor
-cd server
-
-# Instala las dependencias
-npm install
-
-# Crea un archivo .env y configúralo (ver el README del servidor para más detalles)
-touch .env
-
-# Inicia el servidor (por defecto en el puerto 3000)
-npm start
+  UI --> Crypto
+  UI --> RTC
+  UI <-->|HTTPS + Bearer JWT| REST
+  UI <-->|WebSocket| WS
+  RTC <-.->|ICE / STUN / TURN| RTC
+  REST --> Auth
+  Auth --> FBAuth
+  REST --> Firestore
+  WS --> Firestore
+  UI -->|Encrypted / Media Uploads| Storage
+  Shared --> Client
+  Shared --> Server
 ```
 
-### 2. Configuración del Cliente
+## Key Features
 
-```bash
-# Desde la raíz, navega al directorio del cliente
-cd client
+- **End-to-End Encryption (E2EE):** Native browser Web Crypto API (`RSA-OAEP` 2048-bit SHA-256 + `AES-GCM` 256-bit) with passphrase-protected private key wrapping via `PBKDF2` (100,000 iterations).
+- **Real-Time Messaging:** Direct messages and multi-channel group chats over Socket.IO with cursor-based message pagination (`limit` & `before` cursor) and multi-session user socket tracking.
+- **Peer-to-Peer Audio & Video Calls:** WebRTC signaling (`call-offer`, `call-answer`, `ice-candidate`) with configurable STUN/TURN servers and graceful media/ICE error handling.
+- **File & Media Attachments:** Client-side MIME/extension allowlist (blocking active web scripts such as `.html`, `.js`, `.svg`, `.sh`), 10 MB size limit, and Firebase Storage rules.
+- **Internationalization (i18n):** English (`en`, default) and Spanish (`es`) UI translations with an in-app language switcher.
+- **Type-Safe Monorepo:** Shared Socket.IO event contracts and domain models in `@rendezvous/shared`.
 
-# Instala las dependencias
-npm install
+## Monorepo Structure
 
-# Crea un archivo .env.local y configúralo con las claves de tu proyecto de Firebase
-# (ver el README del cliente para más detalles)
-touch .env.local
-
-# Inicia la aplicación de React (por defecto en el puerto 5173)
-npm run dev
-```
-
-### 3. ¡Listo!
-
-- Abre tu navegador y ve a `http://localhost:5173` para usar la aplicación.
-- El cliente se conectará al servidor que se ejecuta en `http://localhost:3000`.
-
-## Estructura del Repositorio
-
-```
+```text
 Rendezvous/
-├── client/         # Código fuente del frontend (React)
-│   ├── public/
-│   └── src/
-├── server/         # Código fuente del backend (Node.js/Express)
-│   └── src/
-└── README.md       # Este archivo
+├── client/             # React 19 + TypeScript + Vite + Tailwind CSS v4 frontend
+├── server/             # Express 5 + Socket.IO + TypeScript backend
+├── shared/             # @rendezvous/shared TypeScript contracts & interfaces
+├── docs/               # Security & Firestore schema documentation
+├── .github/workflows/  # GitHub Actions CI pipeline
+├── firestore.rules     # Cloud Firestore security rules
+├── storage.rules       # Firebase Storage security rules
+├── netlify.toml        # Netlify frontend deployment config
+└── render.yaml         # Render backend deployment config
 ```
 
+## Prerequisites
+
+- **Node.js** >= 20
+- **npm** >= 10
+- A **Firebase** project with Authentication, Cloud Firestore, and Cloud Storage enabled
+
+## Quick Start
+
+1. **Install dependencies** from the repository root:
+
+   ```bash
+   npm install
+   ```
+
+2. **Build the shared workspace** (required before typechecking or running `client` / `server`):
+
+   ```bash
+   npm run build:shared
+   ```
+
+3. **Configure environment variables:**
+
+   - Copy `server/.env.example` to `server/.env` and fill in your Firebase Admin credentials and `CORS_ORIGIN`.
+   - Copy `client/.env.example` to `client/.env` and fill in your Firebase Web SDK keys and `VITE_SERVER_URL` (plus optional `VITE_TURN_*` credentials).
+
+4. **Run in development mode** (in two terminals):
+
+   ```bash
+   npm run dev:server
+   npm run dev:client
+   ```
+
+## Workspace Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev:server` | Start the Express + Socket.IO server in watch mode |
+| `npm run dev:client` | Start the Vite development server |
+| `npm run build` | Build `shared`, `server`, and `client` for production |
+| `npm run typecheck` | Run `tsc --noEmit` across all workspaces |
+| `npm run lint` | Run ESLint on the `client` workspace |
+| `npm test` | Run Vitest unit and Supertest integration suites |
+
+## Documentation
+
+- [Client Workspace Guide](./client/README.md)
+- [Server Workspace Guide](./server/README.md)
+- [Security & E2EE Architecture](./docs/SECURITY.md)
+- [Firestore Data Model](./docs/FIRESTORE_SCHEMA.md)
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
