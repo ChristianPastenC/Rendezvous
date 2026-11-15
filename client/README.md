@@ -1,66 +1,38 @@
-# Rendezvous - Cliente Frontend
+# Rendezvous Client
 
-Este directorio contiene el código fuente para el cliente frontend de la aplicación Rendezvous, construido con React y Vite.
+React 19 + TypeScript + Vite + Tailwind CSS v4 frontend for Rendezvous.
 
-## Funcionalidades
+## Environment Variables
 
-- **Interfaz de Usuario Moderna:** Construida con React y estilizada con Tailwind CSS para un diseño limpio y responsivo.
-- **Cifrado en el Cliente:** Todas las operaciones criptográficas (generación de claves, cifrado y descifrado de mensajes) se realizan localmente en el navegador para garantizar la seguridad de extremo a extremo.
-- **Comunicación en Tiempo Real:** Utiliza Socket.IO para recibir mensajes, actualizaciones de estado y notificaciones de llamadas al instante.
-- **Llamadas P2P:** Implementa la lógica de WebRTC para establecer y gestionar llamadas de audio y video directamente desde el navegador.
-- **Gestión de Estado:** Manejo eficiente del estado de la aplicación a través de hooks de React y Context API.
+Copy `client/.env.example` to `client/.env` and configure:
 
-## Prerrequisitos
+| Variable | Required | Description |
+| --- | --- | --- |
+| `VITE_SERVER_URL` | Yes | Backend API and Socket.IO URL (e.g. `http://localhost:3000`) |
+| `VITE_FIREBASE_API_KEY` | Yes | Firebase Web API key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Yes | Firebase Auth domain |
+| `VITE_FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Yes | Firebase Storage bucket |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Yes | Firebase messaging sender ID |
+| `VITE_FIREBASE_APP_ID` | Yes | Firebase Web app ID |
+| `VITE_TURN_URL` | No | Optional TURN relay URL for WebRTC calls |
+| `VITE_TURN_USERNAME` | No | Optional TURN username |
+| `VITE_TURN_CREDENTIAL` | No | Optional TURN credential |
 
-- Node.js (v18 o superior)
-- Un proyecto de Firebase configurado.
-
-## Instalación y Configuración
-
-1.  **Clona el repositorio y navega a este directorio:**
-    ```bash
-    git clone https://github.com/ChristianPastenC/Rendezvous.git
-    cd Rendezvous/client
-    ```
-
-2.  **Instala las dependencias:**
-    ```bash
-    npm install
-    ```
-
-3.  **Configura las variables de entorno:**
-    Crea un archivo `.env.local` en el directorio `client/` y añade las credenciales de tu aplicación web de Firebase. Estas claves son seguras para exponer en el lado del cliente.
-
-    ```env
-    # La URL donde se ejecuta tu servidor backend.
-    VITE_SERVER_URL=http://localhost:3000
-
-    # --- Credenciales de Firebase ---
-    VITE_FIREBASE_API_KEY="AIza..."
-    VITE_FIREBASE_AUTH_DOMAIN="tu-proyecto.firebaseapp.com"
-    VITE_FIREBASE_PROJECT_ID="tu-proyecto"
-    VITE_FIREBASE_STORAGE_BUCKET="tu-proyecto.appspot.com"
-    VITE_FIREBASE_MESSAGING_SENDER_ID="..."
-    VITE_FIREBASE_APP_ID="1:..."
-    ```
-    *Puedes encontrar estas claves en la configuración de tu proyecto en la consola de Firebase, en la sección "Tus apps" -> "App web".*
-
-## Ejecutar el Cliente
-
-Para iniciar el servidor de desarrollo de Vite con Hot-Reload:
+## Scripts
 
 ```bash
-npm run dev
+npm run dev --workspace=client        # Start Vite dev server
+npm run build --workspace=client      # Typecheck and bundle for production
+npm run typecheck --workspace=client  # Run tsc --noEmit
+npm run lint --workspace=client       # Run ESLint
+npm run test --workspace=client       # Run Vitest unit tests (jsdom)
 ```
 
-La aplicación estará disponible en `http://localhost:5173` (o el puerto que Vite asigne si el 5173 está ocupado).
+## Key Modules
 
-## Compilar para Producción
-
-Para crear una versión optimizada y minificada de la aplicación para despliegue:
-
-```bash
-npm run build
-```
-
-Los archivos compilados se generarán en el directorio `dist/`.
+- `src/lib/cryptoService.ts`: Native Web Crypto API E2EE (`RSA-OAEP`, `AES-GCM`, `PBKDF2`).
+- `src/lib/webrtcService.ts`: `RTCPeerConnection` lifecycle, ICE handling, and media streams.
+- `src/hooks/useConversationsData.ts`: Cursor-based message pagination and real-time updates.
+- `src/context/NotificationContext.tsx`: Non-blocking toast and confirmation modal UI.
+- `src/locales/en.json` & `src/locales/es.json`: i18next translation bundles.
