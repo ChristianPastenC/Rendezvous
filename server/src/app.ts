@@ -11,6 +11,9 @@ import { userRoutes } from './routes/userRoutes.js';
 import { contactRoutes } from './routes/contactRoutes.js';
 import { groupRoutes } from './routes/groupRoutes.js';
 import { messageRoutes } from './routes/messageRoutes.js';
+import { requestLoggerMiddleware } from './utils/logger.js';
+import { createRateLimiter } from './middleware/rateLimitMiddleware.js';
+import { db } from './config/firebaseAdmin.js';
 
 export interface AppInstance {
   app: Express;
@@ -30,9 +33,30 @@ export const createApp = (): AppInstance => {
 
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
+  app.use(requestLoggerMiddleware);
+
+  const authRateLimiter = createRateLimiter({
+    windowMs: 60_000,
+    maxRequests: 60,
+    message: 'Too many authentication requests, please try again later.',
+  });
+  const apiRateLimiter = createRateLimiter({
+    windowMs: 60_000,
+    maxRequests: 240,
+    message: 'Too many API requests, please try again later.',
+  });
+
+  app.use('/api/auth', authRateLimiter);
+  app.use('/api', apiRateLimiter);
 
   app.get('/health', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
+    const firestoreReady = Boolean(db && typeof db.collection === 'function');
+    res.status(200).json({
+      status: 'ok',
+      firestore: firestoreReady ? 'connected' : 'unavailable',
+      activeUsers: userSocketMap.size,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   authRoutes(app);

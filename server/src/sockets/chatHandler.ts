@@ -3,31 +3,61 @@ import type { EncryptedMessage } from '@rendezvous/shared';
 import { db } from '../config/firebaseAdmin.js';
 import type { AuthenticatedSocket, TypedServer, UserSocketMap } from '../types/index.js';
 import { sendMessageSchema } from '../utils/validation.js';
+import { SocketEventRateLimiter } from '../middleware/rateLimitMiddleware.js';
+import { logger } from '../utils/logger.js';
 
 export const registerChatHandlers = (
   io: TypedServer,
   socket: AuthenticatedSocket,
   userSocketMap: UserSocketMap
 ): void => {
+  const messageRateLimiter = new SocketEventRateLimiter(10_000, 20);
+
   socket.on('joinChannel', ({ conversationId }) => {
     if (typeof conversationId === 'string' && conversationId) {
       void socket.join(conversationId);
-      console.log(`[Socket] User ${socket.user.uid} joined conversation: ${conversationId}`);
+      logger.info('User joined conversation channel', {
+        uid: socket.user.uid,
+        socketId: socket.id,
+        conversationId,
+      });
     }
   });
 
   socket.on('leaveChannel', ({ conversationId }) => {
     if (typeof conversationId === 'string' && conversationId) {
       void socket.leave(conversationId);
-      console.log(`[Socket] User ${socket.user.uid} left conversation: ${conversationId}`);
+      logger.info('User left conversation channel', {
+        uid: socket.user.uid,
+        socketId: socket.id,
+        conversationId,
+      });
     }
   });
 
-  socket.on('sendMessage', async (rawPayload) => {
+  socket.on('sendMessage', async (rawPayload, ack) => {
+    const clientTempId =
+      rawPayload && typeof rawPayload === 'object' && 'clientTempId' in rawPayload
+        ? (rawPayload.clientTempId as string | undefined)
+        : undefined;
+
+    if (!messageRateLimiter.consume(socket.user.uid)) {
+      const errorMsg = 'Rate limit exceeded: sending messages too quickly.';
+      socket.emit('messageError', { message: errorMsg, clientTempId });
+      if (typeof ack === 'function') {
+        ack({ ok: false, error: errorMsg });
+      }
+      return;
+    }
+
     try {
       const parsed = sendMessageSchema.safeParse(rawPayload);
       if (!parsed.success) {
-        socket.emit('messageError', { message: 'Invalid message payload.' });
+        const errorMsg = 'Invalid message payload.';
+        socket.emit('messageError', { message: errorMsg, clientTempId });
+        if (typeof ack === 'function') {
+          ack({ ok: false, error: errorMsg });
+        }
         return;
       }
 
@@ -50,7 +80,11 @@ export const registerChatHandlers = (
         members = participants;
       } else {
         if (!groupId) {
-          socket.emit('messageError', { message: 'Group ID is required for group messages.' });
+          const errorMsg = 'Group ID is required for group messages.';
+          socket.emit('messageError', { message: errorMsg, clientTempId });
+          if (typeof ack === 'function') {
+            ack({ ok: false, error: errorMsg });
+          }
           return;
         }
 
@@ -101,32 +135,55 @@ export const registerChatHandlers = (
         }
       }
 
+      const createdAtIso = new Date().toISOString();
       const savedMessage: EncryptedMessage = {
         id: messageRef.id,
         encryptedPayload,
         authorId: author.uid,
         authorInfo,
-        createdAt: new Date().toISOString(),
+        createdAt: createdAtIso,
         conversationId,
         groupId: isDirectMessage ? null : groupId ?? null,
+        clientTempId,
+        status: 'sent',
       };
 
       io.to(conversationId).emit('encryptedMessage', savedMessage);
-      console.log(`[Socket] Broadcast 'encryptedMessage' to room: ${conversationId}`);
+      logger.info('Broadcast encryptedMessage to room', {
+        conversationId,
+        messageId: messageRef.id,
+        authorId: author.uid,
+      });
 
       members.forEach((memberId) => {
         const memberSockets = userSocketMap.get(memberId);
         if (!memberSockets) return;
         memberSockets.forEach((memberSocketId) => {
           const memberSocket = io.sockets.sockets.get(memberSocketId);
-          if (memberSocket && memberSocket.id !== socket.id && !memberSocket.rooms.has(conversationId)) {
+          if (
+            memberSocket &&
+            memberSocket.id !== socket.id &&
+            !memberSocket.rooms.has(conversationId)
+          ) {
             io.to(memberSocketId).emit('encryptedMessage', savedMessage);
           }
         });
       });
+
+      if (typeof ack === 'function') {
+        ack({ ok: true, id: messageRef.id, createdAt: createdAtIso });
+      }
     } catch (error) {
-      console.error(`[Socket] Error in sendMessage for ${socket.id}:`, error);
-      socket.emit('messageError', { message: 'Failed to send message.' });
+      logger.error('Error in sendMessage handler', {
+        socketId: socket.id,
+        uid: socket.user.uid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      const errorMsg = 'Failed to send message.';
+      socket.emit('messageError', { message: errorMsg, clientTempId });
+      if (typeof ack === 'function') {
+        ack({ ok: false, error: errorMsg });
+      }
     }
   });
 };
