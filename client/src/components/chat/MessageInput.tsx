@@ -1,7 +1,7 @@
-// client/src/components/chat/MessageInput.jsx
 import { useState, useRef, useEffect, useCallback, type ChangeEvent, type RefObject } from 'react';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
 import type { TFunction } from 'i18next';
+import type { EncryptedMessage } from '@rendezvous/shared';
 import { EmojiIcon, PlusIcon, SendIcon, ImageIcon, DocumentIcon, CodeIcon } from '../../assets/Icons';
 import { isFileTypeAllowed, ALLOWED_IMAGE_TYPES, ALLOWED_DOC_TYPES, ALLOWED_TEXT_DATA_TYPES } from '../../utils/allowedFiles';
 import { useSendMessage, type MessageMember } from '../../hooks/useSendMessages';
@@ -24,7 +24,6 @@ const AttachMenu = ({ t, onAttachClick, attachMenuRef }: AttachMenuProps) => (
     ref={attachMenuRef}
     className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg overflow-hidden border border-gray-300"
   >
-
     <button
       onClick={() => onAttachClick('image')}
       className="w-full text-left px-4 py-3 text-gray-900 hover:bg-gray-100 flex items-center gap-3"
@@ -57,17 +56,33 @@ interface MessageInputProps {
   conversationId: string | null;
   groupId: string | null;
   members: MessageMember[];
+  onOptimisticMessage?: (msg: EncryptedMessage) => void;
 }
 
-const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, members }: MessageInputProps) => {
+const MessageInput = ({
+  socket,
+  isDirectMessage,
+  conversationId,
+  groupId,
+  members,
+  onOptimisticMessage,
+}: MessageInputProps) => {
   const { t } = useTranslation();
 
-  const { sending, uploadProgress, sendTextMessage, sendFileMessage } = useSendMessage(
+  const {
+    sending,
+    uploadProgress,
+    missingKeyWarning,
+    clearMissingKeyWarning,
+    sendTextMessage,
+    sendFileMessage,
+  } = useSendMessage(
     socket,
     isDirectMessage,
     conversationId,
     groupId,
-    members
+    members,
+    onOptimisticMessage
   );
 
   const {
@@ -78,7 +93,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     handleEmojiClick,
     toggleEmojiPicker,
     closeEmojiPicker,
-    handleSubmit
+    handleSubmit,
   } = useEmojiInput(async (finalContent) => {
     if (sending) return false;
     return await sendTextMessage(finalContent);
@@ -114,44 +129,53 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [closeEmojiPicker]);
 
-  const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      showToast(t('fileInput.error.fileSize', { size: MAX_FILE_SIZE_MB }), 'error');
-      e.target.value = '';
-      return;
-    }
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        showToast(t('fileInput.error.fileSize', { size: MAX_FILE_SIZE_MB }), 'error');
+        e.target.value = '';
+        return;
+      }
 
-    if (!isFileTypeAllowed(file)) {
-      showToast(t('fileInput.error.fileType'), 'error');
-      e.target.value = '';
-      return;
-    }
-
-    if (previewData?.url && previewData.url.startsWith('blob:')) {
-      URL.revokeObjectURL(previewData.url);
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-    setPreviewData({ file, url: previewUrl });
-    e.target.value = '';
-  }, [t, previewData, showToast]);
-
-  const handleConfirmUpload = useCallback(async (file: File) => {
-    try {
-      await sendFileMessage(file);
+      if (!isFileTypeAllowed(file)) {
+        showToast(t('fileInput.error.fileType'), 'error');
+        e.target.value = '';
+        return;
+      }
 
       if (previewData?.url && previewData.url.startsWith('blob:')) {
         URL.revokeObjectURL(previewData.url);
       }
-      setPreviewData(null);
-    } catch (error) {
-      console.error("Error in handleConfirmUpload:", error);
-      showToast(t('fileInput.error.uploadFailed', 'Failed to upload file. Please try again.'), 'error');
-    }
-  }, [sendFileMessage, previewData, t, showToast]);
+
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewData({ file, url: previewUrl });
+      e.target.value = '';
+    },
+    [t, previewData, showToast]
+  );
+
+  const handleConfirmUpload = useCallback(
+    async (file: File) => {
+      try {
+        await sendFileMessage(file);
+
+        if (previewData?.url && previewData.url.startsWith('blob:')) {
+          URL.revokeObjectURL(previewData.url);
+        }
+        setPreviewData(null);
+      } catch (error) {
+        console.error('Error in handleConfirmUpload:', error);
+        showToast(
+          t('fileInput.error.uploadFailed', 'Failed to upload file. Please try again.'),
+          'error'
+        );
+      }
+    },
+    [sendFileMessage, previewData, t, showToast]
+  );
 
   const handleClosePreview = useCallback(() => {
     if (previewData?.url && previewData.url.startsWith('blob:')) {
@@ -167,7 +191,9 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
       } else if (type === 'document') {
         fileInputRef.current.accept = ALLOWED_DOC_TYPES.join(',');
       } else if (type === 'code') {
-        fileInputRef.current.accept = ALLOWED_TEXT_DATA_TYPES.join(',') + ',.css,.json,.xml,.py,.java,.c,.cpp,.cs,.rb,.go,.rs,.md,.yaml,.yml,.sql';
+        fileInputRef.current.accept =
+          ALLOWED_TEXT_DATA_TYPES.join(',') +
+          ',.css,.json,.xml,.py,.java,.c,.cpp,.cs,.rb,.go,.rs,.md,.yaml,.yml,.sql';
       }
       fileInputRef.current.click();
     }
@@ -177,6 +203,19 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
   return (
     <>
       <div className="relative p-4 bg-white border-t border-gray-300">
+        {missingKeyWarning && (
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <span>{missingKeyWarning}</span>
+            <button
+              type="button"
+              onClick={clearMissingKeyWarning}
+              className="font-semibold text-amber-900 hover:underline"
+            >
+              {t('common.close', 'Close')}
+            </button>
+          </div>
+        )}
+
         {showEmojiPicker && (
           <div ref={emojiPickerRef} className="absolute bottom-full mb-2 left-0 z-50">
             <EmojiPicker
@@ -190,11 +229,7 @@ const MessageInput = ({ socket, isDirectMessage, conversationId, groupId, member
         )}
 
         {showAttachMenu && (
-          <AttachMenu
-            t={t}
-            onAttachClick={handleAttachClick}
-            attachMenuRef={attachMenuRef}
-          />
+          <AttachMenu t={t} onAttachClick={handleAttachClick} attachMenuRef={attachMenuRef} />
         )}
 
         <form onSubmit={handleSubmit} className="flex items-center space-x-2">

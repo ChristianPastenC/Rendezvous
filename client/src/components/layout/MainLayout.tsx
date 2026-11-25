@@ -1,4 +1,3 @@
-// src/components/layout/MainLayout.jsx
 import {
   useCallback,
   useEffect,
@@ -6,7 +5,7 @@ import {
   useRef,
   type MutableRefObject,
   type Dispatch,
-  type SetStateAction
+  type SetStateAction,
 } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +15,7 @@ import type { CallType, ConversationItem, EncryptedMessage, UserProfile } from '
 import { auth } from '../../lib/firebase';
 import type { TypedClientSocket } from '../../lib/socket';
 import type { PassphrasePromptOptions } from '../../lib/cryptoService';
+import type { MediaDeviceSelection } from '../../lib/webrtcService';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import Sidebar from './Sidebar';
@@ -31,7 +31,9 @@ import IncomingCallModal from '../calls/IncomingCallModal';
 import CallTypeModal from '../calls/CallTypeModal';
 import OutgoingCallModal from '../calls/OutgoingCallModal';
 import Footer from './Footer';
-import SecurityPassphraseModal from '../auth/SecurityPassphraseModal';
+import SecurityPassphraseModal, {
+  type PassphraseModalMode,
+} from '../auth/SecurityPassphraseModal';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
@@ -51,7 +53,7 @@ export interface MainOutletContext {
 const Loader = ({ t }: { t: TFunction }) => (
   <div className="flex items-center justify-center h-screen bg-gray-100">
     <div className="text-center">
-      <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#3B82F6] mb-4"></div>
+      <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#3B82F6] mb-4" />
       <p className="text-gray-800 text-lg">{t('common.loading')}</p>
     </div>
   </div>
@@ -67,17 +69,28 @@ const MainLayout = () => {
     isOpen: boolean;
     isNewUser: boolean;
     isRetry: boolean;
+    mode: PassphraseModalMode;
   }>({
     isOpen: false,
     isNewUser: false,
     isRetry: false,
+    mode: 'unlock',
   });
   const passphraseResolverRef = useRef<((value: string | null) => void) | null>(null);
 
   const requestPassphrase = useCallback(({ isNewUser, isRetry }: PassphrasePromptOptions) => {
     return new Promise<string | null>((resolve) => {
       passphraseResolverRef.current = resolve;
-      setPassphraseModal({ isOpen: true, isNewUser, isRetry });
+      setPassphraseModal({ isOpen: true, isNewUser, isRetry, mode: 'unlock' });
+    });
+  }, []);
+
+  const handleOpenPassphraseRotate = useCallback(() => {
+    setPassphraseModal({
+      isOpen: true,
+      isNewUser: false,
+      isRetry: false,
+      mode: 'rotate',
     });
   }, []);
 
@@ -95,6 +108,10 @@ const MainLayout = () => {
       passphraseResolverRef.current(null);
       passphraseResolverRef.current = null;
     }
+  }, []);
+
+  const handlePassphraseRotated = useCallback(() => {
+    setPassphraseModal((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
   const socket = useSocketManager(currentUser, requestPassphrase);
@@ -138,38 +155,33 @@ const MainLayout = () => {
   const [showCallTypeModal, setShowCallTypeModal] = useState(false);
   const [selectedMemberToCall, setSelectedMemberToCall] = useState<UserProfile | null>(null);
 
-  const startCallProcess = useCallback((member: UserProfile) => {
-    if (inCall || callState !== 'idle') return;
-    setSelectedMemberToCall(member);
-    setShowCallTypeModal(true);
-  }, [inCall, callState]);
+  const startCallProcess = useCallback(
+    (member: UserProfile) => {
+      if (inCall || callState !== 'idle') return;
+      setSelectedMemberToCall(member);
+      setShowCallTypeModal(true);
+    },
+    [inCall, callState]
+  );
 
-  const handleSelectCallType = useCallback((callType: CallType) => {
-    setShowCallTypeModal(false);
-    if (!selectedMemberToCall || !startCall) return;
-    void startCall(selectedMemberToCall.uid, callType);
-  }, [selectedMemberToCall, startCall]);
+  const handleSelectCallType = useCallback(
+    (callType: CallType, devices?: MediaDeviceSelection) => {
+      setShowCallTypeModal(false);
+      if (!selectedMemberToCall || !startCall) return;
+      void startCall(selectedMemberToCall.uid, callType, devices);
+    },
+    [selectedMemberToCall, startCall]
+  );
 
-  /**
-   * Cancels the call type selection process and closes the modal.
-   */
   const handleCancelCallType = useCallback(() => {
     setShowCallTypeModal(false);
     setSelectedMemberToCall(null);
   }, []);
 
-  /**
-   * Gets the display name of the user being called for the outgoing call modal.
-   * @returns {string} The display name of the call target.
-   */
   const getCallTargetName = () => {
     return selectedMemberToCall?.displayName || t('calls.defaultTargetName');
   };
 
-  /**
-   * Handles the user sign-out process. It hangs up any active call,
-   * signs the user out from Firebase, and navigates to the authentication page.
-   */
   const handleSignOut = useCallback(async () => {
     try {
       if (inCall) {
@@ -200,7 +212,7 @@ const MainLayout = () => {
           name: user.displayName,
           photoURL: user.photoURL,
           userData: user,
-          lastMessage: null
+          lastMessage: null,
         };
         setConversations((prev) => [newConv, ...prev]);
         setSelectedConversation(newConv);
@@ -330,16 +342,12 @@ const MainLayout = () => {
                 onEditProfile={() => setIsProfileModalOpen(true)}
               />
             ) : (
-              <Outlet
-                context={outletContext}
-              />
+              <Outlet context={outletContext} />
             )}
           </div>
 
           <div className="hidden md:block h-full">
-            <Outlet
-              context={outletContext}
-            />
+            <Outlet context={outletContext} />
           </div>
         </main>
         <Footer />
@@ -362,6 +370,10 @@ const MainLayout = () => {
         onProfileUpdate={handleProfileUpdate}
         onAccountDelete={handleDeleteAccount}
         onSignOut={handleSignOut}
+        onManagePassphrase={() => {
+          setIsProfileModalOpen(false);
+          handleOpenPassphraseRotate();
+        }}
       />
 
       <UserSearchModal
@@ -371,10 +383,7 @@ const MainLayout = () => {
       />
 
       {showCallTypeModal && (
-        <CallTypeModal
-          onSelectType={handleSelectCallType}
-          onCancel={handleCancelCallType}
-        />
+        <CallTypeModal onSelectType={handleSelectCallType} onCancel={handleCancelCallType} />
       )}
 
       {(callState === 'calling' || callState === 'ringing') && !inCall && (
@@ -408,8 +417,10 @@ const MainLayout = () => {
         isOpen={passphraseModal.isOpen}
         isNewUser={passphraseModal.isNewUser}
         isRetry={passphraseModal.isRetry}
+        mode={passphraseModal.mode}
         onSubmit={handlePassphraseSubmit}
         onCancel={handlePassphraseCancel}
+        onRotated={handlePassphraseRotated}
       />
     </div>
   );

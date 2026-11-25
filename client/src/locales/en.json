@@ -87,6 +87,13 @@
     "imageAlt": "Attached image",
     "loadOlder": "Load older messages",
     "loadingOlder": "Loading older messages...",
+    "retryDecrypt": "Retry decrypt",
+    "unreadSeparator": "Unread messages",
+    "status": {
+      "sending": "Sending...",
+      "failed": "Failed to send",
+      "retry": "Retry"
+    },
     "empty": {
       "title": "No messages yet",
       "subtitle": "Be the first to say hello!"
@@ -105,7 +112,13 @@
       "video": "Video call",
       "audio": "Voice call",
       "cancel": "Cancel",
-      "defaultTargetName": "User"
+      "defaultTargetName": "User",
+      "deviceSettings": "Audio & Camera Check",
+      "testDevices": "Test Camera & Mic",
+      "stopPreview": "Stop Preview",
+      "microphoneLabel": "Microphone",
+      "cameraLabel": "Camera",
+      "permissionDenied": "Could not access camera or microphone preview. Check browser media permissions."
     },
     "incoming": {
       "title": "Incoming call",
@@ -300,6 +313,56 @@
         "popupBlocked": "Popup blocked by browser. Please allow popups for this site.",
         "accountExists": "An account already exists with this email."
       }
+    }
+  },
+  "security": {
+    "passphrase": {
+      "setupTitle": "Set Up Encryption Passphrase",
+      "unlockTitle": "Unlock Encrypted Messages",
+      "rotateTitle": "Change Encryption Passphrase & Backup",
+      "setupSubtitle": "Create a security passphrase (minimum 8 characters) to protect your private encryption key. Keep it safe—if you lose it, previous messages cannot be recovered.",
+      "unlockSubtitle": "Enter your security passphrase to decrypt your messages in this session.",
+      "rotateSubtitle": "Re-wrap your private encryption key with a new passphrase without losing access to existing messages.",
+      "placeholder": "Enter passphrase (min. 8 characters)",
+      "currentLabel": "Current Passphrase",
+      "currentPlaceholder": "Enter current passphrase",
+      "newLabel": "New Passphrase",
+      "newPlaceholder": "Enter new passphrase (min. 8 characters)",
+      "confirmLabel": "Confirm New Passphrase",
+      "confirmPlaceholder": "Confirm new passphrase",
+      "minLength": "Passphrase must be at least 8 characters long.",
+      "currentMinLength": "Current passphrase must be at least 8 characters long.",
+      "newMinLength": "New passphrase must be at least 8 characters long.",
+      "mismatch": "New passphrases do not match.",
+      "incorrect": "Incorrect passphrase. Please try again.",
+      "saveButton": "Save & Continue",
+      "unlockButton": "Unlock",
+      "updateButton": "Update Passphrase",
+      "updating": "Updating...",
+      "downloadBackup": "Download Encrypted Key Backup (.json)",
+      "rotateSuccess": "Security passphrase updated successfully.",
+      "rotateError": "Failed to rotate security passphrase.",
+      "backupSuccess": "Encrypted key backup downloaded.",
+      "backupError": "Failed to export encrypted key backup."
+    },
+    "verification": {
+      "title": "Encryption Safety Verification",
+      "subtitle": "Compare these SHA-256 SPKI public key fingerprints with your contacts to verify E2EE.",
+      "buttonTitle": "Verify E2EE safety fingerprint",
+      "badge": "E2EE Verify",
+      "activeKey": "RSA-2048 Active",
+      "missingKey": "No Public Key",
+      "missingKeyHint": "This user has not published an encryption key yet. They must sign in and unlock their passphrase first."
+    },
+    "profile": {
+      "title": "End-to-End Encryption (E2EE)",
+      "badge": "RSA-OAEP + AES-256",
+      "fingerprintLabel": "Your Public Key Safety Fingerprint (SHA-256):",
+      "changePassphraseButton": "Change Security Passphrase / Key Backup"
+    },
+    "keys": {
+      "recipientMissingWarning": "Recipient has not set up their encryption key yet. Ask them to sign in and unlock their passphrase.",
+      "groupMissingWarning": "One or more group members have not published an E2EE public key yet and cannot decrypt this message."
     }
   }
 }
