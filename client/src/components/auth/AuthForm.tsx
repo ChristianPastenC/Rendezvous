@@ -76,7 +76,7 @@ const AuthForm = ({
       </button>
 
       <p className='text-sm text-center text-gray-600 mt-6'>
-        {isLoginView ? '¿No tienes una cuenta?' : '¿Ya tienes una cuenta?'}
+        {isLoginView ? t('auth.promptRegister') : t('auth.promptLogin')}
         <button onClick={toggleView} className='ml-1 font-semibold text-[#3B82F6] hover:underline '>
           {isLoginView ? t('auth.registerLink') : t('auth.loginLink')}
         </button>
