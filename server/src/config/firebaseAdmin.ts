@@ -24,11 +24,25 @@ const initializeFirebaseAdmin = (): admin.app.App => {
     });
   }
 
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
-    ? path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS)
-    : path.resolve(__dirname, '../../serviceAccountKey.json');
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) as admin.ServiceAccount;
+    return admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
 
-  if (fs.existsSync(credentialsPath)) {
+  const candidatePaths = [
+    process.env.GOOGLE_APPLICATION_CREDENTIALS
+      ? path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS)
+      : null,
+    path.resolve(__dirname, '../../serviceAccountKey.json'),
+    path.resolve(__dirname, '../../../serviceAccountKey.json'),
+    '/etc/secrets/serviceAccountKey.json',
+  ].filter((p): p is string => Boolean(p));
+
+  const credentialsPath = candidatePaths.find((candidate) => fs.existsSync(candidate));
+
+  if (credentialsPath) {
     const serviceAccount = JSON.parse(fs.readFileSync(credentialsPath, 'utf8')) as admin.ServiceAccount;
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
@@ -36,7 +50,7 @@ const initializeFirebaseAdmin = (): admin.app.App => {
   }
 
   throw new Error(
-    '[FirebaseAdmin] Missing credentials. Set FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY or GOOGLE_APPLICATION_CREDENTIALS.'
+    '[FirebaseAdmin] Missing credentials. Set FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY, FIREBASE_SERVICE_ACCOUNT, or GOOGLE_APPLICATION_CREDENTIALS.'
   );
 };
 
