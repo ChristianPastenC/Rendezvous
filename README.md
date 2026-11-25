@@ -113,7 +113,8 @@ Rendezvous/
 
 - [Client Workspace Guide](./client/README.md)
 - [Server Workspace Guide](./server/README.md)
-- [Security & E2EE Architecture](./docs/SECURITY.md)
+- [Security & E2EE Architecture](./docs/SECURITY_ARCHITECTURE.md)
+- [Security Policy](./SECURITY.md)
 - [Firestore Data Model](./docs/FIRESTORE_SCHEMA.md)
 
 ## License
