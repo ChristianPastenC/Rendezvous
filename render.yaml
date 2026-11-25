@@ -3,7 +3,7 @@ services:
     name: rendezvous-server
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build:shared && npm run build:server
+    buildCommand: rm -rf server/node_modules && npm install --include=dev && npm run build:shared && npm run build:server
     startCommand: npm run start --workspace=server
     healthCheckPath: /health
     envVars:

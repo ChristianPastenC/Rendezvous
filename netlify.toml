@@ -1,6 +1,6 @@
 [build]
   base = "."
-  command = "npm run build:shared && npm run build:client"
+  command = "rm -rf client/node_modules package-lock.json && npm install && npm run build:shared && npm run build:client"
   publish = "client/dist"
 
 [[redirects]]
