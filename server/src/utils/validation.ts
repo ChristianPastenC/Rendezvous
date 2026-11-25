@@ -28,6 +28,7 @@ export const sendMessageSchema = z.object({
   conversationId: z.string().min(1, 'Conversation ID is required.'),
   isDirectMessage: z.boolean(),
   groupId: z.string().min(1).nullable().optional(),
+  clientTempId: z.string().min(1).max(128).optional(),
   encryptedPayload: z
     .record(z.string(), z.string().min(1))
     .refine((obj) => Object.keys(obj).length > 0, 'Encrypted payload cannot be empty.'),
