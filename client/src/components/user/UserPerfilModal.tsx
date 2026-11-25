@@ -1,9 +1,9 @@
-// client/src/components/user/UserPerfilModal.jsx
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { cryptoService } from '../../lib/cryptoService';
 import UserAvatar from './UserAvatar';
 import { CameraIcon, CloseIcon } from '../../assets/Icons';
 
@@ -15,6 +15,7 @@ interface ProfileEditModalProps {
   onProfileUpdate: () => void;
   onAccountDelete: () => void;
   onSignOut: () => void;
+  onManagePassphrase?: () => void;
 }
 
 const ProfileEditModal = ({
@@ -22,7 +23,8 @@ const ProfileEditModal = ({
   onClose,
   onProfileUpdate,
   onAccountDelete,
-  onSignOut
+  onSignOut,
+  onManagePassphrase,
 }: ProfileEditModalProps) => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
@@ -33,6 +35,7 @@ const ProfileEditModal = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [keyFingerprint, setKeyFingerprint] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -43,20 +46,26 @@ const ProfileEditModal = ({
   }, [previewUrl]);
 
   useEffect(() => {
-    if (!isOpen && previewUrl && previewUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrl);
+    if (!isOpen) {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
       setPreviewUrl(null);
       setPhotoFile(null);
+      return;
     }
-  }, [isOpen]);
+
+    const pubKey = cryptoService.getPublicKey();
+    void cryptoService.computeKeyFingerprint(pubKey).then((fp) => {
+      setKeyFingerprint(fp);
+    });
+  }, [isOpen, previewUrl]);
 
   if (!isOpen) return null;
 
   /**
    * Handles the file input change event for the avatar.
    * Validates the file size and sets the state for the new photo file and its preview URL.
-   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
-   * @returns {void}
    */
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -90,8 +99,9 @@ const ProfileEditModal = ({
         const uploadTask = uploadBytesResumable(storageRef, photoFile);
 
         await new Promise<void>((resolve, reject) => {
-          uploadTask.on('state_changed',
-            () => { },
+          uploadTask.on(
+            'state_changed',
+            () => {},
             (uploadError) => reject(uploadError),
             () => {
               void getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
@@ -109,7 +119,7 @@ const ProfileEditModal = ({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           displayName: displayName.trim(),
@@ -128,7 +138,6 @@ const ProfileEditModal = ({
 
       onProfileUpdate();
       onClose();
-
     } catch (err) {
       setError(err instanceof Error ? err.message : t('profileModal.error.updateFailed'));
     } finally {
@@ -137,10 +146,6 @@ const ProfileEditModal = ({
     }
   };
 
-  /**
-   * Determines the text for the save button based on the current saving/uploading state.
-   * @returns {string} The localized text for the save button.
-   */
   const getButtonText = () => {
     if (isUploading) return t('profileModal.saveButton.uploading');
     if (isSaving) return t('profileModal.saveButton.saving');
@@ -201,9 +206,7 @@ const ProfileEditModal = ({
               />
             </div>
           </div>
-          {error && (
-            <p className="text-red-600 text-sm mt-4 text-center">{error}</p>
-          )}
+          {error && <p className="text-red-600 text-sm mt-4 text-center">{error}</p>}
           <div className="mt-8 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-4 gap-3">
             <button
               onClick={onClose}
@@ -212,7 +215,7 @@ const ProfileEditModal = ({
               {t('profileModal.cancelButton')}
             </button>
             <button
-              onClick={handleSave}
+              onClick={() => void handleSave()}
               disabled={isSaving}
               className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
@@ -220,7 +223,39 @@ const ProfileEditModal = ({
             </button>
           </div>
         </div>
-        <div className="border-t border-gray-200 mt-2 p-6 space-y-5">
+
+        {/* E2EE Security & Key Management Section */}
+        <div className="border-t border-gray-200 px-6 py-5 space-y-3 bg-gray-50/60">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-800">
+              {t('security.profile.title', 'End-to-End Encryption (E2EE)')}
+            </h3>
+            <span className="text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+              {t('security.profile.badge', 'RSA-OAEP + AES-256')}
+            </span>
+          </div>
+          {keyFingerprint && (
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                {t('security.profile.fingerprintLabel', 'Your Public Key Safety Fingerprint (SHA-256):')}
+              </p>
+              <code className="block font-mono text-xs tracking-wider text-gray-700 bg-white border border-gray-200 rounded px-2.5 py-1.5 select-all">
+                {keyFingerprint}
+              </code>
+            </div>
+          )}
+          {onManagePassphrase && (
+            <button
+              type="button"
+              onClick={onManagePassphrase}
+              className="w-full px-4 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors"
+            >
+              {t('security.profile.changePassphraseButton', 'Change Security Passphrase / Key Backup')}
+            </button>
+          )}
+        </div>
+
+        <div className="border-t border-gray-200 p-6 space-y-5">
           <button
             onClick={onSignOut}
             className="w-full px-4 py-2.5 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
@@ -232,9 +267,7 @@ const ProfileEditModal = ({
             <h3 className="font-semibold text-lg text-red-700">
               {t('profileModal.dangerZone.title')}
             </h3>
-            <p className="text-sm text-red-600 mt-1">
-              {t('profileModal.dangerZone.warning')}
-            </p>
+            <p className="text-sm text-red-600 mt-1">{t('profileModal.dangerZone.warning')}</p>
             <button
               onClick={onAccountDelete}
               className="w-full mt-3 px-4 py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
