@@ -1,4 +1,3 @@
-// src/components/layout/MainHeader.jsx
 import { useTranslation } from 'react-i18next';
 import type { ConversationItem, UserProfile } from '@rendezvous/shared';
 import { formatLastSeen } from '../../utils/lastSeen';
@@ -12,6 +11,7 @@ interface MainHeaderProps {
   callTarget: UserProfile | null | undefined;
   onCallClick: () => void;
   onMembersClick: () => void;
+  onSafetyVerifyClick?: () => void;
 }
 
 const MainHeader = ({
@@ -21,6 +21,7 @@ const MainHeader = ({
   callTarget,
   onCallClick,
   onMembersClick,
+  onSafetyVerifyClick,
 }: MainHeaderProps) => {
   const { t } = useTranslation();
 
@@ -58,23 +59,34 @@ const MainHeader = ({
               {selectedConversation.type === 'dm' && selectedConversation.userData && (
                 <p className="text-xs text-gray-500">
                   {selectedConversation.userData.status === 'online' ? (
-                    <span className="text-green-600 font-medium">
-                      {t('status.online')}
-                    </span>)
-                    : (`${t('status.offlinePrefix')} ${formatLastSeen(selectedConversation.userData.lastSeen, t)}`)
-                  }
+                    <span className="text-green-600 font-medium">{t('status.online')}</span>
+                  ) : (
+                    `${t('status.offlinePrefix')} ${formatLastSeen(
+                      selectedConversation.userData.lastSeen,
+                      t
+                    )}`
+                  )}
                 </p>
               )}
             </div>
           </>
         ) : (
-          <h2 className="font-bold text-lg text-gray-500">
-            {t('header.prompt')}
-          </h2>
+          <h2 className="font-bold text-lg text-gray-500">{t('header.prompt')}</h2>
         )}
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        {selectedConversation && onSafetyVerifyClick && (
+          <button
+            type="button"
+            onClick={onSafetyVerifyClick}
+            className="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-medium transition-colors"
+            title={t('security.verification.buttonTitle', 'Verify E2EE safety fingerprint')}
+          >
+            {t('security.verification.badge', 'E2EE Verify')}
+          </button>
+        )}
+
         {selectedConversation?.type !== 'group' && callTarget && (
           <button
             onClick={onCallClick}

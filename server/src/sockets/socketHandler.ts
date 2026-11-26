@@ -5,6 +5,7 @@ import { auth, db } from '../config/firebaseAdmin.js';
 import type { AuthenticatedSocket, TypedServer, UserSocketMap } from '../types/index.js';
 import { registerChatHandlers } from './chatHandler.js';
 import { registerWebRTCHandlers } from './webrtcHandlers.js';
+import { logger } from '../utils/logger.js';
 
 const socketAuthMiddleware = async (
   socket: Socket<ClientToServerEvents, ServerToClientEvents>,
@@ -31,9 +32,9 @@ export const registerSocketHandlers = (io: TypedServer, userSocketMap: UserSocke
 
   io.on('connection', async (rawSocket) => {
     const socket = rawSocket as AuthenticatedSocket;
-    console.log(`[Socket] Client authenticated: ${socket.id} (User: ${socket.user.uid})`);
-
     const uid = socket.user.uid;
+    logger.info('Socket client authenticated', { socketId: socket.id, uid });
+
     let userSockets = userSocketMap.get(uid);
     if (!userSockets) {
       userSockets = new Set();
@@ -53,9 +54,12 @@ export const registerSocketHandlers = (io: TypedServer, userSocketMap: UserSocke
           photoURL: socket.user.picture,
           displayName: socket.user.name,
         });
-        console.log(`[Status] User ${uid} is online.`);
+        logger.info('User online status broadcast', { uid });
       } catch (error) {
-        console.error(`[Status] Error setting online status for ${uid}:`, error);
+        logger.error('Error setting online status', {
+          uid,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
@@ -63,17 +67,24 @@ export const registerSocketHandlers = (io: TypedServer, userSocketMap: UserSocke
       if (typeof publicKey !== 'string' || !publicKey) return;
       try {
         await db.collection('users').doc(socket.user.uid).set({ publicKey }, { merge: true });
-        console.log(`[Security] Registered public key for ${socket.user.uid}`);
+        io.to(`status_${socket.user.uid}`).emit('security:public-key-updated', {
+          uid: socket.user.uid,
+          publicKey,
+        });
+        logger.info('Registered and broadcast public key update', { uid: socket.user.uid });
       } catch (error) {
-        console.error('[Security] Error registering public key:', error);
+        logger.error('Error registering public key', {
+          uid: socket.user.uid,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     });
 
     socket.on('subscribeToStatus', (userIds) => {
       if (Array.isArray(userIds)) {
-        userIds.forEach((uid) => {
-          if (typeof uid === 'string' && uid) {
-            void socket.join(`status_${uid}`);
+        userIds.forEach((targetUid) => {
+          if (typeof targetUid === 'string' && targetUid) {
+            void socket.join(`status_${targetUid}`);
           }
         });
       }
@@ -83,7 +94,7 @@ export const registerSocketHandlers = (io: TypedServer, userSocketMap: UserSocke
     registerWebRTCHandlers(io, socket, userSocketMap);
 
     socket.on('disconnect', async (reason) => {
-      console.log(`[Socket] Client disconnected: ${socket.id}, Reason: ${reason}`);
+      logger.info('Socket client disconnected', { socketId: socket.id, uid, reason });
       const sessions = userSocketMap.get(uid);
       if (sessions) {
         sessions.delete(socket.id);
@@ -106,9 +117,12 @@ export const registerSocketHandlers = (io: TypedServer, userSocketMap: UserSocke
           photoURL: socket.user.picture,
           displayName: socket.user.name,
         });
-        console.log(`[Status] User ${uid} is offline.`);
+        logger.info('User offline status broadcast', { uid });
       } catch (error) {
-        console.error(`[Status] Error setting offline status for ${uid}:`, error);
+        logger.error('Error setting offline status', {
+          uid,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     });
   });

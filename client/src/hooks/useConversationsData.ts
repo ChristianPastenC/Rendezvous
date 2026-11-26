@@ -4,6 +4,7 @@ import type { ConversationItem, EncryptedMessage, UserProfile } from '@rendezvou
 import type { TypedClientSocket } from '../lib/socket';
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const LAST_READ_STORAGE_PREFIX = 'rendezvous_last_read_';
 
 export const useConversationsData = (
   socket: TypedClientSocket | null,
@@ -17,6 +18,7 @@ export const useConversationsData = (
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [lastReadTimestamp, setLastReadTimestamp] = useState<string | null>(null);
   const [forceRefetch, setForceRefetch] = useState(0);
   const previousConversationId = useRef<string | null>(null);
   const hasMoreCache = useRef<Record<string, boolean>>({});
@@ -41,6 +43,17 @@ export const useConversationsData = (
     return selectedConversation.groupData?.channelId ?? null;
   }, [selectedConversation, currentUser]);
 
+  const markConversationRead = useCallback((convId: string, latestIso?: string) => {
+    try {
+      localStorage.setItem(
+        `${LAST_READ_STORAGE_PREFIX}${convId}`,
+        latestIso || new Date().toISOString()
+      );
+    } catch {
+      // Ignore storage quota errors
+    }
+  }, []);
+
   useEffect(() => {
     const conversationId = getCurrentConversationId();
     if (previousConversationId.current && previousConversationId.current !== conversationId) {
@@ -53,6 +66,7 @@ export const useConversationsData = (
       if (!selectedConversation || !currentUser) {
         setMessages([]);
         setMembers([]);
+        setLastReadTimestamp(null);
         previousConversationId.current = null;
         return;
       }
@@ -63,6 +77,11 @@ export const useConversationsData = (
         setIsLoadingMessages(false);
         return;
       }
+
+      const storedLastRead = localStorage.getItem(
+        `${LAST_READ_STORAGE_PREFIX}${backendConversationId}`
+      );
+      setLastReadTimestamp(storedLastRead);
 
       try {
         socket?.emit('joinChannel', { conversationId: backendConversationId });
@@ -109,6 +128,8 @@ export const useConversationsData = (
         if (cachedMsgs) {
           setMessages(cachedMsgs);
           setHasMoreMessages(Boolean(hasMoreCache.current[backendConversationId]));
+          const latest = cachedMsgs[cachedMsgs.length - 1];
+          markConversationRead(backendConversationId, latest?.createdAt);
         } else {
           const token = await currentUser.getIdToken();
           const endpoint = getMessagesEndpoint(backendConversationId);
@@ -131,6 +152,8 @@ export const useConversationsData = (
           hasMoreCache.current[backendConversationId] = hasMore;
           setMessages(messagesData);
           setHasMoreMessages(hasMore);
+          const latest = messagesData[messagesData.length - 1];
+          markConversationRead(backendConversationId, latest?.createdAt);
         }
       } catch {
         setMessages([]);
@@ -146,19 +169,56 @@ export const useConversationsData = (
       if (!messageConvId) return;
 
       const currentCache = messagesCache.current[messageConvId] || [];
-      if (!currentCache.some((msg) => msg.id === newMessage.id)) {
-        messagesCache.current[messageConvId] = [...currentCache, newMessage];
+      const tempIdx = newMessage.clientTempId
+        ? currentCache.findIndex(
+            (msg) =>
+              msg.id === newMessage.clientTempId || msg.clientTempId === newMessage.clientTempId
+          )
+        : -1;
+
+      let updatedList: EncryptedMessage[];
+      if (tempIdx !== -1) {
+        updatedList = [...currentCache];
+        updatedList[tempIdx] = { ...newMessage, status: 'sent' };
+      } else if (!currentCache.some((msg) => msg.id === newMessage.id)) {
+        updatedList = [...currentCache, { ...newMessage, status: 'sent' }];
+      } else {
+        updatedList = currentCache;
       }
 
+      messagesCache.current[messageConvId] = updatedList;
+
       if (messageConvId === getCurrentConversationId()) {
-        setMessages((prev) => [...prev, newMessage]);
+        setMessages(updatedList);
+        markConversationRead(messageConvId, newMessage.createdAt);
       }
     };
 
+    const handleMessageError = ({
+      clientTempId,
+    }: {
+      message: string;
+      clientTempId?: string;
+    }) => {
+      if (!clientTempId) return;
+      const convId = getCurrentConversationId();
+      if (!convId) return;
+      const currentCache = messagesCache.current[convId] || [];
+      const updated = currentCache.map((msg) =>
+        msg.id === clientTempId || msg.clientTempId === clientTempId
+          ? { ...msg, status: 'failed' as const }
+          : msg
+      );
+      messagesCache.current[convId] = updated;
+      setMessages(updated);
+    };
+
     socket?.on('encryptedMessage', handleNewMessage);
+    socket?.on('messageError', handleMessageError);
 
     return () => {
       socket?.off('encryptedMessage', handleNewMessage);
+      socket?.off('messageError', handleMessageError);
     };
   }, [
     selectedConversation,
@@ -169,7 +229,29 @@ export const useConversationsData = (
     forceRefetch,
     getCurrentConversationId,
     getMessagesEndpoint,
+    markConversationRead,
   ]);
+
+  const upsertOptimisticMessage = useCallback(
+    (optimisticMsg: EncryptedMessage) => {
+      const convId = optimisticMsg.conversationId || getCurrentConversationId();
+      if (!convId) return;
+      const currentCache = messagesCache.current[convId] || [];
+      const existingIdx = currentCache.findIndex((m) => m.id === optimisticMsg.id);
+      let updated: EncryptedMessage[];
+      if (existingIdx !== -1) {
+        updated = [...currentCache];
+        updated[existingIdx] = optimisticMsg;
+      } else {
+        updated = [...currentCache, optimisticMsg];
+      }
+      messagesCache.current[convId] = updated;
+      if (convId === getCurrentConversationId()) {
+        setMessages(updated);
+      }
+    },
+    [getCurrentConversationId, messagesCache]
+  );
 
   const loadOlderMessages = useCallback(async () => {
     const conversationId = getCurrentConversationId();
@@ -204,7 +286,14 @@ export const useConversationsData = (
     } finally {
       setIsLoadingOlder(false);
     }
-  }, [currentUser, getCurrentConversationId, getMessagesEndpoint, hasMoreMessages, isLoadingOlder, messagesCache]);
+  }, [
+    currentUser,
+    getCurrentConversationId,
+    getMessagesEndpoint,
+    hasMoreMessages,
+    isLoadingOlder,
+    messagesCache,
+  ]);
 
   const refetchData = () => {
     const conversationId = getCurrentConversationId();
@@ -224,7 +313,9 @@ export const useConversationsData = (
     isLoadingMessages,
     isLoadingOlder,
     hasMoreMessages,
+    lastReadTimestamp,
     loadOlderMessages,
+    upsertOptimisticMessage,
     refetchData,
     getCurrentConversationId,
   };

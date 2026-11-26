@@ -87,6 +87,13 @@
     "imageAlt": "Imagen adjunta",
     "loadOlder": "Cargar mensajes anteriores",
     "loadingOlder": "Cargando mensajes anteriores...",
+    "retryDecrypt": "Reintentar descifrado",
+    "unreadSeparator": "Mensajes no leídos",
+    "status": {
+      "sending": "Enviando...",
+      "failed": "Error al enviar",
+      "retry": "Reintentar"
+    },
     "empty": {
       "title": "Aún no hay mensajes",
       "subtitle": "¡Sé el primero en enviar un saludo!"
@@ -105,7 +112,13 @@
       "video": "Videollamada",
       "audio": "Llamada de voz",
       "cancel": "Cancelar",
-      "defaultTargetName": "Usuario"
+      "defaultTargetName": "Usuario",
+      "deviceSettings": "Prueba de Audio y Cámara",
+      "testDevices": "Probar Cámara y Mic",
+      "stopPreview": "Detener Vista Previa",
+      "microphoneLabel": "Micrófono",
+      "cameraLabel": "Cámara",
+      "permissionDenied": "No se pudo acceder a la cámara o micrófono. Verifica los permisos del navegador."
     },
     "incoming": {
       "title": "Llamada entrante",
@@ -300,6 +313,56 @@
         "popupBlocked": "Popup bloqueado por el navegador. Permite popups para este sitio.",
         "accountExists": "Ya existe una cuenta con este correo."
       }
+    }
+  },
+  "security": {
+    "passphrase": {
+      "setupTitle": "Configurar Frase de Seguridad",
+      "unlockTitle": "Desbloquear Mensajes Cifrados",
+      "rotateTitle": "Cambiar Frase de Seguridad y Respaldo",
+      "setupSubtitle": "Crea una frase de seguridad (mínimo 8 caracteres) para proteger tu clave privada. Guárdala en un lugar seguro.",
+      "unlockSubtitle": "Ingresa tu frase de seguridad para descifrar tus mensajes en esta sesión.",
+      "rotateSubtitle": "Vuelve a envolver tu clave privada con una nueva frase sin perder acceso a tus mensajes anteriores.",
+      "placeholder": "Ingresa tu frase (mín. 8 caracteres)",
+      "currentLabel": "Frase Actual",
+      "currentPlaceholder": "Ingresa tu frase actual",
+      "newLabel": "Nueva Frase",
+      "newPlaceholder": "Ingresa la nueva frase (mín. 8 caracteres)",
+      "confirmLabel": "Confirmar Nueva Frase",
+      "confirmPlaceholder": "Confirma la nueva frase",
+      "minLength": "La frase debe tener al menos 8 caracteres.",
+      "currentMinLength": "La frase actual debe tener al menos 8 caracteres.",
+      "newMinLength": "La nueva frase debe tener al menos 8 caracteres.",
+      "mismatch": "Las nuevas frases no coinciden.",
+      "incorrect": "Frase incorrecta. Inténtalo de nuevo.",
+      "saveButton": "Guardar y Continuar",
+      "unlockButton": "Desbloquear",
+      "updateButton": "Actualizar Frase",
+      "updating": "Actualizando...",
+      "downloadBackup": "Descargar Respaldo Cifrado (.json)",
+      "rotateSuccess": "Frase de seguridad actualizada exitosamente.",
+      "rotateError": "No se pudo actualizar la frase de seguridad.",
+      "backupSuccess": "Respaldo de clave cifrada descargado.",
+      "backupError": "No se pudo exportar el respaldo de clave."
+    },
+    "verification": {
+      "title": "Verificación de Seguridad E2EE",
+      "subtitle": "Compara estas huellas SHA-256 de clave pública SPKI con tus contactos para verificar el cifrado.",
+      "buttonTitle": "Verificar huella de seguridad E2EE",
+      "badge": "Verificar E2EE",
+      "activeKey": "RSA-2048 Activa",
+      "missingKey": "Sin Clave Pública",
+      "missingKeyHint": "Este usuario aún no ha publicado su clave de cifrado. Debe iniciar sesión y desbloquear su frase primero."
+    },
+    "profile": {
+      "title": "Cifrado de Extremo a Extremo (E2EE)",
+      "badge": "RSA-OAEP + AES-256",
+      "fingerprintLabel": "Tu Huella de Seguridad de Clave Pública (SHA-256):",
+      "changePassphraseButton": "Cambiar Frase de Seguridad / Respaldo de Clave"
+    },
+    "keys": {
+      "recipientMissingWarning": "El destinatario aún no ha configurado su clave de cifrado. Pídele que inicie sesión.",
+      "groupMissingWarning": "Uno o más miembros del grupo aún no han publicado su clave E2EE."
     }
   }
 }

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DecryptedMessageContent } from '@rendezvous/shared';
+import type { DecryptedMessageContent, EncryptedMessage } from '@rendezvous/shared';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { cryptoService } from '../lib/cryptoService';
@@ -10,6 +10,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 export interface MessageMember {
   uid: string;
+  displayName?: string;
   publicKey?: string | null;
 }
 
@@ -18,20 +19,88 @@ export const useSendMessage = (
   isDirectMessage: boolean,
   conversationId: string | null,
   groupId: string | null,
-  members: MessageMember[]
+  members: MessageMember[],
+  onOptimisticMessage?: (msg: EncryptedMessage) => void
 ) => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
   const { showToast } = useNotification();
   const [sending, setSending] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [missingKeyWarning, setMissingKeyWarning] = useState<string | null>(null);
+
+  const dispatchSocketMessage = useCallback(
+    (
+      backendConversationId: string,
+      encryptedPayload: Record<string, string>,
+      clientTempId: string
+    ): Promise<boolean> => {
+      if (!socket || !currentUser) return Promise.resolve(false);
+
+      const optimisticMsg: EncryptedMessage = {
+        id: clientTempId,
+        clientTempId,
+        encryptedPayload,
+        authorId: currentUser.uid,
+        authorInfo: {
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || 'User',
+          photoURL: currentUser.photoURL,
+        },
+        createdAt: new Date().toISOString(),
+        conversationId: backendConversationId,
+        groupId: isDirectMessage ? null : groupId ?? null,
+        status: 'sending',
+      };
+
+      onOptimisticMessage?.(optimisticMsg);
+
+      return new Promise<boolean>((resolve) => {
+        let settled = false;
+        const timeout = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          resolve(true);
+        }, 5000);
+
+        socket.emit(
+          'sendMessage',
+          {
+            conversationId: backendConversationId,
+            isDirectMessage,
+            groupId,
+            encryptedPayload,
+            clientTempId,
+          },
+          (ack) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            if (ack && !ack.ok) {
+              onOptimisticMessage?.({ ...optimisticMsg, status: 'failed' });
+              showToast(ack.error || t('hooks.useSendMessages.sendEncryptedError'), 'error');
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          }
+        );
+      });
+    },
+    [socket, currentUser, isDirectMessage, groupId, onOptimisticMessage, showToast, t]
+  );
 
   const encryptAndSendMessage = useCallback(
-    async (messageObject: DecryptedMessageContent): Promise<boolean> => {
+    async (messageObject: DecryptedMessageContent, existingTempId?: string): Promise<boolean> => {
       if (!currentUser || !socket) return false;
       setSending(true);
+      setMissingKeyWarning(null);
+
+      const clientTempId =
+        existingTempId || `temp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
       try {
-        let memberKeys: Array<{ uid: string; publicKey: string }>;
+        let memberKeys: Array<{ uid: string; publicKey: string }> = [];
         let backendConversationId = conversationId;
 
         if (isDirectMessage) {
@@ -40,14 +109,45 @@ export const useSendMessage = (
 
           backendConversationId = [currentUser.uid, otherUser.uid].sort().join('_');
 
-          const selfKey = cryptoService.getPublicKey();
-          memberKeys = selfKey ? [{ uid: currentUser.uid, publicKey: selfKey }] : [];
+          const selfKey =
+            cryptoService.getPublicKey() || (await cryptoService.fetchPublicKey(currentUser.uid));
+          if (selfKey) {
+            memberKeys.push({ uid: currentUser.uid, publicKey: selfKey });
+          }
 
-          const otherUserKey = await cryptoService.fetchPublicKey(otherUser.uid);
-          if (otherUserKey) memberKeys.push({ uid: otherUser.uid, publicKey: otherUserKey });
+          let otherUserKey = await cryptoService.fetchPublicKey(otherUser.uid);
+          if (!otherUserKey) {
+            // Force refresh once in case recipient recently initialized or rotated their key
+            otherUserKey = await cryptoService.fetchPublicKey(otherUser.uid, true);
+          }
+
+          if (otherUserKey) {
+            memberKeys.push({ uid: otherUser.uid, publicKey: otherUserKey });
+          } else {
+            const warningText = t(
+              'security.keys.recipientMissingWarning',
+              "Recipient has not set up their encryption key yet. Ask them to sign in and unlock their passphrase."
+            );
+            setMissingKeyWarning(warningText);
+            showToast(warningText, 'error');
+            return false;
+          }
         } else {
           if (!groupId) throw new Error('Group ID is required.');
           memberKeys = await cryptoService.fetchPublicKeysForGroup(groupId);
+          if (memberKeys.length < members.length) {
+            // Force refresh once to pick up newly registered group member keys
+            memberKeys = await cryptoService.fetchPublicKeysForGroup(groupId, true);
+          }
+          const missingCount = Math.max(0, members.length - memberKeys.length);
+          if (missingCount > 0) {
+            setMissingKeyWarning(
+              t(
+                'security.keys.groupMissingWarning',
+                `${missingCount} group member(s) have not published an E2EE public key yet and cannot decrypt this message.`
+              )
+            );
+          }
         }
 
         const encryptedPayload: Record<string, string> = {};
@@ -61,13 +161,7 @@ export const useSendMessage = (
         }
 
         if (Object.keys(encryptedPayload).length > 0 && backendConversationId) {
-          socket.emit('sendMessage', {
-            conversationId: backendConversationId,
-            isDirectMessage,
-            groupId,
-            encryptedPayload,
-          });
-          return true;
+          return await dispatchSocketMessage(backendConversationId, encryptedPayload, clientTempId);
         }
         throw new Error('Encrypted payload is empty.');
       } catch {
@@ -77,7 +171,29 @@ export const useSendMessage = (
         setSending(false);
       }
     },
-    [socket, isDirectMessage, conversationId, groupId, members, currentUser, t, showToast]
+    [
+      socket,
+      isDirectMessage,
+      conversationId,
+      groupId,
+      members,
+      currentUser,
+      t,
+      showToast,
+      dispatchSocketMessage,
+    ]
+  );
+
+  const retryFailedMessage = useCallback(
+    async (failedMsg: EncryptedMessage): Promise<boolean> => {
+      if (!failedMsg.conversationId) return false;
+      return dispatchSocketMessage(
+        failedMsg.conversationId,
+        failedMsg.encryptedPayload,
+        failedMsg.clientTempId || failedMsg.id
+      );
+    },
+    [dispatchSocketMessage]
   );
 
   const sendTextMessage = useCallback(
@@ -150,9 +266,12 @@ export const useSendMessage = (
   return {
     sending,
     uploadProgress,
+    missingKeyWarning,
+    clearMissingKeyWarning: () => setMissingKeyWarning(null),
     sendTextMessage,
     sendFileMessage,
     encryptAndSendMessage,
+    retryFailedMessage,
     cancelSending,
   };
 };

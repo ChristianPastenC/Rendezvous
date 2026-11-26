@@ -117,6 +117,10 @@ Rendezvous/
 - [Security Policy](./SECURITY.md)
 - [Firestore Data Model](./docs/FIRESTORE_SCHEMA.md)
 
+### Cross-Platform `package-lock.json` & Native Binaries Note
+
+Tailwind CSS v4 (`@tailwindcss/oxide`) and `lightningcss` rely on platform-specific optional native binaries (e.g., `win32-x64-msvc` on Windows vs. `linux-x64-gnu` on Linux). Because npm's optional dependency resolution can omit Linux native bindings when a lockfile is generated on Windows, `.github/workflows/ci.yml` and `netlify.toml` perform a clean `rm -f package-lock.json && npm install` on Linux builders so platform-native binaries are always resolved cleanly without drift.
+
 ## License
 
 This project is licensed under the [MIT License](./LICENSE).

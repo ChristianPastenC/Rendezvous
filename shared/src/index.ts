@@ -24,6 +24,8 @@ export interface EncryptedMessage {
   createdAt: string;
   conversationId?: string;
   groupId?: string | null;
+  clientTempId?: string;
+  status?: 'sending' | 'sent' | 'failed';
 }
 
 export interface DecryptedMessageContent {
@@ -96,6 +98,7 @@ export interface SendMessagePayload {
   isDirectMessage: boolean;
   groupId?: string | null;
   encryptedPayload: Record<string, string>;
+  clientTempId?: string;
 }
 
 export interface StatusUpdatePayload {
@@ -104,6 +107,11 @@ export interface StatusUpdatePayload {
   lastSeen: string | null;
   photoURL?: string;
   displayName?: string;
+}
+
+export interface PublicKeyUpdatePayload {
+  uid: string;
+  publicKey: string;
 }
 
 export interface WebRTCOfferPayload {
@@ -153,19 +161,24 @@ export interface ClientToServerEvents {
   subscribeToStatus: (userIds: string[]) => void;
   joinChannel: (payload: { conversationId: string }) => void;
   leaveChannel: (payload: { conversationId: string }) => void;
-  sendMessage: (payload: SendMessagePayload) => void;
+  sendMessage: (
+    payload: SendMessagePayload,
+    ack?: (response: { ok: boolean; id?: string; createdAt?: string; error?: string }) => void
+  ) => void;
   'webrtc:offer': (payload: WebRTCOfferPayload) => void;
   'webrtc:answer': (payload: WebRTCAnswerPayload) => void;
   'webrtc:ice-candidate': (payload: WebRTCIceCandidatePayload) => void;
   'webrtc:ringing': (payload: WebRTCRecipientPayload) => void;
   'webrtc:hang-up': (payload: WebRTCRecipientPayload) => void;
   'webrtc:call-rejected': (payload: WebRTCRecipientPayload) => void;
+  'webrtc:busy': (payload: WebRTCRecipientPayload) => void;
 }
 
 export interface ServerToClientEvents {
   statusUpdate: (payload: StatusUpdatePayload) => void;
+  'security:public-key-updated': (payload: PublicKeyUpdatePayload) => void;
   encryptedMessage: (payload: EncryptedMessage) => void;
-  messageError: (payload: { message: string }) => void;
+  messageError: (payload: { message: string; clientTempId?: string }) => void;
   newConversation: (payload: ConversationItem) => void;
   'webrtc:offer': (payload: WebRTCIncomingOfferPayload) => void;
   'webrtc:answer': (payload: WebRTCIncomingAnswerPayload) => void;
@@ -173,5 +186,6 @@ export interface ServerToClientEvents {
   'webrtc:ringing': (payload: WebRTCFromPayload) => void;
   'webrtc:hang-up': (payload: WebRTCFromPayload) => void;
   'webrtc:call-rejected': (payload: WebRTCFromPayload) => void;
-  'webrtc:error': (payload: { message: string }) => void;
+  'webrtc:busy': (payload: WebRTCFromPayload) => void;
+  'webrtc:error': (payload: { message: string; code?: string }) => void;
 }

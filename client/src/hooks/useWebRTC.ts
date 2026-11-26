@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import type { CallType, WebRTCIncomingOfferPayload } from '@rendezvous/shared';
-import WebRTCService from '../lib/webrtcService';
+import WebRTCService, { type MediaDeviceSelection } from '../lib/webrtcService';
 import type { TypedClientSocket } from '../lib/socket';
 import { playSound, stopSound } from '../lib/soundService';
 
 export type CallState = 'idle' | 'calling' | 'ringing' | 'incoming' | 'connected' | 'ended';
+
+const MISSED_CALL_TIMEOUT_MS = 30000;
 
 export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | null) => {
   const [inCall, setInCall] = useState(false);
@@ -23,6 +25,7 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
   const webrtcRef = useRef<WebRTCService | null>(null);
   const remoteUserIdRef = useRef<string | null>(null);
   const callEndedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const missedCallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingOfferRef = useRef<{
     from: string;
     offer: RTCSessionDescriptionInit;
@@ -39,6 +42,13 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
     callStateRef.current = callState;
   }, [callState]);
 
+  const clearMissedCallTimer = useCallback(() => {
+    if (missedCallTimerRef.current) {
+      clearTimeout(missedCallTimerRef.current);
+      missedCallTimerRef.current = null;
+    }
+  }, []);
+
   const resetCallState = useCallback(() => {
     setInCall(false);
     setCallState('idle');
@@ -47,10 +57,29 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
     setIncomingCallData(null);
     remoteUserIdRef.current = null;
     pendingOfferRef.current = null;
+    clearMissedCallTimer();
     if (callEndedTimerRef.current) {
       clearTimeout(callEndedTimerRef.current);
       callEndedTimerRef.current = null;
     }
+  }, [clearMissedCallTimer]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      stopSound('incomingCall');
+      stopSound('outgoingCall');
+      if (webrtcRef.current && remoteUserIdRef.current) {
+        webrtcRef.current.hangUp(remoteUserIdRef.current);
+      } else if (webrtcRef.current && pendingOfferRef.current) {
+        webrtcRef.current.rejectCall(pendingOfferRef.current.from);
+      }
+      webrtcRef.current?.cleanup();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   useEffect(() => {
@@ -61,7 +90,7 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
 
     webrtcService.onIncomingCall = ({ from, offer, callType, callerName }) => {
       if (inCallRef.current || callStateRef.current !== 'idle') {
-        webrtcService.rejectCall(from);
+        webrtcService.sendBusy(from);
         return;
       }
 
@@ -69,6 +98,17 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
       setCallState('incoming');
       setIncomingCallData({ from, offer, callType, callerName });
       pendingOfferRef.current = { from, offer, callType };
+      remoteUserIdRef.current = from;
+
+      clearMissedCallTimer();
+      missedCallTimerRef.current = setTimeout(() => {
+        if (callStateRef.current === 'incoming') {
+          stopSound('incomingCall');
+          webrtcService.rejectCall(from);
+          setCallError(`Missed call from ${callerName || 'User'}.`);
+          resetCallState();
+        }
+      }, MISSED_CALL_TIMEOUT_MS);
     };
 
     webrtcService.onCallRinging = (from) => {
@@ -78,8 +118,17 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
       }
     };
 
+    webrtcService.onCallBusy = (from) => {
+      if (remoteUserIdRef.current === from) {
+        stopSound('outgoingCall');
+        clearMissedCallTimer();
+        setCallError('Recipient is currently busy on another call.');
+      }
+    };
+
     webrtcService.onRemoteStream = (stream) => {
       stopSound('outgoingCall');
+      clearMissedCallTimer();
       setRemoteStream(stream);
       setCallState('connected');
       setInCall(true);
@@ -90,6 +139,7 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
     };
 
     webrtcService.onCallEnded = () => {
+      clearMissedCallTimer();
       if (
         callStateRef.current === 'connected' ||
         callStateRef.current === 'calling' ||
@@ -117,6 +167,7 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
     };
 
     return () => {
+      clearMissedCallTimer();
       if (webrtcRef.current && remoteUserIdRef.current) {
         webrtcRef.current.hangUp(remoteUserIdRef.current);
       }
@@ -126,10 +177,14 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
         clearTimeout(callEndedTimerRef.current);
       }
     };
-  }, [socket, currentUser, resetCallState]);
+  }, [socket, currentUser, resetCallState, clearMissedCallTimer]);
 
   const startCall = useCallback(
-    async (targetUserId: string, callType: CallType) => {
+    async (
+      targetUserId: string,
+      callType: CallType,
+      devices?: MediaDeviceSelection
+    ) => {
       if (!webrtcRef.current || inCallRef.current || callStateRef.current !== 'idle') return;
 
       try {
@@ -137,24 +192,37 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
         setCallState('calling');
         remoteUserIdRef.current = targetUserId;
 
-        const stream = await webrtcRef.current.startLocalStream(callType);
+        const stream = await webrtcRef.current.startLocalStream(callType, devices);
         setLocalStream(stream);
 
         const callerName = currentUser?.displayName || 'User';
         await webrtcRef.current.createOffer(targetUserId, callType, callerName);
+
+        clearMissedCallTimer();
+        missedCallTimerRef.current = setTimeout(() => {
+          if (
+            (callStateRef.current === 'calling' || callStateRef.current === 'ringing') &&
+            remoteUserIdRef.current === targetUserId
+          ) {
+            stopSound('outgoingCall');
+            webrtcRef.current?.hangUp(targetUserId);
+            setCallError('No answer. The call timed out.');
+          }
+        }, MISSED_CALL_TIMEOUT_MS);
       } catch (error) {
         console.error('[WebRTC] Error starting call:', error);
         resetCallState();
         throw error;
       }
     },
-    [currentUser, resetCallState]
+    [currentUser, resetCallState, clearMissedCallTimer]
   );
 
   const acceptCall = useCallback(async () => {
     if (!webrtcRef.current || !incomingCallData || !pendingOfferRef.current) return;
 
     stopSound('incomingCall');
+    clearMissedCallTimer();
 
     try {
       const { from, offer, callType } = pendingOfferRef.current;
@@ -178,12 +246,13 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
       resetCallState();
       throw error;
     }
-  }, [incomingCallData, resetCallState]);
+  }, [incomingCallData, resetCallState, clearMissedCallTimer]);
 
   const rejectCall = useCallback(() => {
     if (!webrtcRef.current || !incomingCallData) return;
 
     stopSound('incomingCall');
+    clearMissedCallTimer();
 
     if (pendingOfferRef.current) {
       webrtcRef.current.rejectCall(pendingOfferRef.current.from);
@@ -191,12 +260,14 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
 
     setIncomingCallData(null);
     pendingOfferRef.current = null;
+    remoteUserIdRef.current = null;
     setCallState('idle');
-  }, [incomingCallData]);
+  }, [incomingCallData, clearMissedCallTimer]);
 
   const hangUp = useCallback(() => {
     stopSound('outgoingCall');
     stopSound('incomingCall');
+    clearMissedCallTimer();
 
     if (callEndedTimerRef.current) {
       clearTimeout(callEndedTimerRef.current);
@@ -211,7 +282,7 @@ export const useWebRTC = (socket: TypedClientSocket | null, currentUser: User | 
     }
 
     webrtcRef.current.hangUp(remoteId);
-  }, [resetCallState]);
+  }, [resetCallState, clearMissedCallTimer]);
 
   return {
     inCall,

@@ -4,7 +4,8 @@ import { initSocket, type TypedClientSocket } from '../lib/socket';
 import { cryptoService, type RequestPassphraseFn } from '../lib/cryptoService';
 
 /**
- * Manages the Socket.IO connection lifecycle and E2EE key initialization for the authenticated user.
+ * Manages the Socket.IO connection lifecycle, E2EE key initialization,
+ * and remote public-key rotation announcements for the authenticated user.
  */
 export const useSocketManager = (
   currentUser: User | null,
@@ -28,6 +29,12 @@ export const useSocketManager = (
       try {
         socketInstance = await initSocket();
         if (socketInstance && !isCancelled) {
+          socketInstance.on('security:public-key-updated', ({ uid, publicKey }) => {
+            if (uid && publicKey) {
+              cryptoService.updateCachedPublicKey(uid, publicKey);
+            }
+          });
+
           setSocket(socketInstance);
 
           const { publicKey } = await cryptoService.generateAndStoreKeys(requestPassphrase);

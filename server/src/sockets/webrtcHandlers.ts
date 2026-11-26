@@ -1,4 +1,5 @@
 import type { AuthenticatedSocket, TypedServer, UserSocketMap } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 export const registerWebRTCHandlers = (
   io: TypedServer,
@@ -19,7 +20,12 @@ export const registerWebRTCHandlers = (
 
   socket.on('webrtc:offer', ({ recipientUid, offer, callType, callerName }) => {
     const delivered = emitToRecipient(recipientUid, (recipientSocketId) => {
-      console.log(`[WebRTC] Offer from ${socket.user.uid} to ${recipientUid} (${recipientSocketId})`);
+      logger.info('WebRTC offer forwarded', {
+        from: socket.user.uid,
+        to: recipientUid,
+        recipientSocketId,
+        callType,
+      });
       io.to(recipientSocketId).emit('webrtc:offer', {
         from: socket.user.uid,
         offer,
@@ -29,14 +35,23 @@ export const registerWebRTCHandlers = (
     });
 
     if (!delivered) {
-      console.warn(`[WebRTC] User offline: ${recipientUid}`);
-      socket.emit('webrtc:error', { message: 'User is not connected.' });
+      logger.warn('WebRTC recipient offline', {
+        from: socket.user.uid,
+        to: recipientUid,
+      });
+      socket.emit('webrtc:error', {
+        message: 'User is not connected.',
+        code: 'USER_OFFLINE',
+      });
     }
   });
 
   socket.on('webrtc:answer', ({ recipientUid, answer }) => {
     emitToRecipient(recipientUid, (recipientSocketId) => {
-      console.log(`[WebRTC] Answer from ${socket.user.uid} to ${recipientUid}`);
+      logger.info('WebRTC answer forwarded', {
+        from: socket.user.uid,
+        to: recipientUid,
+      });
       io.to(recipientSocketId).emit('webrtc:answer', {
         from: socket.user.uid,
         answer,
@@ -55,22 +70,41 @@ export const registerWebRTCHandlers = (
 
   socket.on('webrtc:ringing', ({ recipientUid }) => {
     emitToRecipient(recipientUid, (recipientSocketId) => {
-      console.log(`[WebRTC] Ringing from ${socket.user.uid} to ${recipientUid}`);
+      logger.info('WebRTC ringing forwarded', {
+        from: socket.user.uid,
+        to: recipientUid,
+      });
       io.to(recipientSocketId).emit('webrtc:ringing', { from: socket.user.uid });
     });
   });
 
   socket.on('webrtc:hang-up', ({ recipientUid }) => {
     emitToRecipient(recipientUid, (recipientSocketId) => {
-      console.log(`[WebRTC] Hang-up from ${socket.user.uid} to ${recipientUid}`);
+      logger.info('WebRTC hang-up forwarded', {
+        from: socket.user.uid,
+        to: recipientUid,
+      });
       io.to(recipientSocketId).emit('webrtc:hang-up', { from: socket.user.uid });
     });
   });
 
   socket.on('webrtc:call-rejected', ({ recipientUid }) => {
     emitToRecipient(recipientUid, (recipientSocketId) => {
-      console.log(`[WebRTC] Call rejected by ${socket.user.uid} for ${recipientUid}`);
+      logger.info('WebRTC call rejected', {
+        from: socket.user.uid,
+        to: recipientUid,
+      });
       io.to(recipientSocketId).emit('webrtc:call-rejected', { from: socket.user.uid });
+    });
+  });
+
+  socket.on('webrtc:busy', ({ recipientUid }) => {
+    emitToRecipient(recipientUid, (recipientSocketId) => {
+      logger.info('WebRTC recipient busy', {
+        from: socket.user.uid,
+        to: recipientUid,
+      });
+      io.to(recipientSocketId).emit('webrtc:busy', { from: socket.user.uid });
     });
   });
 };

@@ -16,6 +16,8 @@ export interface PassphrasePromptOptions {
 
 export type RequestPassphraseFn = (options: PassphrasePromptOptions) => Promise<string | null>;
 
+type KeyStateListener = () => void;
+
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -46,10 +48,32 @@ class CryptoService {
   private privateCryptoKey: CryptoKey | null = null;
   private publicKeyCache = new Map<string, string>();
   private importedPublicKeyCache = new Map<string, CryptoKey>();
+  private listeners = new Set<KeyStateListener>();
+  private keyVersion = 0;
 
   constructor() {
     this.privateKeyBase64 = sessionStorage.getItem(SESSION_KEY_PRIVATE);
     this.publicKey = localStorage.getItem(STORAGE_KEY_PUBLIC);
+  }
+
+  subscribe(listener: KeyStateListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyKeyStateChanged(): void {
+    this.keyVersion += 1;
+    this.listeners.forEach((listener) => listener());
+  }
+
+  getKeyVersion(): number {
+    return this.keyVersion;
+  }
+
+  hasUnlockedPrivateKey(): boolean {
+    return Boolean(this.privateKeyBase64);
   }
 
   async getPrivateCryptoKey(): Promise<CryptoKey | null> {
@@ -79,6 +103,29 @@ class CryptoService {
     );
     this.importedPublicKeyCache.set(publicKeyBase64, cryptoKey);
     return cryptoKey;
+  }
+
+  /**
+   * Computes a human-readable SHA-256 safety fingerprint from a Base64 SPKI public key.
+   * Formats as 8 groups of 4 uppercase hex characters (e.g., "A1B2 C3D4 ...").
+   */
+  async computeKeyFingerprint(publicKeyBase64: string | null | undefined): Promise<string | null> {
+    if (!publicKeyBase64) return null;
+    try {
+      const spkiBuffer = base64ToArrayBuffer(publicKeyBase64);
+      const digest = await window.crypto.subtle.digest('SHA-256', spkiBuffer);
+      const bytes = new Uint8Array(digest);
+      const hex = Array.from(bytes.slice(0, 16))
+        .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
+        .join('');
+      const groups: string[] = [];
+      for (let i = 0; i < hex.length; i += 4) {
+        groups.push(hex.slice(i, i + 4));
+      }
+      return groups.join(' ');
+    } catch {
+      return null;
+    }
   }
 
   async deriveWrappingKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
@@ -149,6 +196,111 @@ class CryptoService {
     }
   }
 
+  /**
+   * Rotates the user's security passphrase by unwrapping the existing PKCS#8 private key
+   * with the current passphrase, re-wrapping it with a fresh PBKDF2 salt & IV under the
+   * new passphrase, and persisting the updated wrapped key on the server.
+   * Does not regenerate the RSA keypair, preserving access to all historical messages.
+   */
+  async rotatePassphrase(currentPassphrase: string, newPassphrase: string): Promise<void> {
+    const trimmedCurrent = currentPassphrase.trim();
+    const trimmedNew = newPassphrase.trim();
+    if (trimmedNew.length < 8) {
+      throw new Error('New passphrase must be at least 8 characters long.');
+    }
+    if (!auth.currentUser) {
+      throw new Error('User is not authenticated.');
+    }
+
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch(`${API_URL}/api/users/me/keys`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch existing encryption keys from server.');
+    }
+
+    const data = (await response.json()) as {
+      publicKey: string;
+      wrappedPrivateKey: string;
+    };
+
+    const decryptedPrivateKeyBase64 = await this.decryptPrivateKey(
+      data.wrappedPrivateKey,
+      trimmedCurrent
+    );
+
+    if (!decryptedPrivateKeyBase64) {
+      throw new Error('Current security passphrase is incorrect.');
+    }
+
+    const pkcs8Buffer = base64ToArrayBuffer(decryptedPrivateKeyBase64);
+    const rewrappedPrivateKey = await this.encryptPrivateKey(pkcs8Buffer, trimmedNew);
+
+    const saveResponse = await fetch(`${API_URL}/api/users/me/keys`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        publicKey: data.publicKey,
+        wrappedPrivateKey: rewrappedPrivateKey,
+      }),
+    });
+
+    if (!saveResponse.ok) {
+      const errorData = (await saveResponse.json().catch(() => ({}))) as { error?: string };
+      throw new Error(errorData.error || 'Failed to save rotated passphrase on the server.');
+    }
+
+    this.privateKeyBase64 = decryptedPrivateKeyBase64;
+    this.publicKey = data.publicKey;
+    this.privateCryptoKey = null;
+    await this.getPrivateCryptoKey();
+
+    sessionStorage.setItem(SESSION_KEY_PRIVATE, this.privateKeyBase64);
+    sessionStorage.setItem(SESSION_KEY_PASSPHRASE, trimmedNew);
+    localStorage.setItem(STORAGE_KEY_PUBLIC, this.publicKey);
+    this.notifyKeyStateChanged();
+  }
+
+  /**
+   * Exports an encrypted backup bundle containing the user's SPKI public key and
+   * PBKDF2-wrapped PKCS#8 private key so the user can back it up offline.
+   */
+  async exportEncryptedKeyBackup(): Promise<string> {
+    if (!auth.currentUser) {
+      throw new Error('User is not authenticated.');
+    }
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch(`${API_URL}/api/users/me/keys`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      throw new Error('Encryption keys not found on server.');
+    }
+    const data = (await response.json()) as {
+      publicKey: string;
+      wrappedPrivateKey: string;
+    };
+    const fingerprint = await this.computeKeyFingerprint(data.publicKey);
+    return JSON.stringify(
+      {
+        format: 'rendezvous-e2ee-key-backup',
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        uid: auth.currentUser.uid,
+        fingerprint,
+        publicKey: data.publicKey,
+        wrappedPrivateKey: data.wrappedPrivateKey,
+      },
+      null,
+      2
+    );
+  }
+
   async getOrPromptPassphrase(
     requestPassphrase: RequestPassphraseFn,
     isNewUser = false,
@@ -212,6 +364,7 @@ class CryptoService {
 
           sessionStorage.setItem(SESSION_KEY_PRIVATE, this.privateKeyBase64);
           localStorage.setItem(STORAGE_KEY_PUBLIC, this.publicKey);
+          this.notifyKeyStateChanged();
           return { publicKey: this.publicKey, privateKey: this.privateKeyBase64 };
         }
 
@@ -269,6 +422,7 @@ class CryptoService {
 
     sessionStorage.setItem(SESSION_KEY_PRIVATE, this.privateKeyBase64);
     localStorage.setItem(STORAGE_KEY_PUBLIC, this.publicKey);
+    this.notifyKeyStateChanged();
 
     return { publicKey: this.publicKey, privateKey: this.privateKeyBase64 };
   }
@@ -277,10 +431,31 @@ class CryptoService {
     return this.publicKey;
   }
 
-  async fetchPublicKey(userId: string): Promise<string | null> {
+  invalidateCachedPublicKey(userId: string): void {
+    const existing = this.publicKeyCache.get(userId);
+    if (existing) {
+      this.importedPublicKeyCache.delete(existing);
+    }
+    this.publicKeyCache.delete(userId);
+  }
+
+  updateCachedPublicKey(userId: string, publicKey: string): void {
+    const existing = this.publicKeyCache.get(userId);
+    if (existing && existing !== publicKey) {
+      this.importedPublicKeyCache.delete(existing);
+    }
+    this.publicKeyCache.set(userId, publicKey);
+    this.notifyKeyStateChanged();
+  }
+
+  async fetchPublicKey(userId: string, forceRefresh = false): Promise<string | null> {
     try {
-      const cached = this.publicKeyCache.get(userId);
-      if (cached) return cached;
+      if (!forceRefresh) {
+        const cached = this.publicKeyCache.get(userId);
+        if (cached) return cached;
+      } else {
+        this.invalidateCachedPublicKey(userId);
+      }
 
       if (!auth.currentUser) throw new Error('User is not authenticated.');
       const token = await auth.currentUser.getIdToken();
@@ -292,15 +467,18 @@ class CryptoService {
       if (!response.ok) return null;
 
       const data = (await response.json()) as { publicKey: string };
-      this.publicKeyCache.set(userId, data.publicKey);
-      return data.publicKey;
+      if (data.publicKey) {
+        this.publicKeyCache.set(userId, data.publicKey);
+      }
+      return data.publicKey || null;
     } catch {
       return null;
     }
   }
 
   async fetchPublicKeysForGroup(
-    groupId: string
+    groupId: string,
+    forceRefresh = false
   ): Promise<Array<{ uid: string; publicKey: string }>> {
     try {
       if (!auth.currentUser) throw new Error('User is not authenticated.');
@@ -316,11 +494,11 @@ class CryptoService {
       const keys: Array<{ uid: string; publicKey: string }> = [];
 
       for (const member of members) {
-        if (member.publicKey) {
+        if (member.publicKey && !forceRefresh) {
           keys.push({ uid: member.uid, publicKey: member.publicKey });
           this.publicKeyCache.set(member.uid, member.publicKey);
         } else {
-          const fetchedKey = await this.fetchPublicKey(member.uid);
+          const fetchedKey = await this.fetchPublicKey(member.uid, forceRefresh);
           if (fetchedKey) keys.push({ uid: member.uid, publicKey: fetchedKey });
         }
       }
@@ -408,6 +586,8 @@ class CryptoService {
     this.privateKeyBase64 = null;
     this.privateCryptoKey = null;
     this.publicKeyCache.clear();
+    this.importedPublicKeyCache.clear();
+    this.notifyKeyStateChanged();
   }
 }
 
