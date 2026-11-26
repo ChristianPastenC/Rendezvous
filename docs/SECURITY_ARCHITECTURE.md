@@ -7,8 +7,10 @@ Rendezvous implements client-side E2EE using the browser's native **Web Crypto A
 - **Asymmetric Keypair:** Each user generates an `RSA-OAEP` 2048-bit keypair (`SHA-256`) on the client.
   - The SPKI public key is published to Firestore (`/users/{uid}.publicKey`).
   - The PKCS#8 private key never leaves the client in plaintext.
-- **Passphrase-Protected Key Wrapping:**
+- **Passphrase-Protected Key Wrapping & Rotation:**
   - Before uploading the private key backup to Firestore (`wrappedPrivateKey`), the client derives a 256-bit `AES-GCM` wrapping key from the user's security passphrase using `PBKDF2` (`SHA-256`, 100,000 iterations, random 16-byte salt) and encrypts the PKCS#8 key with a random 12-byte IV.
+  - Users can rotate their security passphrase (`cryptoService.rotatePassphrase`) or download an offline encrypted key backup bundle (`.json`) without regenerating their RSA keypair, preserving access to all historical messages.
+  - Participants can verify each other's SHA-256 SPKI public key safety fingerprints out-of-band via the in-chat **E2EE Verify** modal.
   - Because key derivation and unwrapping run exclusively on the client, the server cannot decrypt stored private keys or message payloads.
 - **Hybrid Message Encryption (Per-Message Ephemeral Key):**
   - For each message, the client generates a fresh 256-bit `AES-GCM` key and encrypts the message plaintext.
